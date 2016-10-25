@@ -1,18 +1,26 @@
 import requests
 
 from django.db import models
-from django.contrib.auth.models import User
-from django.contrib.postgres.fields import JSONField
+from django.conf import settings
+from django.contrib.postgres.fields import JSONField, ArrayField
 
 
-class User(User):
+class MyUser(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL)
     slug = models.CharField(
         max_length=128)
 
-    favoriteUsers = models.ManyToManyField('User', symmetrical=False)
-    favoriteData = models.ManyToManyField('Dataset')
-    favoritesCount = models.IntegerField(default=0)
-    dataFavoritesCount = models.IntegerField(default=0)
+    favorite_users = models.ManyToManyField(
+        'MyUser', symmetrical=False, blank=True)
+    favorite_data = models.ManyToManyField(
+        'Dataset', blank=True)
+
+    def get_user_favorites_count(self):
+        pass
+
+    def get_data_favorites_count(self):
+        pass
 
 
 class Dataset(models.Model):
@@ -47,17 +55,21 @@ class Dataset(models.Model):
     plus_url = models.URLField()
     minus_url = models.URLField()
 
-    owners = models.ManyToManyField('User')
+    owners = models.ManyToManyField('MyUser')
     name = models.CharField(max_length=128)
     slug = models.CharField(
         max_length=128)
-    favoritesCount = models.IntegerField(default=0)
-    intersectionValues = models.FileField()
+    intersection_values = JSONField()
     created = models.DateTimeField(
         auto_now_add=True)
 
-    promoterMetaPlot = models.ForeignKey('Meta', related_name='promoter_meta')
-    enhancerMetaPlot = models.ForeignKey('Meta', related_name='enhancer_meta')
+    promoter_metaplot = \
+        models.ForeignKey('MetaPlot', related_name='promoter_meta')
+    enhancer_metaplot = \
+        models.ForeignKey('MetaPlot', related_name='enhancer_meta')
+
+    def get_favorites_count(self):
+        pass
 
     @staticmethod
     def check_valid_url(url):
@@ -70,57 +82,109 @@ class Dataset(models.Model):
             return resp.ok, '{}: {}'.format(resp.status_code, resp.reason)
 
 
-class Meta(models.Model):
+class MetaPlot(models.Model):
     genomic_regions = models.ForeignKey('GenomicRegions')
 
     relative_start = models.IntegerField()
     relative_end = models.IntegerField()
     meta_plot = JSONField()
-
-
-class Recommendations(models.Model):
-    owner = models.ForeignKey('User')
     last_updated = models.DateTimeField(
         auto_now=True)
 
-
-class UserRecommendations(Recommendations):
-    rec_list = models.ManyToManyField('User')
-
-
-class DataRecommendations(Recommendations):
-    rec_list = models.ManyToManyField('Dataset')
+    class Meta:
+        unique_together = (
+            ('genomic_regions', 'relative_start', 'relative_end',),
+        )
 
 
-class CorrelationMatrix(models.Model):
-    matrix = JSONField()
+class Recommendation(models.Model):  # Add something to sort
+    owner = models.ForeignKey('MyUser')
     last_updated = models.DateTimeField(
         auto_now=True)
+    score = models.FloatField()
+
+    class Meta:
+        abstract = True
+        ordering = ('score', '-last_updated',)
+
+
+class UserRecommendation(Recommendation):
+    recommended = models.ForeignKey('MyUser', related_name='recommended')
+
+
+class DataRecommendation(Recommendation):
+    recommended = models.ForeignKey('Dataset')
+
+
+class CorrelationCell(models.Model):
+    x_dataset = models.ForeignKey('Dataset', related_name='x')
+    y_dataset = models.ForeignKey('Dataset', related_name='y')
+    score = models.FloatField()
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = (
+            ('x_dataset', 'y_dataset',),
+        )
+
+    @classmethod
+    def as_matrix(cls):
+        pass
 
 
 class GenomeAssembly(models.Model):
     name = models.CharField(
         unique=True,
         max_length=32)
-    defaultAnnotation = models.ForeignKey('GeneAnnotation')
+    default_annotation = models.ForeignKey(
+        'GeneAnnotation',
+        blank=True,
+        null=True)
+    last_updated = models.DateTimeField(
+        auto_now=True)
 
 
 class GeneAnnotation(models.Model):
+    name = models.CharField(
+        max_length=32)
     assembly = models.ForeignKey('GenomeAssembly')
     gtf_file = models.FileField()
+    last_updated = models.DateTimeField(
+        auto_now=True)
 
-    promoters = models.ForeignKey('GenomicRegions', related_name='promoters')
-    enhancers = models.ForeignKey('GenomicRegions', related_name='enhancers')
+    promoters = models.ForeignKey(
+            'GenomicRegions',
+            related_name='promoters',
+            blank=True,
+            null=True,
+        )
+    enhancers = models.ForeignKey(
+            'GenomicRegions',
+            related_name='enhancers',
+            blank=True,
+            null=True,
+        )
 
 
 class GenomicRegions(models.Model):
+    name = models.CharField(
+        max_length=32)
+    assembly = models.ForeignKey('GenomeAssembly')
     bed_file = models.FileField()
+    last_updated = models.DateTimeField(
+        auto_now=True)
 
 
 class Gene(models.Model):
-    annotation = models.ForeignKey(GeneAnnotation)
+    name = models.CharField(
+        max_length=32)
+    annotation = models.ForeignKey('GeneAnnotation')
 
-    names = JSONField()
+
+class Transcript(models.Model):
+    name = models.CharField(
+        max_length=32)
+    gene = models.ForeignKey('Gene')
 
     STRANDS = (('+', '+'), ('-', '-'))
 
@@ -128,11 +192,4 @@ class Gene(models.Model):
     strand = models.CharField(choices=STRANDS, max_length=1)
     start = models.IntegerField()
     end = models.IntegerField()
-
-
-class Exon(models.Model):
-    gene = models.ForeignKey(Gene)
-    id_num = models.IntegerField()
-
-    start = models.IntegerField()
-    end = models.IntegerField()
+    exons = ArrayField(ArrayField(models.IntegerField(), size=2))
