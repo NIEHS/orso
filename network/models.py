@@ -55,18 +55,22 @@ class Dataset(models.Model):
     plus_url = models.URLField()
     minus_url = models.URLField()
 
-    owners = models.ManyToManyField('MyUser')
+    owners = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True)
     name = models.CharField(max_length=128)
     slug = models.CharField(
         max_length=128)
-    intersection_values = JSONField()
     created = models.DateTimeField(
         auto_now_add=True)
 
-    promoter_metaplot = \
-        models.ForeignKey('MetaPlot', related_name='promoter_meta')
-    enhancer_metaplot = \
-        models.ForeignKey('MetaPlot', related_name='enhancer_meta')
+    promoter_intersection = models.ForeignKey(
+        'IntersectionValues',
+        related_name='promoter')
+    enhancer_intersection = models.ForeignKey(
+        'IntersectionValues',
+        related_name='enhancer')
+
+    promoter_metaplot = models.ForeignKey('MetaPlot', related_name='promoter')
+    enhancer_metaplot = models.ForeignKey('MetaPlot', related_name='enhancer')
 
     def get_favorites_count(self):
         pass
@@ -84,6 +88,7 @@ class Dataset(models.Model):
 
 class MetaPlot(models.Model):
     genomic_regions = models.ForeignKey('GenomicRegions')
+    bigwig_url = models.URLField()
 
     relative_start = models.IntegerField()
     relative_end = models.IntegerField()
@@ -91,13 +96,19 @@ class MetaPlot(models.Model):
     last_updated = models.DateTimeField(
         auto_now=True)
 
-    class Meta:
-        unique_together = (
-            ('genomic_regions', 'relative_start', 'relative_end',),
-        )
+
+class IntersectionValues(models.Model):
+    genomic_regions = models.ForeignKey('GenomicRegions')
+    bigwig_url = models.URLField()
+
+    relative_start = models.IntegerField()
+    relative_end = models.IntegerField()
+    intersection_values = JSONField()
+    last_updated = models.DateTimeField(
+        auto_now=True)
 
 
-class Recommendation(models.Model):  # Add something to sort
+class Recommendation(models.Model):
     owner = models.ForeignKey('MyUser')
     last_updated = models.DateTimeField(
         auto_now=True)
@@ -119,12 +130,14 @@ class DataRecommendation(Recommendation):
 class CorrelationCell(models.Model):
     x_dataset = models.ForeignKey('Dataset', related_name='x')
     y_dataset = models.ForeignKey('Dataset', related_name='y')
+    genomic_regions = models.ForeignKey('GenomicRegions')
+
     score = models.FloatField()
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = (
-            ('x_dataset', 'y_dataset',),
+            ('x_dataset', 'y_dataset', 'genomic_regions',),
         )
 
     @classmethod

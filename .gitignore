@@ -1,0 +1,6 @@
+*.log
+*.py[co]
+*.djcache
+
+data/*
+project/django_project/settings/local.py
