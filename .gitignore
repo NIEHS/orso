@@ -4,3 +4,8 @@
 
 data/*
 project/django_project/settings/local.py
+
+*node_modules
+webpack-stats.json
+project/static/bundles
+project/.happypack

@@ -3,6 +3,6 @@ from . import views
 
 
 urlpatterns = [
-    url(r'^$', views.index, name='index'),
+    url(r'^$', views.Home.as_view(), name='index'),
     url(r'^dataset/(?P<pk>\d+)/$', views.dataset, name='dataset'),
 ]
