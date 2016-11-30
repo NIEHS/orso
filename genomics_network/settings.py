@@ -145,3 +145,14 @@ WEBPACK_LOADER = {
 }
 
 LOGIN_REDIRECT_URL = 'index'
+
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False
+CELERY_TIME_ZONE = TIME_ZONE
+
+# Celery dev settings
+# CELERY_TASK_ALWAYS_EAGER = True
+# CELERY_TASK_EAGER_PROPAGATES = True
+
+# Celery production settings
+CELERY_BROKER_URL = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'db+sqlite:///celery.sqlite3'
