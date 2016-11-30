@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container">
+    <h3>{{dataset.name}}</h3>
+
+    {% if dataset.data_type %}
+    <p>Data type: {{dataset.data_type}}</p>
+    {% endif %}
+
+    {% if dataset.cell_type %}
+    <p>Cell type: {{dataset.cell_type}}</p>
+    {% endif %}
+
+    {% if dataset.antibody %}
+    <p>Antibody: {{dataset.antibody}}</p>
+    {% endif %}
+
+    {% if dataset.description %}
+    <p>Description: {{dataset.description}}</p>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-sm-6">
+            <h4 align="center">Promoters</h4>
+            <div id="meta1"></div>
+        </div>
+        <div class="col-sm-6">
+            <h4 align="center">Enhancers</h4>
+            <div id="meta2"></div>
+        </div>
+    </div>
+    <div id="browser"/>
+</div>
+
+{% endblock content %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+$(document).ready(function(){
+    window.apps.createMetaPlot(
+        $('#meta1')[0],
+        {{dataset.promoter_metaplot.meta_plot|safe}}
+    );
+    window.apps.createMetaPlot(
+        $('#meta2')[0],
+        {{dataset.enhancer_metaplot.meta_plot|safe}}
+    );
+    window.apps.createBrowser(
+        $('#browser')[0],
+        {{dataset.id}},
+        200,
+        $('#browser').width()
+    );
+});
+</script>
+{% endblock %}

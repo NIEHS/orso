@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container container-fluid">
+    <div>
+        <h1>
+            {{user.username}}
+            <button type="button" id="favorite_button" class="panel-close-button">
+                {% if is_favorite %}
+                <span id="star_glyph" class="glyphicon glyphicon-star"></span>
+                {% else %}
+                <span id="star_glyph" class="glyphicon glyphicon-star-empty"></span>
+                {% endif %}
+            </button>
+        </h1>
+    </div>
+    <div class="row">
+        <div class="col-sm-4">{{meta_data.user_favorite_number}} favorite users</div>
+        <div class="col-sm-4">{{meta_data.data_favorite_number}} favorite datasets</div>
+        <div class="col-sm-4">Favorited by {{meta_data.user_favorited_by_number}} users</div>
+    </div>
+    <div><h2>{{dataset_number}} datasets</h2></div>
+    <div>{{user.username}}'s datasets have been favorited {{meta_data.data_favorited_by_number}} times</div>
+    <div class="row">
+        <div class="col-sm-6">
+            <div>Assemblies:</div>
+            <div id="pie_1"></div>
+        </div>
+        <div class="col-sm-6">
+            <div>Data types:</div>
+            <div id="pie_2"></div>
+        </div>
+    </div>
+    <div>Most recent dataset:</div>
+    <div id="recent_dataset"></div>
+</div>
+{% endblock content %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+$(document).ready(function(){
+    console.log({{meta_data|safe}});
+    let star_glyph = $('#star_glyph');
+    $('#favorite_button').on('click', function () {
+        if (star_glyph.hasClass('glyphicon-star-empty')) {
+            star_glyph.removeClass('glyphicon-star-empty')
+            star_glyph.addClass('glyphicon-star')
+
+            $.ajax({url: '{% url 'api:user-add-favorite' myuser.pk %}'});
+        }
+
+        else if (star_glyph.hasClass('glyphicon-star')) {
+            star_glyph.removeClass('glyphicon-star')
+            star_glyph.addClass('glyphicon-star-empty')
+
+            $.ajax({url: '{% url 'api:user-remove-favorite' myuser.pk %}'});
+        }
+    });
+
+    window.apps.createPieChart(
+        $('#pie_1')[0],
+        {{plot_data.assembly_counts|safe}}
+    );
+    window.apps.createPieChart(
+        $('#pie_2')[0],
+        {{plot_data.experiment_counts|safe}}
+    );
+
+    window.apps.createSmallDataView(
+        $('#recent_dataset')[0],
+        {{latest_dataset.meta_data|safe}},
+        {{latest_dataset.plot_data|safe}},
+        {{latest_dataset.urls|safe}},
+        {
+            'display_favorite': true,
+        }
+    );
+});
+</script>
+{% endblock %}

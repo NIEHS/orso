@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<nav class="navbar navbar-sub">
+    <div class="container">
+        <ul class="nav navbar-nav">
+            <li><a href="{% url 'recommended_datasets' %}">Recommended datasets <span id="recommended_counts" class="badge">{{dataset_counts.recommended_dataset_counts}}</span></a></li>
+            <li><a href="{% url 'favorite_datasets' %}">Favorite datasets <span id="favorite_counts" class="badge">{{dataset_counts.favorite_dataset_counts}}</span></a></li>
+            <li><a href="{% url 'personal_datasets' %}">Personal datasets <span id="personal_counts" class="badge">{{dataset_counts.personal_dataset_counts}}</span></a></li>
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+            <li><a href="{% url 'create_dataset' %}"><span class="glyphicon glyphicon-plus"></span> Add new dataset</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container container-fluid">
+    <div id="processing_container"></div>
+    <div id="dataset_container"></div>
+</div>
+
+{% endblock content %}

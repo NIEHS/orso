@@ -35,7 +35,7 @@ def find_intersection(start, end, intervals, interval_starts, interval_ends):
     index_1 = bisect.bisect_right(interval_starts, start)
     index_2 = bisect.bisect_left(interval_ends, end)
 
-    intersecting_intervals = intervals[index_1-1:index_2+1]
+    intersecting_intervals = intervals[index_1 - 1:index_2 + 1]
     return intersecting_intervals
 
 
@@ -57,7 +57,7 @@ def find_bin_values(bin_start, bin_num, bin_size, intervals, interval_starts,
         coverage = 0
         for overlapping_interval in overlapping_intervals:
             val = min(bin_range[1], overlapping_interval[1]) - \
-                    max(bin_range[0], overlapping_interval[0]) + 1
+                max(bin_range[0], overlapping_interval[0]) + 1
             positions = max(0, val)
             coverage += positions * overlapping_interval[2]
         bin_values.append(coverage)
@@ -77,7 +77,7 @@ def get_bw_intervals(bw, chromosome):
     # Convert from 0-based to 1-based
     converted_intervals = []
     for interval in intervals:
-        converted_intervals.append((interval[0]+1, interval[1], interval[2]))
+        converted_intervals.append((interval[0] + 1, interval[1], interval[2]))
     converted_intervals = tuple(converted_intervals)
 
     starts, ends = get_starts_and_ends(converted_intervals)
@@ -101,7 +101,7 @@ def read_bed_by_chrom(bed_fn):
 
 class MetaPlot(object):
 
-    def __init__(self, bed_fn, bin_start, bin_num, bin_size, single_bw=None,
+    def __init__(self, bed_fn, bin_start=-2500, bin_num=50, bin_size=100, single_bw=None,
                  paired_1_bw=None, paired_2_bw=None):
 
         self.bed_fn = bed_fn
@@ -128,18 +128,21 @@ class MetaPlot(object):
         data_dict = defaultdict(list)
         self.data_matrix = {'matrix_rows': [], 'matrix_columns': []}
 
-        if self.single_bw:
-            bw = pyBigWig.open(self.single_bw)
-        else:
-            bw_1 = pyBigWig.open(self.paired_1_bw)
-            bw_2 = pyBigWig.open(self.paired_2_bw)
+        # if self.single_bw:
+        #     bw = pyBigWig.open(self.single_bw)
+        # else:
+        #     bw_1 = pyBigWig.open(self.paired_1_bw)
+        #     bw_2 = pyBigWig.open(self.paired_2_bw)
 
         for chromosome, bed_values in chrom_entries.items():
 
             if self.single_bw:
+                bw = pyBigWig.open(self.single_bw)
                 intervals, interval_starts, interval_ends = \
                     get_bw_intervals(bw, chromosome)
             else:
+                bw_1 = pyBigWig.open(self.paired_1_bw)
+                bw_2 = pyBigWig.open(self.paired_2_bw)
                 intervals_1, interval_starts_1, interval_ends_1 = \
                     get_bw_intervals(bw_1, chromosome)
                 intervals_2, interval_starts_2, interval_ends_2 = \
@@ -152,7 +155,7 @@ class MetaPlot(object):
                     strand = entry[4]
                 else:
                     strand = '.'
-                center = int((int(end)-int(start))/2 + int(start))
+                center = int((int(end) - int(start)) / 2 + int(start))
 
                 if strand == '+' or strand == '.':
                     intersection_start = center + self.bin_start
@@ -259,7 +262,7 @@ class MetaPlot(object):
             with open(json_file, 'w') as outfile:
                 json.dump(intersection_values, outfile)
         else:
-            return json.dumps(intersection_values)
+            return intersection_values
 
     def create_metaplot_json(self, json_file=None):
         matrix_values = []
@@ -277,7 +280,7 @@ class MetaPlot(object):
             with open(json_file, 'w') as outfile:
                 json.dump(metaplot, outfile)
         else:
-            return json.dumps(metaplot)
+            return metaplot
 
 
 @click.command()

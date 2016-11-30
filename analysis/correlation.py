@@ -9,14 +9,10 @@ from scipy import stats
 
 class Correlation(object):
 
-    def __init__(self, intersection_file_1, intersection_file_2):
+    def __init__(self, intersection_json_1, intersection_json_2):
 
-        assert os.path.exists(intersection_file_1)
-        assert os.path.exists(intersection_file_2)
-
-        with open(intersection_file_1) as f1, open(intersection_file_2) as f2:
-            self.intersection_1 = json.load(f1)
-            self.intersection_2 = json.load(f2)
+        self.intersection_1 = intersection_json_1
+        self.intersection_2 = intersection_json_2
 
     def get_correlation(self):
 
@@ -29,14 +25,14 @@ class Correlation(object):
 @click.command()
 @click.argument('intersection_file_1')
 @click.argument('intersection_file_2')
-def cli(intersection_file_1, intersection_file_2):
+def cli(intersection_json_1, intersection_json_2):
     """
     Find a correlation value considering paired intersection files.
     """
 
     correlation = Correlation(
-        intersection_file_1,
-        intersection_file_2,
+        intersection_json_1,
+        intersection_json_2,
     )
 
     print(correlation.get_correlation())

@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h3>{{dataset_x.name}}</h3>
+    <h3>{{dataset_y.name}}</h3>
+    <div class="row">
+        <div class="col-sm-6">
+            <h4 align="center">Promoters</h4>
+            <div id="promoter_comp" style="height:200px;" ></div>
+        </div>
+        <div class="col-sm-6">
+            <h4 align="center">Enhancers</h4>
+            <div id="enhancer_comp" style="height:200px;" ></div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+$(document).ready(function(){
+    window.apps.createIntersectionComparison(
+        $('#promoter_comp')[0],
+        '{{dataset_x.name}}',
+        '{{dataset_y.name}}',
+        {{dataset_x.promoter_intersection.intersection_values|safe}},
+        {{dataset_y.promoter_intersection.intersection_values|safe}}
+    );
+    window.apps.createIntersectionComparison(
+        $('#enhancer_comp')[0],
+        '{{dataset_x.name}}',
+        '{{dataset_y.name}}',
+        {{dataset_x.enhancer_intersection.intersection_values|safe}},
+        {{dataset_y.enhancer_intersection.intersection_values|safe}}
+    );
+});
+</script>
+{% endblock %}

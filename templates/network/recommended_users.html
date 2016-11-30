@@ -1,0 +1,20 @@
+{% extends 'base_USERS.html' %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+{% for i in users %}
+$(document).ready(function(){
+    window.apps.appendSmallUserView(
+        $('#user_container')[0],
+        {{i.meta_data|safe}},
+        {{i.plot_data|safe}},
+        {{i.urls|safe}},
+        {
+            'display_favorite': true,
+            'display_remove_recommendation': true
+        }
+    );
+});
+{% endfor %}
+</script>
+{% endblock %}

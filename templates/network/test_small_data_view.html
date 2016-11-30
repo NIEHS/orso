@@ -1,0 +1,24 @@
+{% extends 'base_DATASETS.html' %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+{% for i in datasets %}
+$(document).ready(function(){
+    var args = {
+        'display_favorite': true,
+        'display_edit': true,
+        'display_remove_recommendation': true,
+        'display_delete': true,
+        'display_remove_favorite': true
+    };
+    window.apps.appendSmallDataView(
+        $('#dataset_container')[0],
+        {{i.meta_data|safe}},
+        {{i.plot_data|safe}},
+        {{i.urls|safe}},
+        args
+    );
+});
+{% endfor %}
+</script>
+{% endblock %}
