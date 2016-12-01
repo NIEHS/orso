@@ -5,6 +5,8 @@ from analysis.metaplot import MetaPlot
 from analysis.correlation import Correlation
 from . import models
 
+from collections import defaultdict
+
 
 @task()
 def process_dataset(id_):
@@ -126,13 +128,54 @@ def update_data_recommendations():
                 recommended=recommended,
                 reference_dataset=reference,
             )
-            if dr.exists():
-                dr[0].score = score['max_z_score']
-                dr[0].save()
+            df = models.DataFavorite.objects.filter(
+                owner=user,
+                favorite=recommended,
+            )
+
+            if not df.exists():
+                if dr.exists():
+                    dr[0].score = score['max_z_score']
+                    dr[0].save()
+                else:
+                    models.DataRecommendation.objects.create(
+                        owner=user,
+                        score=score['max_z_score'],
+                        recommended=recommended,
+                        reference_dataset=reference,
+                    )
+
+
+@task()
+def update_user_recommendations():
+    # Add a user recommendation if a user's dataset has been favorited
+    # Score is the number of favorited dataset_counts
+    scores = defaultdict(int)
+
+    for fav in models.DataFavorite.objects.all():
+        for dataset_owner in fav.favorite.owners.all():
+            if fav.owner != dataset_owner:
+                scores[(fav.owner, dataset_owner)] += 1
+
+    for key, score in scores.items():
+        owner, favorite = key
+
+        ur = models.UserRecommendation.objects.filter(
+            owner=owner,
+            recommended=favorite,
+        )
+        uf = models.UserFavorite.objects.filter(
+            owner=owner,
+            favorite=favorite,
+        )
+
+        if not uf.exists():
+            if ur.exists():
+                ur[0].score = score
+                ur[0].save()
             else:
-                models.DataRecommendation.objects.create(
-                    owner=user,
-                    score=score['max_z_score'],
-                    recommended=recommended,
-                    reference_dataset=reference,
+                models.UserRecommendation.objects.create(
+                    owner=owner,
+                    recommended=favorite,
+                    score=score,
                 )
