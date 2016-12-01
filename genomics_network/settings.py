@@ -156,3 +156,10 @@ CELERY_TIME_ZONE = TIME_ZONE
 # Celery production settings
 CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_RESULT_BACKEND = 'db+sqlite:///celery.sqlite3'
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
+    }
+}
