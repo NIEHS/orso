@@ -1,6 +1,7 @@
 import requests
 import pyBigWig
 import re
+import numpy
 
 from django.db import models
 from django.conf import settings
@@ -384,9 +385,59 @@ class CorrelationCell(models.Model):
             ('x_dataset', 'y_dataset', 'genomic_regions',),
         )
 
-    @classmethod
-    def as_matrix(cls):
-        pass
+    @staticmethod
+    def get_correlation_stats(regions):
+        corr_values = []
+        for corr in CorrelationCell.objects.filter(genomic_regions=regions):
+            corr_values.append(corr.score)
+        if corr_values:
+            return (
+                numpy.mean(corr_values),
+                numpy.std(corr_values),
+            )
+        else:
+            return (None, None)
+
+    @staticmethod
+    def get_z_score_list():
+        z_scores = []
+
+        corr_stats = dict()
+        for assembly in GenomeAssembly.objects.all():
+            promoter_mean, promoter_stdev = \
+                CorrelationCell.get_correlation_stats(assembly.default_annotation.promoters)
+            enhancer_mean, enhancer_stdev = \
+                CorrelationCell.get_correlation_stats(assembly.default_annotation.enhancers)
+            corr_stats[assembly] = {
+                'promoter_mean': promoter_mean,
+                'promoter_stdev': promoter_stdev,
+                'enhancer_mean': enhancer_mean,
+                'enhancer_stdev': enhancer_stdev,
+            }
+
+        for assembly in GenomeAssembly.objects.all():
+            datasets = Dataset.objects.filter(assembly=assembly).order_by('id')
+            for i, ds_1 in enumerate(datasets):
+                for j, ds_2 in enumerate(datasets[i + 1:]):
+                    scores = []
+                    for corr in CorrelationCell.objects.filter(x_dataset=ds_1, y_dataset=ds_2):
+                        if corr.genomic_regions == assembly.default_annotation.promoters:
+                            mean = corr_stats[assembly]['promoter_mean']
+                            stdev = corr_stats[assembly]['promoter_stdev']
+                        elif corr.genomic_regions == assembly.default_annotation.enhancers:
+                            mean = corr_stats[assembly]['enhancer_mean']
+                            stdev = corr_stats[assembly]['enhancer_stdev']
+                        scores.append((corr.score - mean) / stdev)
+                    if scores:
+                        z_scores.append({
+                            'dataset_1': ds_1.id,
+                            'dataset_2': ds_2.id,
+                            'users_1': [user.id for user in ds_1.owners.all()],
+                            'users_2': [user.id for user in ds_2.owners.all()],
+                            'max_z_score': max(scores),
+                        })
+
+        return z_scores
 
 
 class GenomeAssembly(models.Model):
