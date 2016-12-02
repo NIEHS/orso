@@ -84,17 +84,29 @@ def update_data_recommendations():
         z_scores = [score for score in z_scores if score['users_1'] or score['users_2']]
 
         for user in models.MyUser.objects.all():
+            print(user.user.username)
 
-            user_scores = []
+            user_score_dict = dict()
             for score in z_scores:
                 in_1 = user.id in score['users_1']
                 in_2 = user.id in score['users_2']
                 if (in_1 or in_2) and not (in_1 and in_2):
-                    user_scores.append(score)
+                    if in_1:
+                        recommended_id = score['dataset_2']
+                    elif in_2:
+                        recommended_id = score['dataset_1']
+                    if not models.DataFavorite.objects.filter(
+                            owner=user, favorite__id=recommended_id).exists():
+                        if recommended_id in user_score_dict:
+                            if score['max_z_score'] > \
+                                    user_score_dict[recommended_id]['max_z_score']:
+                                user_score_dict[recommended_id] = score
+                        else:
+                            user_score_dict[recommended_id] = score
 
-            user_scores.sort(key=lambda x: -x['max_z_score'])
-
-            for score in user_scores[:20]:
+            user_score_list = sorted(user_score_dict.values(), key=lambda x: -x['max_z_score'])
+            print(len(user_score_list))
+            for score in user_score_list[:20]:
                 if user.id in score['users_1']:
                     reference_id = score['dataset_1']
                     recommended_id = score['dataset_2']
