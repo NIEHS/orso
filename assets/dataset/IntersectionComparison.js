@@ -23,14 +23,12 @@ class IntersectionComparison extends React.Component {
         }
 
         var x = d3.scale.linear()
-            .domain([1,d3.max(x_data)])
+            .domain([0,d3.max(x_data)])
             .range([margins.left, w + margins.left]);
 
         var y = d3.scale.linear()
-            .domain([1,d3.max(y_data)])
-            .range([h, margins.top])
-            .nice()
-            .clamp(true);
+            .domain([0,d3.max(y_data)])
+            .range([h, margins.top]);
 
         var xAxis = d3.svg.axis()
             .scale(x)
@@ -52,14 +50,21 @@ class IntersectionComparison extends React.Component {
             .attr('transform', `translate(${margins.left},0)`)
             .call(yAxis);
 
-        d3.select(svgElement).append('svg:g')
-            .selectAll('circle')
-            .data(scatter)
-            .enter()
-            .append('circle')
-            .attr('r', 3.5)
-            .attr('cx', function(d) {return x(d[0]);})
-            .attr('cy', function(d) {return y(d[1]);});
+        var canvas = $('<canvas/>').prop({
+                width: $(this.refs.parent).width(),
+                height: $(this.refs.parent).height(),
+            });
+        $(this.refs.parent).append(canvas);
+        var context = canvas[0].getContext("2d");
+
+        var _2_pi = 2 * Math.PI;
+        scatter.forEach(function(d) {
+            context.beginPath();
+            context.arc(x(d[0]), y(d[1]), 2, 0, _2_pi);
+            context.fillStyle="black";
+            context.fill();
+            context.closePath();
+        });
     }
 
     removeD3(svgElement){
@@ -75,8 +80,8 @@ class IntersectionComparison extends React.Component {
     }
 
     render(){
-        return <div className='intersection_comparison'>
-            <svg style={{height:"100%", width:"100%"}} ref='svg'></svg>
+        return <div className='intersection_comparison' ref='parent'>
+            <svg ref='svg' style={{height: '100%', width: '100%', position:'absolute'}}></svg>
         </div>;
     }
 }

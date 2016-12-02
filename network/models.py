@@ -371,6 +371,29 @@ class DataRecommendation(Recommendation):
     recommended = models.ForeignKey('Dataset')
     reference_dataset = models.ForeignKey('Dataset', related_name='reference')
 
+    def get_recommendation_data(self, my_user):
+        plot_data = dict()
+        plot_data['rec_promoter_intersection'] = \
+            self.recommended.promoter_intersection.intersection_values
+        plot_data['ref_promoter_intersection'] = \
+            self.reference_dataset.promoter_intersection.intersection_values
+        plot_data['rec_enhancer_intersection'] = \
+            self.recommended.enhancer_intersection.intersection_values
+        plot_data['ref_enhancer_intersection'] = \
+            self.reference_dataset.enhancer_intersection.intersection_values
+        meta_data = self.recommended.get_metadata(my_user)
+        meta_data['reference_name'] = self.reference_dataset.name
+        urls = self.recommended.get_urls()
+
+        urls['reference_detail'] = \
+            reverse('dataset', kwargs={'pk': self.reference_dataset.pk})
+
+        return {
+            'plot_data': plot_data,
+            'meta_data': meta_data,
+            'urls': urls,
+        }
+
 
 class CorrelationCell(models.Model):
     x_dataset = models.ForeignKey('Dataset', related_name='x')

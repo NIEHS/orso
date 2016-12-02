@@ -7,11 +7,12 @@ import Browser from './Browser';
 import SmallDataView from './SmallDataView';
 import SmallPersonalDataView from './SmallPersonalDataView';
 import SmallFavoriteDataView from './SmallFavoriteDataView';
-import SmallRecommendedDataView from './SmallRecommendedDataView';
+// import SmallRecommendedDataView from './SmallRecommendedDataView';
 import SmallUserDataView from './SmallUserDataView';
 import IntersectionComparison from './IntersectionComparison';
 import PieChart from './PieChart';
-import SmallUserView from './SmallUserView'
+import SmallUserView from './SmallUserView';
+import SmallRecommendedDataView from './SmallRecommendedDataView';
 
 
 let createMetaPlot = function(el, metaplot) {
@@ -87,29 +88,29 @@ let appendSmallFavoriteDataView = function(el, meta_data, promoter_data, enhance
         remove_favorite_url={remove_favorite_url}/>, element[0]);
 };
 
-let createSmallRecommendedDataView = function(el, meta_data, promoter_data, enhancer_data, dataset_url, add_favorite_url, remove_favorite_url, hide_recommendation_url) {
-    ReactDOM.render(<SmallRecommendedDataView
-        meta_data={meta_data}
-        promoter_data={promoter_data}
-        enhancer_data={enhancer_data}
-        dataset_url={dataset_url}
-        add_favorite_url={add_favorite_url}
-        remove_favorite_url={remove_favorite_url}
-        hide_recommendation_url={hide_recommendation_url}/>, el);
-};
-
-let appendSmallRecommendedDataView = function(el, meta_data, promoter_data, enhancer_data, dataset_url, add_favorite_url, remove_favorite_url, hide_recommendation_url) {
-    var element = $('<div></div>').appendTo(el);
-
-    ReactDOM.render(<SmallRecommendedDataView
-        meta_data={meta_data}
-        promoter_data={promoter_data}
-        enhancer_data={enhancer_data}
-        dataset_url={dataset_url}
-        add_favorite_url={add_favorite_url}
-        remove_favorite_url={remove_favorite_url}
-        hide_recommendation_url={hide_recommendation_url}/>, element[0]);
-};
+// let createSmallRecommendedDataView = function(el, meta_data, promoter_data, enhancer_data, dataset_url, add_favorite_url, remove_favorite_url, hide_recommendation_url) {
+//     ReactDOM.render(<SmallRecommendedDataView
+//         meta_data={meta_data}
+//         promoter_data={promoter_data}
+//         enhancer_data={enhancer_data}
+//         dataset_url={dataset_url}
+//         add_favorite_url={add_favorite_url}
+//         remove_favorite_url={remove_favorite_url}
+//         hide_recommendation_url={hide_recommendation_url}/>, el);
+// };
+//
+// let appendSmallRecommendedDataView = function(el, meta_data, promoter_data, enhancer_data, dataset_url, add_favorite_url, remove_favorite_url, hide_recommendation_url) {
+//     var element = $('<div></div>').appendTo(el);
+//
+//     ReactDOM.render(<SmallRecommendedDataView
+//         meta_data={meta_data}
+//         promoter_data={promoter_data}
+//         enhancer_data={enhancer_data}
+//         dataset_url={dataset_url}
+//         add_favorite_url={add_favorite_url}
+//         remove_favorite_url={remove_favorite_url}
+//         hide_recommendation_url={hide_recommendation_url}/>, element[0]);
+// };
 
 let createSmallUserDataView = function(el, meta_data, promoter_data, enhancer_data, dataset_url, add_favorite_url, remove_favorite_url, is_favorite) {
     ReactDOM.render(<SmallUserDataView
@@ -159,6 +160,20 @@ let appendSmallUserView = function(el, meta_data, plot_data, urls, args) {
         display_remove_favorite={Boolean(args.display_remove_favorite)}/>, element[0]);
 };
 
+let appendSmallRecommendedDataView = function(el, meta_data, plot_data, urls, args) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<SmallRecommendedDataView
+        meta_data={meta_data}
+        plot_data={plot_data}
+        urls={urls}
+        display_favorite={Boolean(args.display_favorite)}
+        display_edit={Boolean(args.display_edit)}
+        display_delete={Boolean(args.display_delete)}
+        display_remove_recommendation={Boolean(args.display_remove_recommendation)}
+        display_remove_favorite={Boolean(args.display_remove_favorite)}/>, element[0]);
+};
+
 export {
     createMetaPlot,
     createBrowser,
@@ -168,11 +183,12 @@ export {
     appendSmallPersonalDataView,
     createSmallFavoriteDataView,
     appendSmallFavoriteDataView,
-    createSmallRecommendedDataView,
-    appendSmallRecommendedDataView,
+    // createSmallRecommendedDataView,
+    // appendSmallRecommendedDataView,
     createSmallUserDataView,
     appendSmallUserDataView,
     createIntersectionComparison,
     createPieChart,
-    appendSmallUserView
+    appendSmallUserView,
+    appendSmallRecommendedDataView,
 };

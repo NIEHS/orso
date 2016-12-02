@@ -165,7 +165,7 @@ class RecommendedDatasets(TemplateView, AddMyUserMixin):
 
         datasets = []
         for rec in models.DataRecommendation.objects.filter(owner=my_user, hidden=False):
-            datasets.append(rec.recommended.get_display_data(my_user))
+            datasets.append(rec.get_recommendation_data(my_user))
 
         context['datasets'] = datasets
         context['dataset_counts'] = my_user.get_dataset_counts()

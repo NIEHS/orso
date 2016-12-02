@@ -1,22 +1,41 @@
 import React from 'react';
 import MetaPlot from './MetaPlot';
+import IntersectionComparison from './IntersectionComparison';
 
-import './SmallDataView.css';
+import './MetaPlot.css';
+import './IntersectionComparison.css';
 
 
 class SmallRecommendedDataView extends React.Component {
+
+    constructor(props) {
+        super(props);
+        this.state = {is_favorite: (props.meta_data['is_favorite'] === 'true')};
+    }
+
     componentDidMount(){
-        
-        let star_glyph = $(this.refs.star_glyph),
-            add_favorite_url = this.props.add_favorite_url,
-            remove_favorite_url = this.props.remove_favorite_url,
-            hide_recommendation_url = this.props.hide_recommendation_url;
 
-		$(this.refs.favorite_button).on('click', function () {
+        let add_favorite_url = this.props.urls['add_favorite'],
+            remove_favorite_url = this.props.urls['remove_favorite'],
+            hide_recommendation_url = this.props.urls['hide_recommendation'];
+        let self = this;
 
-            if (star_glyph.hasClass('glyphicon-star-empty')) {
-                star_glyph.removeClass('glyphicon-star-empty')
-                star_glyph.addClass('glyphicon-star')
+        $(this.refs.favorite_button).on('click', function () {
+            if (self.state.is_favorite) {
+                self.setState({
+                    is_favorite: false
+                });
+
+                let favorite_count = parseInt($('#favorite_counts').html());
+                favorite_count = favorite_count - 1;
+                $('#favorite_counts').html(favorite_count);
+
+                $.ajax({url: remove_favorite_url});
+
+            } else {
+                self.setState({
+                    is_favorite: true
+                });
 
                 let favorite_count = parseInt($('#favorite_counts').html());
                 favorite_count = favorite_count + 1;
@@ -24,26 +43,23 @@ class SmallRecommendedDataView extends React.Component {
 
                 $.ajax({url: add_favorite_url});
             }
+        });
 
-            else if (star_glyph.hasClass('glyphicon-star')) {
-                star_glyph.removeClass('glyphicon-star')
-                star_glyph.addClass('glyphicon-star-empty')
-
-                let favorite_count = parseInt($('#favorite_counts').html());
-                favorite_count = favorite_count - 1;
-                $('#favorite_counts').html(favorite_count);
-
-                $.ajax({url: remove_favorite_url});
-            }
-		});
-
-        $(this.refs.close_button).on('click', function () {
+        $(this.refs.remove_recommendation_button).on('click', function () {
             let recommended_count = parseInt($('#recommended_counts').html());
             recommended_count = recommended_count - 1;
             $('#recommended_counts').html(recommended_count);
 
             $.ajax({url: hide_recommendation_url});
-		});
+        });
+
+        $(this.refs.remove_favorite_button).on('click', function () {
+            let favorite_count = parseInt($('#favorite_counts').html());
+            favorite_count = favorite_count - 1;
+            $('#favorite_counts').html(favorite_count);
+
+            $.ajax({url: remove_favorite_url});
+        });
     }
 
     render(){
@@ -52,10 +68,42 @@ class SmallRecommendedDataView extends React.Component {
 
         return <div className="panel panel-default" id={id_select}>
             <div className="panel-heading">
-                <div className="panel-title pull-left"><a href={this.props.dataset_url}>{this.props.meta_data['name']}</a></div>
+                <div className="panel-title pull-left">
+                    <a href={this.props.urls['detail']}>{this.props.meta_data['name']}</a>
+                </div>
                 <div className="panel-title pull-right">
-                    <button type="button" ref="favorite_button" className="panel-close-button"><span ref="star_glyph" className="glyphicon glyphicon-star-empty"></span></button>&nbsp;
-                    <button type="button" ref="close_button" className="panel-close-button" data-target={id_css_select} data-dismiss="alert"><span className="glyphicon glyphicon-remove"></span></button>
+                    {this.props.display_favorite &&
+                        <button type="button" ref="favorite_button" className="panel-close-button">
+                            &nbsp;
+                            {this.state.is_favorite ? (
+                                <span className="glyphicon glyphicon-star"></span>
+                            ) : (
+                                <span className="glyphicon glyphicon-star-empty"></span>
+                            )}
+                        </button>
+                    }
+                    {this.props.display_edit &&
+                        <a href={this.props.urls['edit']} className="btn panel-close-button">
+                            &nbsp;<span className="glyphicon glyphicon-pencil"></span>
+                        </a>
+                    }
+                    {this.props.display_remove_recommendation &&
+                        <button type="button" ref="remove_recommendation_button" className="panel-close-button"
+                                data-target={id_css_select} data-dismiss="alert">
+                            &nbsp;<span className="glyphicon glyphicon-remove"></span>
+                        </button>
+                    }
+                    {this.props.display_remove_favorite &&
+                        <button type="button" ref="remove_favorite_button" className="panel-close-button"
+                                data-target={id_css_select} data-dismiss="alert">
+                            &nbsp;<span className="glyphicon glyphicon-remove"></span>
+                        </button>
+                    }
+                    {this.props.display_delete &&
+                        <a href={this.props.urls['delete']} className="btn panel-close-button">
+                            &nbsp;<span className="glyphicon glyphicon-trash"></span>
+                        </a>
+                    }
                 </div>
                 <div className="clearfix"></div>
 
@@ -73,17 +121,26 @@ class SmallRecommendedDataView extends React.Component {
                                 <li><b>Description:</b> {this.props.meta_data['description']}</li>}
                         </ul>
                     </div>
-                    <div style={{height:"150px"}} className="col-sm-3">
-                        <h4 style={{textAlign:"center"}}>Promoters</h4>
-                        <MetaPlot
-                            data={this.props.promoter_data}
-                        />
-                    </div>
-                    <div style={{height:"150px"}} className="col-sm-3">
-                        <h4 style={{textAlign:"center"}}>Enhancers</h4>
-                        <MetaPlot
-                            data={this.props.enhancer_data}
-                        />
+                    <div className="col-sm-6">
+                        <p>Reference dataset: <a href={this.props.urls['reference_detail']}>{this.props.meta_data['reference_name']}</a></p>
+                        <div className="row">
+                            <div style={{height:"150px", padding:0}} className="col-sm-6">
+                                <h4 style={{textAlign:"center"}}>Promoters</h4>
+                                <IntersectionComparison
+                                    x_name={this.props.meta_data['name']}
+                                    y_name={this.props.meta_data['reference_name']}
+                                    x_data={this.props.plot_data['rec_promoter_intersection']}
+                                    y_data={this.props.plot_data['ref_promoter_intersection']}/>
+                            </div>
+                            <div style={{height:"150px", padding:0}} className="col-sm-6">
+                                <h4 style={{textAlign:"center"}}>Enhancers</h4>
+                                <IntersectionComparison style={{position:"absolute"}}
+                                    x_name={this.props.meta_data['name']}
+                                    y_name={this.props.meta_data['reference_name']}
+                                    x_data={this.props.plot_data['rec_enhancer_intersection']}
+                                    y_data={this.props.plot_data['ref_enhancer_intersection']}/>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -95,12 +152,22 @@ class SmallRecommendedDataView extends React.Component {
 
 SmallRecommendedDataView.propTypes = {
     meta_data: React.PropTypes.object.isRequired,
-    promoter_data: React.PropTypes.object.isRequired,
-    enhancer_data: React.PropTypes.object.isRequired,
-    dataset_url: React.PropTypes.string.isRequired,
-    add_favorite_url: React.PropTypes.string.isRequired,
-    remove_favorite_url: React.PropTypes.string.isRequired,
-    hide_recommendation_url: React.PropTypes.string.isRequired,
+    plot_data: React.PropTypes.object.isRequired,
+    urls: React.PropTypes.object.isRequired,
+
+    display_favorite: React.PropTypes.bool,
+    display_edit: React.PropTypes.bool,
+    display_delete: React.PropTypes.bool,
+    display_remove_recommendation: React.PropTypes.bool,
+    display_remove_favorite: React.PropTypes.bool,
+};
+
+SmallRecommendedDataView.defaultProps = {
+    display_favorite: false,
+    display_edit: false,
+    display_delete: false,
+    display_remove_recommendation: false,
+    display_remove_favorite: false,
 };
 
 export default SmallRecommendedDataView;

@@ -84,7 +84,6 @@ def update_data_recommendations():
         z_scores = [score for score in z_scores if score['users_1'] or score['users_2']]
 
         for user in models.MyUser.objects.all():
-            print(user.user.username)
 
             user_score_dict = dict()
             for score in z_scores:
@@ -105,7 +104,7 @@ def update_data_recommendations():
                             user_score_dict[recommended_id] = score
 
             user_score_list = sorted(user_score_dict.values(), key=lambda x: -x['max_z_score'])
-            print(len(user_score_list))
+
             for score in user_score_list[:20]:
                 if user.id in score['users_1']:
                     reference_id = score['dataset_1']

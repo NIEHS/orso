@@ -10,12 +10,13 @@ import {
     appendSmallPersonalDataView,
     createSmallFavoriteDataView,
     appendSmallFavoriteDataView,
-    createSmallRecommendedDataView,
-    appendSmallRecommendedDataView,
+    // createSmallRecommendedDataView,
+    // appendSmallRecommendedDataView,
     createSmallUserDataView,
     appendSmallUserDataView,
     createPieChart,
     appendSmallUserView,
+    appendSmallRecommendedDataView,
 } from './dataset';
 
 
@@ -29,10 +30,11 @@ window.apps = {
     appendSmallPersonalDataView,
     createSmallFavoriteDataView,
     appendSmallFavoriteDataView,
-    createSmallRecommendedDataView,
-    appendSmallRecommendedDataView,
+    // createSmallRecommendedDataView,
+    // appendSmallRecommendedDataView,
     createSmallUserDataView,
     appendSmallUserDataView,
     createPieChart,
     appendSmallUserView,
+    appendSmallRecommendedDataView,
 };

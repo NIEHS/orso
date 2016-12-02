@@ -4,7 +4,7 @@
 <script type='text/javascript'>
 {% for i in datasets %}
 $(document).ready(function(){
-    window.apps.appendSmallDataView(
+    window.apps.appendSmallRecommendedDataView(
         $('#dataset_container')[0],
         {{i.meta_data|safe}},
         {{i.plot_data|safe}},
