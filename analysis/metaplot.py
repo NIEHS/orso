@@ -151,8 +151,8 @@ class MetaPlot(object):
             for entry in bed_values:
 
                 chromosome, start, end, name = entry[:4]
-                if len(entry) > 4:
-                    strand = entry[4]
+                if len(entry) > 5:
+                    strand = entry[5]
                 else:
                     strand = '.'
                 center = int((int(end) - int(start)) / 2 + int(start))
