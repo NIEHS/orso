@@ -2,6 +2,7 @@ import requests
 import pyBigWig
 import re
 import numpy
+import math
 
 from django.db import models
 from django.conf import settings
@@ -134,6 +135,28 @@ class MyUser(models.Model):
             'urls': urls,
         }
 
+    def get_personal_dataset_ids(self):
+        datasets = []
+
+        for ds in Dataset.objects.filter(owners__in=[self]):
+            datasets.append({
+                'id': ds.pk,
+                'name': ds.name,
+            })
+
+        return datasets
+
+    def get_favorite_dataset_ids(self):
+        datasets = []
+
+        for ds in [df.favorite for df in DataFavorite.objects.filter(owner=self)]:
+            datasets.append({
+                'id': ds.pk,
+                'name': ds.name,
+            })
+
+        return datasets
+
 
 class Dataset(models.Model):
     DATA_TYPES = (
@@ -249,39 +272,87 @@ class Dataset(models.Model):
         else:
             return resp.ok, '{}: {}'.format(resp.status_code, resp.reason)
 
-    def get_browser_view(self, query):
+    @staticmethod
+    def get_browser_view(chromosome, start, end, datasets):
 
-        query_split = re.split(':|-|\s', query)
+        # query_split = re.split(':|-|\s', query)
+        # try:
+        #     chromosome, start, end = query_split
+        #     start = int(start) - 1
+        #     end = int(end)
+        # except:
+        #     return 'Format error'
+        # out_query = {
+        #     'chromosome': chromosome,
+        #     'start': start,
+        #     'end': end,
+        # }
+        start = int(start) - 1
+        end = int(end)
 
-        try:
-            chromosome, start, end = query_split
-            start = int(start) - 1
-            end = int(end)
-        except:
-            return 'Format error'
+        data_ids = [int(d) for d in datasets.split(',')]
+        out_data = []
+        # out_dict = {
+        #     'chromsome': chromosome,
+        #     'start': start,
+        #     'end': end,
+        # }
 
-        out_dict = {
-            'chromsome': chromosome,
-            'start': start,
-            'end': end,
-        }
+        for _id in data_ids:
+            ds = Dataset.objects.get(pk=_id)
 
-        if self.ambiguous_url:
-            bigwig = pyBigWig.open(self.ambiguous_url)
-            intervals = bigwig.intervals(chromosome, start, end)
+            # if 'assembly' not in out_query:
+            #     out_query['assembly'] = ds.assembly.name
+            # elif ds.assembly.name != out_query['assembly']:
+            #     raise ValueError('Assembly is not consistent across datasets.')
 
-            out_dict['ambig_intervals'] = intervals
+            if ds.ambiguous_url:
+                bigwig = pyBigWig.open(ds.ambiguous_url)
+                intervals = bigwig.intervals(chromosome, start, end)
 
-        else:
-            bigwig_1 = pyBigWig.open(self.plus_url)
-            bigwig_2 = pyBigWig.open(self.minus_url)
-            intervals_1 = bigwig_1.intervals(chromosome, start, end)
-            intervals_2 = bigwig_2.intervals(chromosome, start, end)
+                _range = end - start
+                _interval = _range / 1000
 
-            out_dict['plus_intervals'] = intervals_1
-            out_dict['minus_intervals'] = intervals_2
+                bins = []
+                for i in range(1000):
+                    bins.append([
+                        math.ceil(start + _interval * i),
+                        math.ceil(start + _interval * (i + 1)),
+                        0,
+                    ])
 
-        return out_dict
+                interval_n = 0
+                bin_n = 0
+
+                while interval_n < len(intervals) and bin_n < len(bins):
+                    if intervals[interval_n][0] < bins[bin_n][1] and \
+                            bins[bin_n][0] <= intervals[interval_n][1]:
+                        if intervals[interval_n][2] > bins[bin_n][2]:
+                            bins[bin_n][2] = intervals[interval_n][2]
+                        bin_n += 1
+                    elif intervals[interval_n][1] < bins[bin_n][0]:
+                        interval_n += 1
+                    elif bins[bin_n][1] < intervals[interval_n][0] + 1:
+                        bin_n += 1
+
+                # out_dict['ambig_intervals'] = bins
+                out_data.append({
+                    'ambig_intervals': bins,
+                    'id': _id,
+                    'name': ds.name,
+                    'assembly': ds.assembly.name,
+                })
+
+        # else:
+        #     bigwig_1 = pyBigWig.open(self.plus_url)
+        #     bigwig_2 = pyBigWig.open(self.minus_url)
+        #     intervals_1 = bigwig_1.intervals(chromosome, start, end)
+        #     intervals_2 = bigwig_2.intervals(chromosome, start, end)
+        #
+        #     out_dict['plus_intervals'] = intervals_1
+        #     out_dict['minus_intervals'] = intervals_2
+
+        return out_data
 
     def get_metadata(self, my_user=None):
         metadata = dict()

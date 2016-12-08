@@ -19,8 +19,13 @@ let createMetaPlot = function(el, metaplot) {
     ReactDOM.render(<MetaPlot data={metaplot}/>, el);
 };
 
-let createBrowser = function(el, id, height, width) {
-    ReactDOM.render(<Browser id={id} height={height} width={width}/>, el);
+let createBrowser = function(el, id, assembly, height, width, selectable) {
+    ReactDOM.render(<Browser
+        id={id}
+        assembly={assembly}
+        height={height}
+        width={width}
+        selectable_datasets={selectable}/>, el);
 };
 
 let createSmallDataView = function(el, meta_data, plot_data, urls, args) {

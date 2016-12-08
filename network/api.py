@@ -7,13 +7,22 @@ from . import models
 from . import serializers
 
 
+class BrowserViewset(viewsets.ViewSet):
+
+    @detail_route(methods=['get'], url_path='view')
+    def browser_view(self, request):
+        query = self.request.GET.get('query')
+        datasets = self.request.GET.get('datasets')
+        return Response(models.Dataset.get_browser_view(query, datasets))
+
+
 class DatasetViewset(viewsets.ModelViewSet):
 
-    @detail_route(methods=['get'])
-    def browser_view(self, request, pk=None):
-        query = self.request.GET.get('query')
-        object = self.get_object()
-        return Response(object.get_browser_view(query))
+    # @detail_route(methods=['get'])
+    # def browser_view(self, request, pk=None):
+    #     query = self.request.GET.get('query')
+    #     datasets = self.request.GET.get('datasets')
+    #     return Response(models.Dataset.get_browser_view(query, datasets))
 
     @detail_route(methods=['get'], url_path='promoter-intersection')
     def promoter_intersection(self, request, pk=None):

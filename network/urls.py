@@ -10,6 +10,9 @@ router.register('dataset',
 router.register('user',
                 api.UserViewset,
                 base_name='user')
+router.register('browser',
+                api.BrowserViewset,
+                base_name='browser')
 
 urlpatterns = [
 
@@ -34,6 +37,7 @@ urlpatterns = [
 
     # url(r'^test/$', views.TestSmallDataView.as_view(), name='test'),
     url(r'^test/$', views.TestSmallUserView.as_view(), name='test'),
+    url(r'^browser/$', views.browser, name='browser'),
 
     url(r'^api/',
         include(router.urls, namespace='api')),

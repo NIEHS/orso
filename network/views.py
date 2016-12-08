@@ -6,6 +6,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import available_attrs, method_decorator
 from django.utils.cache import add_never_cache_headers
 from django.urls import reverse
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from functools import wraps
 
 from . import models, forms
@@ -35,6 +37,15 @@ def never_cache(view_func):
         return response
 
     return _wrapped_view_func
+
+
+@api_view()
+def browser(request):
+    chromosome = request.GET.get('chr')
+    start = request.GET.get('start')
+    end = request.GET.get('end')
+    datasets = request.GET.get('datasets')
+    return Response(models.Dataset.get_browser_view(chromosome, start, end, datasets))
 
 
 class NeverCacheFormMixin:
@@ -101,6 +112,16 @@ class Home(TemplateView, AddMyUserMixin):
 class Dataset(DetailView, AddMyUserMixin):
     template_name = 'network/dataset.html'
     model = models.Dataset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        login_user = context['login_user']
+
+        context['selectable'] = dict()
+        context['selectable']['personal'] = login_user.get_personal_dataset_ids()
+        context['selectable']['favorite'] = login_user.get_favorite_dataset_ids()
+
+        return context
 
 
 class MyUser(DetailView, AddMyUserMixin):
