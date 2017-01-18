@@ -60,7 +60,7 @@ def find_bin_values(bin_start, bin_num, bin_size, intervals, interval_starts,
                 max(bin_range[0], overlapping_interval[0]) + 1
             positions = max(0, val)
             coverage += positions * overlapping_interval[2]
-        bin_values.append(coverage)
+        bin_values.append(coverage / bin_size)
 
     return bin_values
 
@@ -101,8 +101,8 @@ def read_bed_by_chrom(bed_fn):
 
 class MetaPlot(object):
 
-    def __init__(self, bed_fn, bin_start=-2500, bin_num=50, bin_size=100, single_bw=None,
-                 paired_1_bw=None, paired_2_bw=None):
+    def __init__(self, bed_fn, bin_start=-2500, bin_num=50, bin_size=100,
+                 single_bw=None, paired_1_bw=None, paired_2_bw=None):
 
         self.bed_fn = bed_fn
         self.bin_start = bin_start
@@ -128,12 +128,6 @@ class MetaPlot(object):
         data_dict = defaultdict(list)
         self.data_matrix = {'matrix_rows': [], 'matrix_columns': []}
 
-        # if self.single_bw:
-        #     bw = pyBigWig.open(self.single_bw)
-        # else:
-        #     bw_1 = pyBigWig.open(self.paired_1_bw)
-        #     bw_2 = pyBigWig.open(self.paired_2_bw)
-
         for chromosome, bed_values in chrom_entries.items():
 
             if self.single_bw:
@@ -155,7 +149,8 @@ class MetaPlot(object):
                     strand = entry[5]
                 else:
                     strand = '.'
-                center = int((int(end) - int(start)) / 2 + int(start))
+                center = \
+                    int((int(end) - int(start) + 1) / 2 + (int(start) + 1))
 
                 if strand == '+' or strand == '.':
                     intersection_start = center + self.bin_start
@@ -272,7 +267,7 @@ class MetaPlot(object):
 
         metaplot = {
             'metaplot_values':
-                list(numpy.mean(matrix_values[0:2], axis=0)),
+                list(numpy.mean(matrix_values, axis=0)),
             'bin_values': self.data_matrix['matrix_columns'],
         }
 
