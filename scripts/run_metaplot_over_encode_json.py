@@ -168,8 +168,8 @@ def cli(json_input, bed_list, output_directory, processes):
     dataset_list = []
     for experiment in experiments:
         for dataset in experiment['datasets']:
-            if 'ce10' in dataset['assembly']:
-                dataset_list.append(dataset)
+            # if 'ce10' in dataset['assembly']:
+            dataset_list.append(dataset)
     p = multiprocessing.Pool(processes)
     # print(dataset_list[0])
     # process_dataset(dataset_list[0])
