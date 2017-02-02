@@ -3,6 +3,7 @@
 import requests
 import dateutil.parser
 import click
+import json
 
 HEADERS = {'accept': 'application/json'}
 SELECTION_HIERARCHY = [
@@ -282,6 +283,18 @@ class Encode(object):
                         'ChIP-seq' in self.exp_dict[name]['assay_term_name']:
                     experiment['visible'] = False
 
+    def add_detail(self):
+        for experiment in self.experiments:
+            experiment['detail'] = self.exp_dict[experiment['name']]
+            for dataset in experiment['datasets']:
+                if 'ambiguous' in dataset:
+                    dataset['ambiguous_detail'] = \
+                        self.bw_dict[dataset['ambiguous']]
+                if 'plus' in dataset:
+                    dataset['plus_detail'] = self.bw_dict[dataset['plus']]
+                if 'minus' in dataset:
+                    dataset['minus_detail'] = self.bw_dict[dataset['minus']]
+
     def get_experiments(self):
         self.call_api()
         self.associate_bw_to_exp()
@@ -292,21 +305,23 @@ class Encode(object):
         self.add_dataset_href_values()
         self.make_control_associations()
         self.mark_low_visibility_controls()
-        for experiment in self.experiments:
-            # print(experiment)
-            if not experiment['datasets'][0]['assembly'] == 'hg19':
-                print(experiment)
-                break
+        self.add_detail()
+
+    def make_experiment_json(self, output_file):
+        with open(output_file, 'w') as out:
+            json.dump(self.experiments, out, indent=4)
 
 
 @click.command()
-def cli():
+@click.argument('json_output')
+def cli(json_output):
     '''
     Interact with the ENCODE REST API.
     '''
 
     encode = Encode()
     encode.get_experiments()
+    encode.make_experiment_json(json_output)
 
 if __name__ == '__main__':
     cli()

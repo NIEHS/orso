@@ -31,6 +31,12 @@ def check_bigwigs(single_bw, paired_1_bw, paired_2_bw):
             print('pyBigWig is unable to open bigWig files.')
 
 
+def is_header(line):
+    line_split = line.strip().split('\t')
+    if 'track' in line_split[0] or 'browser' in line_split[0]:
+        return True
+
+
 def find_intersection(start, end, intervals, interval_starts, interval_ends):
     index_1 = bisect.bisect_right(interval_starts, start)
     index_2 = bisect.bisect_left(interval_ends, end)
@@ -92,9 +98,9 @@ def read_bed_by_chrom(bed_fn):
 
         for line in f:
             line_split = line.strip().split('\t')
-            chromosome = line_split[0]
-
-            chrom_entries[chromosome].append(line_split)
+            if not is_header(line):
+                chromosome = line_split[0]
+                chrom_entries[chromosome].append(line_split)
 
     return chrom_entries
 
@@ -128,84 +134,105 @@ class MetaPlot(object):
         data_dict = defaultdict(list)
         self.data_matrix = {'matrix_rows': [], 'matrix_columns': []}
 
+        if self.single_bw:
+            bw = pyBigWig.open(self.single_bw)
+            bw_chroms = set(bw.chroms().keys())
+            # intervals, interval_starts, interval_ends = \
+            #     get_bw_intervals(bw, chromosome)
+        else:
+            bw_1 = pyBigWig.open(self.paired_1_bw)
+            bw_2 = pyBigWig.open(self.paired_2_bw)
+            bw_chroms = set(bw_1.chroms().keys())
+            for chrom in bw_2.chroms().keys():
+                bw_chroms.add(chrom)
+            # intervals_1, interval_starts_1, interval_ends_1 = \
+            #     get_bw_intervals(bw_1, chromosome)
+            # intervals_2, interval_starts_2, interval_ends_2 = \
+            #     get_bw_intervals(bw_2, chromosome)
+
         for chromosome, bed_values in chrom_entries.items():
-
-            if self.single_bw:
-                bw = pyBigWig.open(self.single_bw)
-                intervals, interval_starts, interval_ends = \
-                    get_bw_intervals(bw, chromosome)
-            else:
-                bw_1 = pyBigWig.open(self.paired_1_bw)
-                bw_2 = pyBigWig.open(self.paired_2_bw)
-                intervals_1, interval_starts_1, interval_ends_1 = \
-                    get_bw_intervals(bw_1, chromosome)
-                intervals_2, interval_starts_2, interval_ends_2 = \
-                    get_bw_intervals(bw_2, chromosome)
-
-            for entry in bed_values:
-
-                chromosome, start, end, name = entry[:4]
-                if len(entry) > 5:
-                    strand = entry[5]
-                else:
-                    strand = '.'
-                center = \
-                    int((int(end) - int(start) + 1) / 2 + (int(start) + 1))
-
-                if strand == '+' or strand == '.':
-                    intersection_start = center + self.bin_start
-                    intersection_end = center + self.bin_start + \
-                        self.bin_num * self.bin_size
-                else:
-                    intersection_start = center - self.bin_start - \
-                        self.bin_num * self.bin_size
-                    intersection_end = center - self.bin_start
+            if chromosome in bw_chroms:
 
                 if self.single_bw:
-                    intersected_intervals = find_intersection(
-                        intersection_start, intersection_end, intervals,
-                        interval_starts, interval_ends)
-                    intersected_starts, intersected_ends = \
-                        get_starts_and_ends(intersected_intervals)
+                    # bw = pyBigWig.open(self.single_bw)
+                    intervals, interval_starts, interval_ends = \
+                        get_bw_intervals(bw, chromosome)
                 else:
-                    if strand == '+':
-                        intersected_intervals = find_intersection(
-                            intersection_start, intersection_end, intervals_1,
-                            interval_starts_1, interval_ends_1)
-                        intersected_starts, intersected_ends = \
-                            get_starts_and_ends(intersected_intervals)
-                    if strand == '-':
-                        intersected_intervals = find_intersection(
-                            intersection_start, intersection_end, intervals_2,
-                            interval_starts_2, interval_ends_2)
-                        intersected_starts, intersected_ends = \
-                            get_starts_and_ends(intersected_intervals)
-                    if strand == '.':
-                        intersected_intervals_1 = find_intersection(
-                            intersection_start, intersection_end, intervals_1,
-                            interval_starts_1, interval_ends_1)
-                        intersected_starts_1, intersected_ends_1 = \
-                            get_starts_and_ends(intersected_intervals_1)
+                    # bw_1 = pyBigWig.open(self.paired_1_bw)
+                    # bw_2 = pyBigWig.open(self.paired_2_bw)
+                    intervals_1, interval_starts_1, interval_ends_1 = \
+                        get_bw_intervals(bw_1, chromosome)
+                    intervals_2, interval_starts_2, interval_ends_2 = \
+                        get_bw_intervals(bw_2, chromosome)
 
-                        intersected_intervals_2 = find_intersection(
-                            intersection_start, intersection_end, intervals_2,
-                            interval_starts_2, interval_ends_2)
-                        intersected_starts_2, intersected_ends_2 = \
-                            get_starts_and_ends(intersected_intervals_2)
+                for entry in bed_values:
 
-                if strand == '+' or strand == '-':
-                    bin_values = find_bin_values(
-                        intersection_start,
-                        self.bin_num,
-                        self.bin_size,
-                        intersected_intervals,
-                        intersected_starts,
-                        intersected_ends)
-                    if strand == '-':
-                        bin_values.reverse()
+                    chromosome, start, end, name = entry[:4]
+                    if len(entry) > 5:
+                        strand = entry[5]
+                    else:
+                        strand = '.'
+                    center = \
+                        int((int(end) - int(start) + 1) / 2 + (int(start) + 1))
 
-                if strand == '.':
+                    if strand == '+' or strand == '.':
+                        intersection_start = center + self.bin_start
+                        intersection_end = center + self.bin_start + \
+                            self.bin_num * self.bin_size
+                    else:
+                        intersection_start = center - self.bin_start - \
+                            self.bin_num * self.bin_size
+                        intersection_end = center - self.bin_start
+
                     if self.single_bw:
+                        intersected_intervals = find_intersection(
+                            intersection_start, intersection_end, intervals,
+                            interval_starts, interval_ends)
+                        intersected_starts, intersected_ends = \
+                            get_starts_and_ends(intersected_intervals)
+                    else:
+                        if strand == '+':
+                            intersected_intervals = find_intersection(
+                                intersection_start,
+                                intersection_end,
+                                intervals_1,
+                                interval_starts_1,
+                                interval_ends_1,
+                            )
+                            intersected_starts, intersected_ends = \
+                                get_starts_and_ends(intersected_intervals)
+                        if strand == '-':
+                            intersected_intervals = find_intersection(
+                                intersection_start,
+                                intersection_end,
+                                intervals_2,
+                                interval_starts_2,
+                                interval_ends_2,
+                            )
+                            intersected_starts, intersected_ends = \
+                                get_starts_and_ends(intersected_intervals)
+                        if strand == '.':
+                            intersected_intervals_1 = find_intersection(
+                                intersection_start,
+                                intersection_end,
+                                intervals_1,
+                                interval_starts_1,
+                                interval_ends_1,
+                            )
+                            intersected_starts_1, intersected_ends_1 = \
+                                get_starts_and_ends(intersected_intervals_1)
+
+                            intersected_intervals_2 = find_intersection(
+                                intersection_start,
+                                intersection_end,
+                                intervals_2,
+                                interval_starts_2,
+                                interval_ends_2,
+                            )
+                            intersected_starts_2, intersected_ends_2 = \
+                                get_starts_and_ends(intersected_intervals_2)
+
+                    if strand == '+' or strand == '-':
                         bin_values = find_bin_values(
                             intersection_start,
                             self.bin_num,
@@ -213,33 +240,49 @@ class MetaPlot(object):
                             intersected_intervals,
                             intersected_starts,
                             intersected_ends)
-                    else:
-                        bin_values_1 = find_bin_values(
-                            intersection_start,
-                            self.bin_num,
-                            self.bin_size,
-                            intersected_intervals_1,
-                            intersected_starts_1,
-                            intersected_ends_1)
-                        bin_values_2 = find_bin_values(
-                            intersection_start,
-                            self.bin_num,
-                            self.bin_size,
-                            intersected_intervals_2,
-                            intersected_starts_2,
-                            intersected_ends_2)
-                        bin_values = \
-                            [x + y for x, y in zip(bin_values_1, bin_values_2)]
+                        if strand == '-':
+                            bin_values.reverse()
 
-                data_dict[name] = bin_values
+                    if strand == '.':
+                        if self.single_bw:
+                            bin_values = find_bin_values(
+                                intersection_start,
+                                self.bin_num,
+                                self.bin_size,
+                                intersected_intervals,
+                                intersected_starts,
+                                intersected_ends)
+                        else:
+                            bin_values_1 = find_bin_values(
+                                intersection_start,
+                                self.bin_num,
+                                self.bin_size,
+                                intersected_intervals_1,
+                                intersected_starts_1,
+                                intersected_ends_1)
+                            bin_values_2 = find_bin_values(
+                                intersection_start,
+                                self.bin_num,
+                                self.bin_size,
+                                intersected_intervals_2,
+                                intersected_starts_2,
+                                intersected_ends_2)
+                            bin_values = \
+                                [x + y for x, y in zip(bin_values_1,
+                                                       bin_values_2)]
+
+                    data_dict[name] = bin_values
 
         with open(self.bed_fn) as f:
             for line in f:
-                name = line.strip().split()[3]
-                self.data_matrix['matrix_rows'].append({
-                    'name': name,
-                    'row_values': data_dict[name]
-                })
+                if not is_header(line):
+                    chrom = line.strip().split()[0]
+                    name = line.strip().split()[3]
+                    if chrom in bw_chroms:
+                        self.data_matrix['matrix_rows'].append({
+                            'name': name,
+                            'row_values': data_dict[name]
+                        })
 
         for i in range(self.bin_num):
             s = self.bin_start + i * self.bin_size
@@ -264,7 +307,6 @@ class MetaPlot(object):
 
         for row in self.data_matrix['matrix_rows']:
             matrix_values.append(row['row_values'])
-
         metaplot = {
             'metaplot_values':
                 list(numpy.mean(matrix_values, axis=0)),
