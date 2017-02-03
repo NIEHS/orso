@@ -23,12 +23,16 @@ def check_bigwigs(single_bw, paired_1_bw, paired_2_bw):
             pyBigWig.open(single_bw)
         except RuntimeError:
             print('pyBigWig is unable to open bigWig file.')
+            return False
     else:
         try:
             pyBigWig.open(paired_1_bw)
             pyBigWig.open(paired_2_bw)
         except RuntimeError:
             print('pyBigWig is unable to open bigWig files.')
+            return False
+
+    return True
 
 
 def is_header(line):
@@ -124,9 +128,8 @@ class MetaPlot(object):
         assert isinstance(self.bin_num, int)
         assert isinstance(self.bin_size, int)
 
-        check_bigwigs(self.single_bw, self.paired_1_bw, self.paired_2_bw)
-
-        self.find_data_matrix()
+        if check_bigwigs(self.single_bw, self.paired_1_bw, self.paired_2_bw):
+            self.find_data_matrix()
 
     def find_data_matrix(self):
 
@@ -348,8 +351,11 @@ def cli(feature_bed, output_header, s, f, r, bin_start, bin_number, bin_size):
         paired_2_bw=r,
     )
 
-    metaplot.create_intersection_json(output_header + '.intersection.json')
-    metaplot.create_metaplot_json(output_header + '.metaplot.json')
+    try:
+        metaplot.create_intersection_json(output_header + '.intersection.json')
+        metaplot.create_metaplot_json(output_header + '.metaplot.json')
+    except AttributeError:
+        print('Unable to create output JSONs: {}'.format(str(vars(metaplot))))
 
 if __name__ == '__main__':
     cli()

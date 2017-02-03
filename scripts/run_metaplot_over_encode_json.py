@@ -32,7 +32,6 @@ def read(bed_list):
 def process_dataset(dataset):
     assembly = dataset['assembly']
     bed_files = BED_DICT[assembly]
-    # print(bed_files)
     if 'ambiguous_href' in dataset:
         print('{}: processing {}.'.format(
             str(datetime.now()),
@@ -40,7 +39,6 @@ def process_dataset(dataset):
         ))
         url = get_encode_url(dataset['ambiguous_href'])
         dataset_name = dataset['ambiguous']
-        # bigwig_name = '{}.bigWig'.format(dataset['ambiguous'])
         temp_bw = tempfile.NamedTemporaryFile()
         print('{}: downloading {}.'.format(
             str(datetime.now()),
@@ -63,15 +61,23 @@ def process_dataset(dataset):
                 dataset_name,
                 bed['name']
             )
-            print('{}: processing {} over {} complete.'.format(
-                str(datetime.now()),
-                dataset['ambiguous'],
-                bed['name'],
-            ))
-            meta.create_intersection_json(os.path.join(
-                OUTPUT_DIR, out_header + '.intersection.json'))
-            meta.create_metaplot_json(os.path.join(
-                OUTPUT_DIR, out_header + '.metaplot.json'))
+            try:
+                meta.create_intersection_json(os.path.join(
+                    OUTPUT_DIR, out_header + '.intersection.json'))
+                meta.create_metaplot_json(os.path.join(
+                    OUTPUT_DIR, out_header + '.metaplot.json'))
+            except:
+                print('{}: processing {} over {} failed.'.format(
+                    str(datetime.now()),
+                    dataset['ambiguous'],
+                    bed['name'],
+                ))
+            else:
+                print('{}: processing {} over {} complete.'.format(
+                    str(datetime.now()),
+                    dataset['ambiguous'],
+                    bed['name'],
+                ))
         temp_bw.close()
         print('{}: processing {} complete.'.format(
             str(datetime.now()),
@@ -87,8 +93,6 @@ def process_dataset(dataset):
         url_r = get_encode_url(dataset['minus_href'])
         dataset_f = dataset['plus']
         dataset_r = dataset['minus']
-        # bigwig_f = '{}.bigWig'.format(dataset_f)
-        # bigwig_r = '{}.bigWig'.format(dataset_r)
         temp_bw_f = tempfile.NamedTemporaryFile()
         temp_bw_r = tempfile.NamedTemporaryFile()
 
@@ -128,16 +132,25 @@ def process_dataset(dataset):
                 dataset_r,
                 bed['name']
             )
-            meta.create_intersection_json(os.path.join(
-                OUTPUT_DIR, out_header + '.intersection.json'))
-            meta.create_metaplot_json(os.path.join(
-                OUTPUT_DIR, out_header + '.metaplot.json'))
-            print('{}: processing {}/{} over {} complete.'.format(
-                str(datetime.now()),
-                dataset['plus'],
-                dataset['minus'],
-                bed['name'],
-            ))
+            try:
+                meta.create_intersection_json(os.path.join(
+                    OUTPUT_DIR, out_header + '.intersection.json'))
+                meta.create_metaplot_json(os.path.join(
+                    OUTPUT_DIR, out_header + '.metaplot.json'))
+            except:
+                print('{}: processing {}/{} over {} failed.'.format(
+                    str(datetime.now()),
+                    dataset['plus'],
+                    dataset['minus'],
+                    bed['name'],
+                ))
+            else:
+                print('{}: processing {}/{} over {} complete.'.format(
+                    str(datetime.now()),
+                    dataset['plus'],
+                    dataset['minus'],
+                    bed['name'],
+                ))
         temp_bw_f.close()
         temp_bw_r.close()
         print('{}: processing {}/{} complete.'.format(
@@ -168,12 +181,9 @@ def cli(json_input, bed_list, output_directory, processes):
     dataset_list = []
     for experiment in experiments:
         for dataset in experiment['datasets']:
-            # if 'ce10' in dataset['assembly']:
             dataset_list.append(dataset)
     p = multiprocessing.Pool(processes)
-    # print(dataset_list[0])
-    # process_dataset(dataset_list[0])
-    p.map(process_dataset, dataset_list[:4])
+    p.map(process_dataset, dataset_list)
 
 if __name__ == '__main__':
     cli()
