@@ -1,6 +1,5 @@
 import requests
 import pyBigWig
-import re
 import numpy
 import math
 
@@ -31,7 +30,8 @@ class MyUser(models.Model):
         counts = dict()
 
         counts['favorites'] = len(UserFavorite.objects.filter(owner=self))
-        counts['recommendations'] = len(UserRecommendation.objects.filter(owner=self))
+        counts['recommendations'] = \
+            len(UserRecommendation.objects.filter(owner=self))
 
         return counts
 
@@ -48,9 +48,12 @@ class MyUser(models.Model):
             detail['data_favorited_by_number'] += \
                 len(DataFavorite.objects.filter(favorite=ds))
 
-        detail['data_favorite_number'] = len(DataFavorite.objects.filter(owner=self))
-        detail['user_favorite_number'] = len(UserFavorite.objects.filter(owner=self))
-        detail['user_favorited_by_number'] = len(UserFavorite.objects.filter(favorite=self))
+        detail['data_favorite_number'] = \
+            len(DataFavorite.objects.filter(owner=self))
+        detail['user_favorite_number'] = \
+            len(UserFavorite.objects.filter(owner=self))
+        detail['user_favorited_by_number'] = \
+            len(UserFavorite.objects.filter(favorite=self))
 
         if my_user:
             detail['is_favorite'] = self.is_favorite(my_user)
@@ -98,8 +101,10 @@ class MyUser(models.Model):
 
     def get_urls(self):
         add_favorite = reverse('api:user-add-favorite', kwargs={'pk': self.pk})
-        remove_favorite = reverse('api:user-remove-favorite', kwargs={'pk': self.pk})
-        hide_recommendation = reverse('api:user-hide-recommendation', kwargs={'pk': self.pk})
+        remove_favorite = \
+            reverse('api:user-remove-favorite', kwargs={'pk': self.pk})
+        hide_recommendation = \
+            reverse('api:user-hide-recommendation', kwargs={'pk': self.pk})
         detail = reverse('user', kwargs={'pk': self.pk})
 
         return {
@@ -116,7 +121,7 @@ class MyUser(models.Model):
             return 'false'
 
     def is_recommended(self, my_user):
-        if UserRecommendation.objects.filter(owner=my_user, recommended=self).exists():
+        if UserRecommendation.objects.filter(owner=my_user, recommended=self).exists():  # noqa
             return 'true'
         else:
             return 'false'
@@ -124,7 +129,8 @@ class MyUser(models.Model):
     def get_display_data(self, my_user):
         plot_data = dict()
         plot_data['assembly_counts'] = self.get_dataset_assembly_counts()
-        plot_data['experiment_counts'] = self.get_dataset_experiment_type_counts()
+        plot_data['experiment_counts'] = \
+            self.get_dataset_experiment_type_counts()
 
         meta_data = self.get_user_details(my_user)
         urls = self.get_urls()
@@ -149,13 +155,22 @@ class MyUser(models.Model):
     def get_favorite_dataset_ids(self):
         datasets = []
 
-        for ds in [df.favorite for df in DataFavorite.objects.filter(owner=self)]:
+        for ds in [df.favorite for df in DataFavorite.objects.filter(owner=self)]:  # noqa
             datasets.append({
                 'id': ds.pk,
                 'name': ds.name,
             })
 
         return datasets
+
+
+class Project(models.Model):
+    owners = models.ManyToManyField('MyUser', blank=True)
+
+
+class Experiment(models.Model):
+    owners = models.ManyToManyField('MyUser', blank=True)
+    project = models.ForeignKey('Project', blank=True)
 
 
 class Dataset(models.Model):
@@ -191,6 +206,7 @@ class Dataset(models.Model):
     minus_url = models.URLField()
 
     owners = models.ManyToManyField('MyUser', blank=True)
+    experiment = models.ForeignKey('Experiment', blank=True, null=True)
     name = models.CharField(max_length=128)
     slug = models.CharField(
         max_length=128)
@@ -218,9 +234,12 @@ class Dataset(models.Model):
         pass
 
     def get_urls(self):
-        add_favorite = reverse('api:dataset-add-favorite', kwargs={'pk': self.pk})
-        remove_favorite = reverse('api:dataset-remove-favorite', kwargs={'pk': self.pk})
-        hide_recommendation = reverse('api:dataset-hide-recommendation', kwargs={'pk': self.pk})
+        add_favorite = \
+            reverse('api:dataset-add-favorite', kwargs={'pk': self.pk})
+        remove_favorite = \
+            reverse('api:dataset-remove-favorite', kwargs={'pk': self.pk})
+        hide_recommendation = \
+            reverse('api:dataset-hide-recommendation', kwargs={'pk': self.pk})
 
         edit = reverse('update_dataset', kwargs={'pk': self.pk})
         delete = reverse('delete_dataset', kwargs={'pk': self.pk})
@@ -242,7 +261,7 @@ class Dataset(models.Model):
             return 'false'
 
     def is_recommended(self, my_user):
-        if DataRecommendation.objects.filter(owner=my_user, recommended=self).exists():
+        if DataRecommendation.objects.filter(owner=my_user, recommended=self).exists():  # noqa
             return 'true'
         else:
             return 'false'
@@ -275,36 +294,14 @@ class Dataset(models.Model):
     @staticmethod
     def get_browser_view(chromosome, start, end, datasets):
 
-        # query_split = re.split(':|-|\s', query)
-        # try:
-        #     chromosome, start, end = query_split
-        #     start = int(start) - 1
-        #     end = int(end)
-        # except:
-        #     return 'Format error'
-        # out_query = {
-        #     'chromosome': chromosome,
-        #     'start': start,
-        #     'end': end,
-        # }
         start = int(start) - 1
         end = int(end)
 
         data_ids = [int(d) for d in datasets.split(',')]
         out_data = []
-        # out_dict = {
-        #     'chromsome': chromosome,
-        #     'start': start,
-        #     'end': end,
-        # }
 
         for _id in data_ids:
             ds = Dataset.objects.get(pk=_id)
-
-            # if 'assembly' not in out_query:
-            #     out_query['assembly'] = ds.assembly.name
-            # elif ds.assembly.name != out_query['assembly']:
-            #     raise ValueError('Assembly is not consistent across datasets.')
 
             if ds.ambiguous_url:
                 bigwig = pyBigWig.open(ds.ambiguous_url)
@@ -335,22 +332,12 @@ class Dataset(models.Model):
                     elif bins[bin_n][1] < intervals[interval_n][0] + 1:
                         bin_n += 1
 
-                # out_dict['ambig_intervals'] = bins
                 out_data.append({
                     'ambig_intervals': bins,
                     'id': _id,
                     'name': ds.name,
                     'assembly': ds.assembly.name,
                 })
-
-        # else:
-        #     bigwig_1 = pyBigWig.open(self.plus_url)
-        #     bigwig_2 = pyBigWig.open(self.minus_url)
-        #     intervals_1 = bigwig_1.intervals(chromosome, start, end)
-        #     intervals_2 = bigwig_2.intervals(chromosome, start, end)
-        #
-        #     out_dict['plus_intervals'] = intervals_1
-        #     out_dict['minus_intervals'] = intervals_2
 
         return out_data
 
@@ -499,9 +486,9 @@ class CorrelationCell(models.Model):
         corr_stats = dict()
         for assembly in GenomeAssembly.objects.all():
             promoter_mean, promoter_stdev = \
-                CorrelationCell.get_correlation_stats(assembly.default_annotation.promoters)
+                CorrelationCell.get_correlation_stats(assembly.default_annotation.promoters)  # noqa
             enhancer_mean, enhancer_stdev = \
-                CorrelationCell.get_correlation_stats(assembly.default_annotation.enhancers)
+                CorrelationCell.get_correlation_stats(assembly.default_annotation.enhancers)  # noqa
             corr_stats[assembly] = {
                 'promoter_mean': promoter_mean,
                 'promoter_stdev': promoter_stdev,
@@ -514,11 +501,14 @@ class CorrelationCell(models.Model):
             for i, ds_1 in enumerate(datasets):
                 for j, ds_2 in enumerate(datasets[i + 1:]):
                     scores = []
-                    for corr in CorrelationCell.objects.filter(x_dataset=ds_1, y_dataset=ds_2):
-                        if corr.genomic_regions == assembly.default_annotation.promoters:
+                    for corr in CorrelationCell.objects.filter(x_dataset=ds_1,
+                                                               y_dataset=ds_2):
+                        if corr.genomic_regions == \
+                                assembly.default_annotation.promoters:
                             mean = corr_stats[assembly]['promoter_mean']
                             stdev = corr_stats[assembly]['promoter_stdev']
-                        elif corr.genomic_regions == assembly.default_annotation.enhancers:
+                        elif corr.genomic_regions == \
+                                assembly.default_annotation.enhancers:
                             mean = corr_stats[assembly]['enhancer_mean']
                             stdev = corr_stats[assembly]['enhancer_stdev']
                         scores.append((corr.score - mean) / stdev)
