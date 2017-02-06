@@ -24,6 +24,6 @@ class DatasetForm(forms.ModelForm):
     class Meta:
         model = models.Dataset
         fields = (
-            'data_type', 'cell_type', 'antibody', 'description',
+            'data_type', 'cell_type', 'target', 'description',
             'ambiguous_url', 'plus_url', 'minus_url', 'name', 'assembly'
         )

@@ -166,38 +166,52 @@ class MyUser(models.Model):
 
 class Project(models.Model):
     owners = models.ManyToManyField('MyUser', blank=True)
+    name = models.CharField(max_length=128)
+    description = models.TextField(blank=True)
 
 
 class Experiment(models.Model):
     owners = models.ManyToManyField('MyUser', blank=True)
     project = models.ForeignKey('Project', blank=True)
+    name = models.CharField(max_length=128)
+    description = models.TextField(blank=True)
 
 
 class Dataset(models.Model):
     DATA_TYPES = (
-        ('Cage', 'Cage'),
-        ('ChiaPet', 'ChiaPet'),
-        ('ChipSeq', 'ChipSeq'),
-        ('DnaseDgf', 'DnaseDgf'),
-        ('DnaseSeq', 'DnaseSeq'),
-        ('FaireSeq', 'FaireSeq'),
-        ('Mapability', 'Mapability'),
-        ('Nucleosome', 'Nucleosome'),
-        ('Orchid', 'Orchid'),
-        ('RepliChip', 'RepliChip'),
-        ('RepliSeq', 'RepliSeq'),
-        ('RipSeq', 'RipSeq'),
-        ('RnaPet', 'RnaPet'),
-        ('RnaSeq', 'RnaSeq'),
-        ('StartSeq', 'StartSeq'),
-        ('Other', 'Other (describe in "description" field)'),
+        ('RAMPAGE', 'RAMPAGE'),
+        ('RNA-seq', 'RNA-seq'),
+        ('HiC', 'HiC'),
+        ('RNA-PET', 'RNA-PET'),
+        ('DNase-seq', 'DNase-seq'),
+        ('siRNA knockdown followed by RNA-seq',
+            'siRNA knockdown followed by RNA-seq'),
+        ('eCLIP', 'eCLIP'),
+        ('ChIA-PET', 'ChIA-PET'),
+        ('shRNA knockdown followed by RNA-seq',
+            'shRNA knockdown followed by RNA-seq'),
+        ('single cell isolation followed by RNA-seq',
+            'single cell isolation followed by RNA-seq'),
+        ('Repli-chip', 'Repli-chip'),
+        ('CRISPR genome editing followed by RNA-seq',
+            'CRISPR genome editing followed by RNA-seq'),
+        ('RIP-seq', 'RIP-seq'),
+        ('whole-genome shotgun bisulfite sequencing',
+            'whole-genome shotgun bisulfite sequencing'),
+        ('ATAC-seq', 'ATAC-seq'),
+        ('CAGE', 'CAGE'),
+        ('MNase-seq', 'MNase-seq'),
+        ('FAIRE-seq', 'FAIRE-seq'),
+        ('ChIP-seq', 'ChIP-seq'),
+        ('Repli-seq', 'Repli-seq'),
+        ('microRNA-seq', 'microRNA-seq'),
     )
 
     data_type = models.CharField(
-        max_length=16,
+        max_length=64,
         choices=DATA_TYPES)
     cell_type = models.CharField(max_length=128)
-    antibody = models.CharField(max_length=128, blank=True)
+    target = models.CharField(max_length=128, blank=True)
 
     description = models.TextField(blank=True)
 
@@ -349,8 +363,8 @@ class Dataset(models.Model):
         metadata['data_type'] = self.data_type
         metadata['cell_type'] = self.cell_type
 
-        if self.antibody:
-            metadata['antibody'] = self.antibody
+        if self.target:
+            metadata['target'] = self.target
         if self.ambiguous_url:
             metadata['strand'] = 'Unstranded'
         else:
