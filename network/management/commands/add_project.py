@@ -1,0 +1,209 @@
+from django.core.management.base import BaseCommand
+from network import models
+import json
+
+ASSEMBLY_TO_SPECIES = {
+    'hg19': 'Human',
+    'GRCh38': 'Human',
+    'mm9': 'Mouse',
+    'mm10': 'Mouse',
+    'ce10': 'Celeganz',
+    'ce11': 'Celeganz',
+    'dm3': 'Dmelanogaster',
+    'dm6': 'Dmelanogaster',
+}
+
+ASSAY_REPLACEMENT = {
+    'single cell isolation followed by RNA-seq': 'SingleCell RNA-seq',
+    'shRNA knockdown followed by RNA-seq': 'shRNA-KD RNA-seq',
+    'siRNA knockdown followed by RNA-seq': 'siRNA-KD RNA-seq',
+    'CRISPR genome editing followed by RNA-seq': 'CRISPR RNA-seq',
+    'whole-genome shotgun bisulfite sequencing': 'WGBS',
+    'microRNA-seq': 'miRNA-seq',
+}
+
+
+def get_encode_url(url):
+    return 'https://www.encodeproject.org{}'.format(url)
+
+
+class Command(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument('input_json', type=str)
+        parser.add_argument('project_name', type=str)
+
+        parser.add_argument(
+            '--owner',
+            action='store',
+            dest='owner',
+            type=str,
+            help='Assign project to owner',
+        )
+
+    def handle(self, *args, **options):
+
+        with open(options['input_json']) as _in:
+            experiments = json.load(_in)
+        experiment_description_fields = [
+            'assay_slims',
+            'assay_synonyms',
+            'assay_term_name',
+            'assay_title',
+            'biosample_summary',
+            'biosample_synonyms',
+            'biosample_term_name',
+            'biosample_type',
+            'category_slims',
+            'objective_slims',
+            'organ_slims',
+            'system_slims',
+        ]
+        dataset_description_fields = [
+            'assembly',
+            'biological_replicates',
+            'output_category',
+            'output_type',
+            'technical_replicates',
+        ]
+
+        project = models.Project.objects.create(
+            name=options['project_name'],
+        )
+        if options['owner']:
+            project.owner = options['owner']
+            project.save()
+
+        for experiment in experiments:
+            experiment_description = ''
+            for field in experiment_description_fields:
+                try:
+                    experiment['detail'][field]
+                except:
+                    pass
+                else:
+                    if type(experiment['detail'][field]) is list:
+                        value = '\n'.join(experiment['detail'][field])
+                    else:
+                        value = experiment['detail'][field]
+                    experiment_description += '{}:\n{}\n\n'.format(
+                        field,
+                        value
+                    )
+            experiment_description = experiment_description.rstrip()
+
+            if experiment['detail']['assay_term_name'] in ASSAY_REPLACEMENT:
+                assay = \
+                    ASSAY_REPLACEMENT[experiment['detail']['assay_term_name']]
+            else:
+                assay = experiment['detail']['assay_term_name']
+            base_name = assay.replace('-seq', 'seq').replace(' ', '_')
+
+            data_type = experiment['detail']['assay_term_name']
+
+            try:
+                target = '-'.join(
+                    experiment['detail']['target']
+                    .split('/')[2]
+                    .split('-')[:-1]
+                ).replace('%20', ' ')
+            except:
+                target = None
+            else:
+                base_name += '-{}'.format(
+                    target.replace(' ', '_').replace('-', '_'))
+
+            try:
+                biosample_term_name = \
+                    experiment['detail']['biosample_term_name']
+            except:
+                biosample_term_name = None
+            else:
+                base_name += '-{}'.format(
+                    ('').join(w.replace('-', '').capitalize() for w in
+                              biosample_term_name.split())
+                )
+            experiment_name = '{}-{}-{}'.format(
+                experiment['name'],
+                base_name,
+                ASSEMBLY_TO_SPECIES[experiment['datasets'][0]['assembly']],
+            )
+
+            e = models.Experiment.objects.create(
+                name=experiment_name,
+                project=project,
+                description=experiment_description,
+            )
+
+            for dataset in experiment['datasets']:
+
+                dataset_description = ''
+                for field in dataset_description_fields:
+                    for detail in ['ambiguous_detail',
+                                   'plus_detail',
+                                   'minus_detail']:
+                        values = set()
+                        try:
+                            dataset[detail][field]
+                        except:
+                            pass
+                        else:
+                            if type(dataset[detail][field]) is list:
+                                values.update(dataset[detail][field])
+                            else:
+                                values.add(dataset[detail][field])
+                            dataset_description += '{}:\n{}\n\n'.format(
+                                field,
+                                '\n'.join(str(val) for val in values)
+                            )
+                dataset_description = dataset_description.rstrip()
+
+                assembly = dataset['assembly']
+                try:
+                    ambiguous_url = get_encode_url(dataset['ambiguous_href'])
+                except:
+                    ambiguous_url = None
+                else:
+                    slug = dataset['ambiguous']
+
+                try:
+                    plus_url = get_encode_url(dataset['plus_href'])
+                    minus_url = get_encode_url(dataset['minus_href'])
+                except:
+                    plus_url = None
+                    minus_url = None
+                else:
+                    slug = '{}-{}'.format(
+                        dataset['plus'],
+                        dataset['minus'],
+                    )
+                dataset_name = '{}-{}-{}'.format(
+                    slug,
+                    base_name,
+                    assembly,
+                )
+
+                try:
+                    assembly_obj = \
+                        models.GenomeAssembly.objects.get(name=assembly)
+                except:
+                    assembly_obj = models.GenomeAssembly.objects.create(
+                        name=assembly
+                    )
+
+                ds = models.Dataset.objects.create(
+                    data_type=data_type,
+                    cell_type=biosample_term_name,
+                    description=dataset_description,
+                    experiment=e,
+                    name=dataset_name,
+                    slug=slug,
+                    assembly=assembly_obj,
+                )
+                if ambiguous_url:
+                    ds.ambiguous_url = ambiguous_url
+                if plus_url:
+                    ds.plus_url = plus_url
+                    ds.minus_url = minus_url
+                if target:
+                    ds.target = target
+                ds.save()
