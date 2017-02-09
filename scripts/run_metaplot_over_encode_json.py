@@ -11,6 +11,7 @@ import shutil
 
 BED_DICT = None
 OUTPUT_DIR = None
+TEMP_DIR = None
 
 
 def get_encode_url(url):
@@ -76,7 +77,7 @@ def process_dataset(dataset):
             ))
             url = get_encode_url(dataset['ambiguous_href'])
             dataset_name = dataset['ambiguous']
-            temp_bw = tempfile.NamedTemporaryFile()
+            temp_bw = tempfile.NamedTemporaryFile(dir=TEMP_DIR)
             print('{}: downloading {}.'.format(
                 str(datetime.now()),
                 dataset['ambiguous'],
@@ -130,8 +131,8 @@ def process_dataset(dataset):
             url_r = get_encode_url(dataset['minus_href'])
             dataset_f = dataset['plus']
             dataset_r = dataset['minus']
-            temp_bw_f = tempfile.NamedTemporaryFile()
-            temp_bw_r = tempfile.NamedTemporaryFile()
+            temp_bw_f = tempfile.NamedTemporaryFile(dir=TEMP_DIR)
+            temp_bw_r = tempfile.NamedTemporaryFile(dir=TEMP_DIR)
 
             print('{}: downloading {}.'.format(
                 str(datetime.now()),
@@ -212,6 +213,7 @@ def cli(json_input, bed_list, output_directory, processes):
 
     global BED_DICT
     global OUTPUT_DIR
+    global TEMP_DIR
     BED_DICT = read(bed_list)
     OUTPUT_DIR = output_directory
 
@@ -220,7 +222,10 @@ def cli(json_input, bed_list, output_directory, processes):
         for dataset in experiment['datasets']:
             dataset_list.append(dataset)
     p = multiprocessing.Pool(processes)
+    TEMP_DIR = tempfile.mkdtemp(dir=os.getcwd())
     p.map(process_dataset, dataset_list)
+    shutil.rmtree(TEMP_DIR)
+
 
 if __name__ == '__main__':
     cli()
