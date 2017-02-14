@@ -22,6 +22,30 @@ ASSAY_REPLACEMENT = {
     'microRNA-seq': 'miRNA-seq',
 }
 
+EXPERIMENT_DESCRIPTION_FIELDS = [
+    'assay_slims',
+    'assay_synonyms',
+    'assay_term_name',
+    'assay_title',
+    'biosample_summary',
+    'biosample_synonyms',
+    'biosample_term_name',
+    'biosample_type',
+    'category_slims',
+    'objective_slims',
+    'organ_slims',
+    'target',
+    'system_slims',
+]
+
+DATASET_DESCRIPTION_FIELDS = [
+    'assembly',
+    'biological_replicates',
+    'output_category',
+    'output_type',
+    'technical_replicates',
+]
+
 
 def get_encode_url(url):
     return 'https://www.encodeproject.org{}'.format(url)
@@ -44,27 +68,6 @@ class Command(BaseCommand):
 
         with open(options['input_json']) as _in:
             experiments = json.load(_in)
-        experiment_description_fields = [
-            'assay_slims',
-            'assay_synonyms',
-            'assay_term_name',
-            'assay_title',
-            'biosample_summary',
-            'biosample_synonyms',
-            'biosample_term_name',
-            'biosample_type',
-            'category_slims',
-            'objective_slims',
-            'organ_slims',
-            'system_slims',
-        ]
-        dataset_description_fields = [
-            'assembly',
-            'biological_replicates',
-            'output_category',
-            'output_type',
-            'technical_replicates',
-        ]
 
         project = models.Project.objects.create(
             name=options['project_name'],
@@ -75,7 +78,7 @@ class Command(BaseCommand):
 
         for experiment in experiments:
             experiment_description = ''
-            for field in experiment_description_fields:
+            for field in EXPERIMENT_DESCRIPTION_FIELDS:
                 try:
                     experiment['detail'][field]
                 except:
@@ -85,10 +88,13 @@ class Command(BaseCommand):
                         value = '\n'.join(experiment['detail'][field])
                     else:
                         value = experiment['detail'][field]
+                    if field == 'target':
+                        value = value.split('/')[2]
                     experiment_description += '{}:\n{}\n\n'.format(
                         field,
                         value
                     )
+
             experiment_description = experiment_description.rstrip()
 
             if experiment['detail']['assay_term_name'] in ASSAY_REPLACEMENT:
@@ -137,7 +143,7 @@ class Command(BaseCommand):
             for dataset in experiment['datasets']:
 
                 dataset_description = ''
-                for field in dataset_description_fields:
+                for field in DATASET_DESCRIPTION_FIELDS:
                     for detail in ['ambiguous_detail',
                                    'plus_detail',
                                    'minus_detail']:
