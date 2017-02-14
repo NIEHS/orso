@@ -668,7 +668,6 @@ class ExperimentRecommendation(Recommendation):
     recommended = models.ForeignKey('Experiment')
     reference_experiment = models.ForeignKey('Experiment', related_name='reference')  # noqa
 
-    #  TODO: fix for Experiment model
     def get_recommendation_data(self, my_user):
         plot_data = dict()
 
@@ -680,28 +679,18 @@ class ExperimentRecommendation(Recommendation):
             ref_assemblies.add(ds.assembly.id)
         shared_assemblies = rec_assemblies & ref_assemblies
 
-        # for assembly_id in shared_assemblies:
-        #     assembly = GenomeAssembly.objects.get(pk=assembly_id)
-        #     plot_data[assembly.name] = dict()
         plot_data = dict()
         plot_data['rec'] = self.recommended.get_average_intersections(
             assemblies=shared_assemblies)
         plot_data['ref'] = self.reference_experiment.get_average_intersections(
             assemblies=shared_assemblies)
-    #     plot_data['rec_promoter_intersection'] = \
-    #         self.recommended.promoter_intersection.intersection_values
-    #     plot_data['ref_promoter_intersection'] = \
-    #         self.reference_experiment.promoter_intersection.intersection_values
-    #     plot_data['rec_enhancer_intersection'] = \
-    #         self.recommended.enhancer_intersection.intersection_values
-    #     plot_data['ref_enhancer_intersection'] = \
-    #         self.reference_experiment.enhancer_intersection.intersection_values
+
         meta_data = self.recommended.get_metadata(my_user)
         meta_data['reference_name'] = self.reference_experiment.name
         urls = self.recommended.get_urls()
         urls['reference_detail'] = \
             reverse('experiment', kwargs={'pk': self.reference_experiment.pk})
-    #
+
         return {
             'plot_data': plot_data,
             'meta_data': meta_data,
@@ -709,7 +698,7 @@ class ExperimentRecommendation(Recommendation):
         }
 
 
-class CorrelationCell(models.Model):
+class ExperimentCorrelation(models.Model):
     x_experiment = models.ForeignKey('Experiment', related_name='x')
     y_experiment = models.ForeignKey('Experiment', related_name='y')
     genomic_regions = models.ForeignKey('GenomicRegions')
@@ -725,7 +714,8 @@ class CorrelationCell(models.Model):
     @staticmethod
     def get_correlation_stats(regions):
         corr_values = []
-        for corr in CorrelationCell.objects.filter(genomic_regions=regions):
+        for corr in ExperimentCorrelation.objects.filter(
+                genomic_regions=regions):
             corr_values.append(corr.score)
         if corr_values:
             return (
@@ -743,9 +733,11 @@ class CorrelationCell(models.Model):
         corr_stats = dict()
         for assembly in GenomeAssembly.objects.all():
             promoter_mean, promoter_stdev = \
-                CorrelationCell.get_correlation_stats(assembly.default_annotation.promoters)  # noqa
+                ExperimentCorrelation.get_correlation_stats(
+                    assembly.default_annotation.promoters)
             enhancer_mean, enhancer_stdev = \
-                CorrelationCell.get_correlation_stats(assembly.default_annotation.enhancers)  # noqa
+                ExperimentCorrelation.get_correlation_stats(
+                    assembly.default_annotation.enhancers)
             corr_stats[assembly] = {
                 'promoter_mean': promoter_mean,
                 'promoter_stdev': promoter_stdev,
@@ -754,13 +746,15 @@ class CorrelationCell(models.Model):
             }
 
         for assembly in GenomeAssembly.objects.all():
-            datasets = Dataset.objects.filter(assembly=assembly).order_by('id')
-            for i, ds_1 in enumerate(datasets):
-                for j, ds_2 in enumerate(datasets[i + 1:]):
+            experiments = []
+            for ds in Dataset.objects.filter(assembly=assembly).order_by('id'):
+                experiments.append(ds.experiment)
+            for i, exp_1 in enumerate(experiments):
+                for j, exp_2 in enumerate(experiments[i + 1:]):
                     scores = []
-                    for corr in CorrelationCell.objects.filter(
-                            x_experiment=ds_1,
-                            y_experiment=ds_2):
+                    for corr in ExperimentCorrelation.objects.filter(
+                            x_experiment=exp_1,
+                            y_experiment=exp_2):
                         if corr.genomic_regions == \
                                 assembly.default_annotation.promoters:
                             mean = corr_stats[assembly]['promoter_mean']
@@ -772,10 +766,12 @@ class CorrelationCell(models.Model):
                         scores.append((corr.score - mean) / stdev)
                     if scores:
                         z_scores.append({
-                            'dataset_1': ds_1.id,
-                            'dataset_2': ds_2.id,
-                            'users_1': [user.id for user in ds_1.owners.all()],
-                            'users_2': [user.id for user in ds_2.owners.all()],
+                            'experiment_1': exp_1.id,
+                            'experiment_2': exp_2.id,
+                            'users_1':
+                                [user.id for user in exp_1.owners.all()],
+                            'users_2':
+                                [user.id for user in exp_2.owners.all()],
                             'max_z_score': max(scores),
                         })
 
