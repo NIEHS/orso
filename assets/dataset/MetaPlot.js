@@ -6,8 +6,7 @@ import './MetaPlot.css';
 class MetaPlot extends React.Component {
 
     drawD3(svgElement, data){
-        var data = this.props.data,
-            margins = {
+        var margins = {
                 left: 40,
                 bottom: 60,
                 top: 10,

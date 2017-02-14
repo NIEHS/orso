@@ -205,8 +205,11 @@ def update_correlation_values():
             for i, ds_1 in enumerate(datasets):
                 for j, ds_2 in enumerate(datasets[i + 1:]):
                     if not (models.CorrelationCell.objects
-                            .filter(x_dataset=ds_1, y_dataset=ds_2, genomic_regions=regions)
-                            .exists()):
+                            .filter(
+                                x_experiment=ds_1,
+                                y_experiment=ds_2,
+                                genomic_regions=regions
+                            ).exists()):
 
                         if regions == annotation.promoters:
                             corr = Correlation(
@@ -220,8 +223,8 @@ def update_correlation_values():
                             ).get_correlation()[0]
 
                         models.CorrelationCell.objects.create(
-                            x_dataset=ds_1,
-                            y_dataset=ds_2,
+                            x_experiment=ds_1,
+                            y_experiment=ds_2,
                             genomic_regions=regions,
                             score=corr,
                         )

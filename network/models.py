@@ -2,6 +2,7 @@ import requests
 import pyBigWig
 import numpy
 import math
+from collections import defaultdict
 
 from django.db import models
 from django.conf import settings
@@ -46,10 +47,10 @@ class MyUser(models.Model):
         detail['data_favorited_by_number'] = 0
         for ds in datasets:
             detail['data_favorited_by_number'] += \
-                len(DataFavorite.objects.filter(favorite=ds))
+                len(ExperimentFavorite.objects.filter(favorite=ds))
 
         detail['data_favorite_number'] = \
-            len(DataFavorite.objects.filter(owner=self))
+            len(ExperimentFavorite.objects.filter(owner=self))
         detail['user_favorite_number'] = \
             len(UserFavorite.objects.filter(owner=self))
         detail['user_favorited_by_number'] = \
@@ -85,18 +86,18 @@ class MyUser(models.Model):
 
         return experiment_type_counts
 
-    def get_dataset_counts(self):
-        favorite_dataset_counts = \
-            len(DataFavorite.objects.filter(owner=self))
-        personal_dataset_counts = \
-            len(Dataset.objects.filter(owners__in=[self]))
-        recommended_dataset_counts = \
-            len(DataRecommendation.objects.filter(owner=self, hidden=False))
+    def get_experiment_counts(self):
+        favorite_experiment_counts = \
+            len(ExperimentFavorite.objects.filter(owner=self))
+        personal_experiment_counts = \
+            len(Experiment.objects.filter(owners__in=[self]))
+        recommended_experiment_counts = \
+            len(ExperimentRecommendation.objects.filter(owner=self, hidden=False))  # noqa
 
         return {
-            'favorite_dataset_counts': favorite_dataset_counts,
-            'personal_dataset_counts': personal_dataset_counts,
-            'recommended_dataset_counts': recommended_dataset_counts,
+            'favorite_experiment_counts': favorite_experiment_counts,
+            'personal_experiment_counts': personal_experiment_counts,
+            'recommended_experiment_counts': recommended_experiment_counts,
         }
 
     def get_urls(self):
@@ -141,27 +142,27 @@ class MyUser(models.Model):
             'urls': urls,
         }
 
-    def get_personal_dataset_ids(self):
-        datasets = []
+    def get_personal_experiment_ids(self):
+        experiments = []
 
-        for ds in Dataset.objects.filter(owners__in=[self]):
-            datasets.append({
-                'id': ds.pk,
-                'name': ds.name,
+        for exp in Experiment.objects.filter(owners__in=[self]):
+            experiments.append({
+                'id': exp.pk,
+                'name': exp.name,
             })
 
-        return datasets
+        return experiments
 
-    def get_favorite_dataset_ids(self):
-        datasets = []
+    def get_favorite_experiment_ids(self):
+        experiments = []
 
-        for ds in [df.favorite for df in DataFavorite.objects.filter(owner=self)]:  # noqa
-            datasets.append({
-                'id': ds.pk,
-                'name': ds.name,
+        for exp in [df.favorite for df in ExperimentFavorite.objects.filter(owner=self)]:  # noqa
+            experiments.append({
+                'id': exp.pk,
+                'name': exp.name,
             })
 
-        return datasets
+        return experiments
 
 
 class Project(models.Model):
@@ -171,13 +172,6 @@ class Project(models.Model):
 
 
 class Experiment(models.Model):
-    owners = models.ManyToManyField('MyUser', blank=True)
-    project = models.ForeignKey('Project', blank=True)
-    name = models.CharField(max_length=128)
-    description = models.TextField(blank=True)
-
-
-class Dataset(models.Model):
     DATA_TYPES = (
         ('RAMPAGE', 'RAMPAGE'),
         ('RNA-seq', 'RNA-seq'),
@@ -212,6 +206,238 @@ class Dataset(models.Model):
         choices=DATA_TYPES)
     cell_type = models.CharField(max_length=128)
     target = models.CharField(max_length=128, blank=True)
+    owners = models.ManyToManyField('MyUser', blank=True)
+    project = models.ForeignKey('Project', blank=True, null=True)
+    name = models.CharField(max_length=128)
+    slug = models.CharField(max_length=128)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        get_latest_by = 'created'
+
+    def get_absolute_url(self):
+        return reverse('experiment', kwargs={'pk': self.pk})
+
+    def get_urls(self):
+        add_favorite = \
+            reverse('api:experiment-add-favorite', kwargs={'pk': self.pk})
+        remove_favorite = \
+            reverse('api:experiment-remove-favorite', kwargs={'pk': self.pk})
+        hide_recommendation = \
+            reverse('api:experiment-hide-recommendation', kwargs={'pk': self.pk})
+
+        edit = reverse('update_experiment', kwargs={'pk': self.pk})
+        delete = reverse('delete_experiment', kwargs={'pk': self.pk})
+        detail = reverse('experiment', kwargs={'pk': self.pk})
+
+        return {
+            'add_favorite': add_favorite,
+            'remove_favorite': remove_favorite,
+            'hide_recommendation': hide_recommendation,
+            'edit': edit,
+            'delete': delete,
+            'detail': detail,
+        }
+
+    def is_favorite(self, my_user):
+        if ExperimentFavorite.objects.filter(owner=my_user, favorite=self).exists():  # noqa
+            return 'true'
+        else:
+            return 'false'
+
+    def is_recommended(self, my_user):
+        if ExperimentRecommendation.objects.filter(owner=my_user, recommended=self).exists():  # noqa
+            return 'true'
+        else:
+            return 'false'
+
+    def get_average_metaplots(self, assemblies=None):
+        if assemblies:
+            datasets = []
+            for assembly in assemblies:
+                assembly_obj = GenomeAssembly.objects.get(pk=assembly)
+                datasets.extend(Dataset.objects.filter(
+                    experiment=self, assembly=assembly_obj))
+        else:
+            datasets = Dataset.objects.filter(experiment=self)
+
+        average_metaplots = dict()
+        assembly_count = defaultdict(int)
+
+        for ds in datasets:
+            assembly_count[ds.assembly.name] += 1
+            if ds.assembly.name in average_metaplots:
+                for i, entry in enumerate(
+                    ds.promoter_metaplot.meta_plot['metaplot_values']
+                ):
+                    average_metaplots[ds.assembly.name]['promoters'][i] += \
+                        entry
+                for i, entry in enumerate(
+                    ds.enhancer_metaplot.meta_plot['metaplot_values']
+                ):
+                    average_metaplots[ds.assembly.name]['enhancers'][i] += \
+                        entry
+            else:
+                average_metaplots[ds.assembly.name] = {
+                    'promoters': ds.promoter_metaplot.meta_plot,
+                    'enhancers': ds.enhancer_metaplot.meta_plot,
+                }
+
+        #  Divide by assembly counts
+        for assembly in average_metaplots.keys():
+            count = assembly_count[assembly]
+            for i, entry in enumerate(
+                average_metaplots[assembly]['promoters']['metaplot_values']
+            ):
+                average_metaplots[assembly]['promoters']['metaplot_values'][i] = entry / count  # noqa
+            for i, entry in enumerate(
+                average_metaplots[assembly]['enhancers']['metaplot_values']
+            ):
+                average_metaplots[assembly]['enhancers']['metaplot_values'][i] = entry / count  # noqa
+
+        return average_metaplots
+
+    def get_average_intersections(self, assemblies=None):
+        if assemblies:
+            datasets = []
+            for assembly in assemblies:
+                assembly_obj = GenomeAssembly.objects.get(pk=assembly)
+                datasets.extend(Dataset.objects.filter(
+                    experiment=self, assembly=assembly_obj))
+        else:
+            datasets = Dataset.objects.filter(experiment=self)
+
+        average_intersections = dict()
+        assembly_count = defaultdict(int)
+
+        for ds in datasets:
+            assembly_count[ds.assembly.name] += 1
+            if ds.assembly.name in average_intersections:
+                for i, entry in enumerate(
+                    ds.promoter_intersection.intersection_values
+                ):
+                    average_intersections[ds.assembly.name]['promoters'][i] += entry  # noqa
+                for i, entry in enumerate(
+                    ds.enhancer_intersection.intersection_values
+                ):
+                    average_intersections[ds.assembly.name]['enhancers'][i] += entry  # noqa
+            else:
+                average_intersections[ds.assembly.name] = {
+                    'promoters': ds.promoter_intersection.intersection_values,
+                    'enhancers': ds.enhancer_intersection.intersection_values,
+                }
+
+        #  Divide by assembly counts
+        for assembly in average_intersections.keys():
+            count = assembly_count[assembly]
+            for i, entry in enumerate(
+                average_intersections[assembly]['promoters']
+            ):
+                average_intersections[assembly]['promoters'][i] = entry / count
+            for i, entry in enumerate(
+                average_intersections[assembly]['enhancers']
+            ):
+                average_intersections[assembly]['enhancers'][i] = entry / count
+
+        return average_intersections
+
+    def get_display_data(self, my_user):
+        return {
+            'plot_data': self.get_average_metaplots(),
+            'meta_data': self.get_metadata(my_user),
+            'urls': self.get_urls(),
+        }
+
+    @staticmethod
+    def check_valid_url(url):
+        # ensure URL is valid and doesn't raise a 400/500 error
+        try:
+            resp = requests.head(url)
+        except requests.exceptions.ConnectionError:
+            return False, '{} not found.'.format(url)
+        else:
+            return resp.ok, '{}: {}'.format(resp.status_code, resp.reason)
+
+    @staticmethod
+    def get_browser_view(chromosome, start, end, datasets):
+        # TODO: iterate through datasets to get browser data
+        start = int(start) - 1
+        end = int(end)
+
+        data_ids = [int(d) for d in datasets.split(',')]
+        out_data = []
+
+        for _id in data_ids:
+            ds = Dataset.objects.get(pk=_id)
+
+            if ds.ambiguous_url:
+                bigwig = pyBigWig.open(ds.ambiguous_url)
+                intervals = bigwig.intervals(chromosome, start, end)
+
+                _range = end - start
+                _interval = _range / 1000
+
+                bins = []
+                for i in range(1000):
+                    bins.append([
+                        math.ceil(start + _interval * i),
+                        math.ceil(start + _interval * (i + 1)),
+                        0,
+                    ])
+
+                interval_n = 0
+                bin_n = 0
+
+                while interval_n < len(intervals) and bin_n < len(bins):
+                    if intervals[interval_n][0] < bins[bin_n][1] and \
+                            bins[bin_n][0] <= intervals[interval_n][1]:
+                        if intervals[interval_n][2] > bins[bin_n][2]:
+                            bins[bin_n][2] = intervals[interval_n][2]
+                        bin_n += 1
+                    elif intervals[interval_n][1] < bins[bin_n][0]:
+                        interval_n += 1
+                    elif bins[bin_n][1] < intervals[interval_n][0] + 1:
+                        bin_n += 1
+
+                out_data.append({
+                    'ambig_intervals': bins,
+                    'id': _id,
+                    'name': ds.name,
+                    'assembly': ds.assembly.name,
+                })
+
+        return out_data
+
+    def get_metadata(self, my_user=None):
+        metadata = dict()
+
+        metadata['id'] = self.id
+        metadata['name'] = self.name
+        metadata['data_type'] = self.data_type
+        metadata['cell_type'] = self.cell_type
+
+        if self.target:
+            metadata['target'] = self.target
+        # if self.ambiguous_url:
+        #     metadata['strand'] = 'Unstranded'
+        # else:
+        #     metadata['strand'] = 'Stranded'
+        if self.description:
+            metadata['description'] = self.description
+
+        metadata['owners'] = []
+        if self.owners:
+            for owner in self.owners.all():
+                metadata['owners'].append(owner.user.username)
+
+        if my_user:
+            metadata['is_favorite'] = self.is_favorite(my_user)
+            metadata['is_recommended'] = self.is_recommended(my_user)
+
+        return metadata
+
+
+class Dataset(models.Model):
 
     description = models.TextField(blank=True)
 
@@ -219,7 +445,6 @@ class Dataset(models.Model):
     plus_url = models.URLField()
     minus_url = models.URLField()
 
-    owners = models.ManyToManyField('MyUser', blank=True)
     experiment = models.ForeignKey('Experiment', blank=True, null=True)
     name = models.CharField(max_length=128)
     slug = models.CharField(
@@ -247,38 +472,38 @@ class Dataset(models.Model):
     def get_favorites_count(self):
         pass
 
-    def get_urls(self):
-        add_favorite = \
-            reverse('api:dataset-add-favorite', kwargs={'pk': self.pk})
-        remove_favorite = \
-            reverse('api:dataset-remove-favorite', kwargs={'pk': self.pk})
-        hide_recommendation = \
-            reverse('api:dataset-hide-recommendation', kwargs={'pk': self.pk})
-
-        edit = reverse('update_dataset', kwargs={'pk': self.pk})
-        delete = reverse('delete_dataset', kwargs={'pk': self.pk})
-        detail = reverse('dataset', kwargs={'pk': self.pk})
-
-        return {
-            'add_favorite': add_favorite,
-            'remove_favorite': remove_favorite,
-            'hide_recommendation': hide_recommendation,
-            'edit': edit,
-            'delete': delete,
-            'detail': detail,
-        }
-
-    def is_favorite(self, my_user):
-        if DataFavorite.objects.filter(owner=my_user, favorite=self).exists():
-            return 'true'
-        else:
-            return 'false'
-
-    def is_recommended(self, my_user):
-        if DataRecommendation.objects.filter(owner=my_user, recommended=self).exists():  # noqa
-            return 'true'
-        else:
-            return 'false'
+    # def get_urls(self):
+    #     add_favorite = \
+    #         reverse('api:dataset-add-favorite', kwargs={'pk': self.pk})
+    #     remove_favorite = \
+    #         reverse('api:dataset-remove-favorite', kwargs={'pk': self.pk})
+    #     hide_recommendation = \
+    #         reverse('api:dataset-hide-recommendation', kwargs={'pk': self.pk})
+    #
+    #     edit = reverse('update_dataset', kwargs={'pk': self.pk})
+    #     delete = reverse('delete_dataset', kwargs={'pk': self.pk})
+    #     detail = reverse('dataset', kwargs={'pk': self.pk})
+    #
+    #     return {
+    #         'add_favorite': add_favorite,
+    #         'remove_favorite': remove_favorite,
+    #         'hide_recommendation': hide_recommendation,
+    #         'edit': edit,
+    #         'delete': delete,
+    #         'detail': detail,
+    #     }
+    #
+    # def is_favorite(self, my_user):
+    #     if DataFavorite.objects.filter(owner=my_user, favorite=self).exists():
+    #         return 'true'
+    #     else:
+    #         return 'false'
+    #
+    # def is_recommended(self, my_user):
+    #     if DataRecommendation.objects.filter(owner=my_user, recommended=self).exists():  # noqa
+    #         return 'true'
+    #     else:
+    #         return 'false'
 
     def get_display_data(self, my_user):
         plot_data = dict()
@@ -355,33 +580,33 @@ class Dataset(models.Model):
 
         return out_data
 
-    def get_metadata(self, my_user=None):
-        metadata = dict()
-
-        metadata['id'] = self.id
-        metadata['name'] = self.name
-        metadata['data_type'] = self.data_type
-        metadata['cell_type'] = self.cell_type
-
-        if self.target:
-            metadata['target'] = self.target
-        if self.ambiguous_url:
-            metadata['strand'] = 'Unstranded'
-        else:
-            metadata['strand'] = 'Stranded'
-        if self.description:
-            metadata['description'] = self.description
-
-        metadata['owners'] = []
-        if self.owners:
-            for owner in self.owners.all():
-                metadata['owners'].append(owner.user.username)
-
-        if my_user:
-            metadata['is_favorite'] = self.is_favorite(my_user)
-            metadata['is_recommended'] = self.is_recommended(my_user)
-
-        return metadata
+    # def get_metadata(self, my_user=None):
+    #     metadata = dict()
+    #
+    #     metadata['id'] = self.id
+    #     metadata['name'] = self.name
+    #     metadata['data_type'] = self.data_type
+    #     metadata['cell_type'] = self.cell_type
+    #
+    #     if self.target:
+    #         metadata['target'] = self.target
+    #     if self.ambiguous_url:
+    #         metadata['strand'] = 'Unstranded'
+    #     else:
+    #         metadata['strand'] = 'Stranded'
+    #     if self.description:
+    #         metadata['description'] = self.description
+    #
+    #     metadata['owners'] = []
+    #     if self.owners:
+    #         for owner in self.owners.all():
+    #             metadata['owners'].append(owner.user.username)
+    #
+    #     if my_user:
+    #         metadata['is_favorite'] = self.is_favorite(my_user)
+    #         metadata['is_recommended'] = self.is_recommended(my_user)
+    #
+    #     return metadata
 
 
 class MetaPlot(models.Model):
@@ -419,8 +644,8 @@ class UserFavorite(Favorite):
     favorite = models.ForeignKey('MyUser', related_name='favorite')
 
 
-class DataFavorite(Favorite):
-    favorite = models.ForeignKey('Dataset')
+class ExperimentFavorite(Favorite):
+    favorite = models.ForeignKey('Experiment')
 
 
 class Recommendation(models.Model):
@@ -439,27 +664,44 @@ class UserRecommendation(Recommendation):
     recommended = models.ForeignKey('MyUser', related_name='recommended')
 
 
-class DataRecommendation(Recommendation):
-    recommended = models.ForeignKey('Dataset')
-    reference_dataset = models.ForeignKey('Dataset', related_name='reference')
+class ExperimentRecommendation(Recommendation):
+    recommended = models.ForeignKey('Experiment')
+    reference_experiment = models.ForeignKey('Experiment', related_name='reference')  # noqa
 
+    #  TODO: fix for Experiment model
     def get_recommendation_data(self, my_user):
         plot_data = dict()
-        plot_data['rec_promoter_intersection'] = \
-            self.recommended.promoter_intersection.intersection_values
-        plot_data['ref_promoter_intersection'] = \
-            self.reference_dataset.promoter_intersection.intersection_values
-        plot_data['rec_enhancer_intersection'] = \
-            self.recommended.enhancer_intersection.intersection_values
-        plot_data['ref_enhancer_intersection'] = \
-            self.reference_dataset.enhancer_intersection.intersection_values
+
+        rec_assemblies = set()
+        ref_assemblies = set()
+        for ds in Dataset.objects.filter(experiment=self.recommended):
+            rec_assemblies.add(ds.assembly.id)
+        for ds in Dataset.objects.filter(experiment=self.reference_experiment):
+            ref_assemblies.add(ds.assembly.id)
+        shared_assemblies = rec_assemblies & ref_assemblies
+
+        # for assembly_id in shared_assemblies:
+        #     assembly = GenomeAssembly.objects.get(pk=assembly_id)
+        #     plot_data[assembly.name] = dict()
+        plot_data = dict()
+        plot_data['rec'] = self.recommended.get_average_intersections(
+            assemblies=shared_assemblies)
+        plot_data['ref'] = self.reference_experiment.get_average_intersections(
+            assemblies=shared_assemblies)
+    #     plot_data['rec_promoter_intersection'] = \
+    #         self.recommended.promoter_intersection.intersection_values
+    #     plot_data['ref_promoter_intersection'] = \
+    #         self.reference_experiment.promoter_intersection.intersection_values
+    #     plot_data['rec_enhancer_intersection'] = \
+    #         self.recommended.enhancer_intersection.intersection_values
+    #     plot_data['ref_enhancer_intersection'] = \
+    #         self.reference_experiment.enhancer_intersection.intersection_values
         meta_data = self.recommended.get_metadata(my_user)
-        meta_data['reference_name'] = self.reference_dataset.name
+        meta_data['reference_name'] = self.reference_experiment.name
         urls = self.recommended.get_urls()
-
         urls['reference_detail'] = \
-            reverse('dataset', kwargs={'pk': self.reference_dataset.pk})
-
+            reverse('experiment', kwargs={'pk': self.reference_experiment.pk})
+    #
         return {
             'plot_data': plot_data,
             'meta_data': meta_data,
@@ -468,8 +710,8 @@ class DataRecommendation(Recommendation):
 
 
 class CorrelationCell(models.Model):
-    x_dataset = models.ForeignKey('Dataset', related_name='x')
-    y_dataset = models.ForeignKey('Dataset', related_name='y')
+    x_experiment = models.ForeignKey('Experiment', related_name='x')
+    y_experiment = models.ForeignKey('Experiment', related_name='y')
     genomic_regions = models.ForeignKey('GenomicRegions')
 
     score = models.FloatField()
@@ -477,7 +719,7 @@ class CorrelationCell(models.Model):
 
     class Meta:
         unique_together = (
-            ('x_dataset', 'y_dataset', 'genomic_regions',),
+            ('x_experiment', 'y_experiment', 'genomic_regions',),
         )
 
     @staticmethod
@@ -493,6 +735,7 @@ class CorrelationCell(models.Model):
         else:
             return (None, None)
 
+    #  TODO: check for new Project>Experiment>Dataset hierarchy
     @staticmethod
     def get_z_score_list():
         z_scores = []
@@ -515,8 +758,9 @@ class CorrelationCell(models.Model):
             for i, ds_1 in enumerate(datasets):
                 for j, ds_2 in enumerate(datasets[i + 1:]):
                     scores = []
-                    for corr in CorrelationCell.objects.filter(x_dataset=ds_1,
-                                                               y_dataset=ds_2):
+                    for corr in CorrelationCell.objects.filter(
+                            x_experiment=ds_1,
+                            y_experiment=ds_2):
                         if corr.genomic_regions == \
                                 assembly.default_annotation.promoters:
                             mean = corr_stats[assembly]['promoter_mean']

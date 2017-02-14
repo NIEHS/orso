@@ -16,6 +16,57 @@ class BrowserViewset(viewsets.ViewSet):
         return Response(models.Dataset.get_browser_view(query, datasets))
 
 
+class ExperimentViewset(viewsets.ModelViewSet):
+
+    # @detail_route(methods=['get'])
+    # def browser_view(self, request, pk=None):
+    #     query = self.request.GET.get('query')
+    #     datasets = self.request.GET.get('datasets')
+    #     return Response(models.Dataset.get_browser_view(query, datasets))
+    #
+    # @detail_route(methods=['get'], url_path='promoter-intersection')
+    # def promoter_intersection(self, request, pk=None):
+    #     object = self.get_object()
+    #     return Response(object.promoter_intersection.intersection_values)
+
+    def get_queryset(self):
+        return models.Experiment.objects.all()
+
+    def get_serializer_class(self):
+        return serializers.ExperimentSerializer
+
+    @detail_route(methods=['get'], url_path='add-favorite')
+    def add_experiment_to_favorites(self, request, pk=None):
+        object = self.get_object()
+        my_user = models.MyUser.objects.get(user=self.request.user)
+
+        models.ExperimentFavorite.objects.create(
+            owner=my_user,
+            favorite=object,
+        )
+
+        return HttpResponse(status=202)
+
+    @detail_route(methods=['get'], url_path='remove-favorite')
+    def remove_experiment_from_favorites(self, request, pk=None):
+        object = self.get_object()
+        my_user = models.MyUser.objects.get(user=self.request.user)
+
+        favorite = models.ExperimentFavorite.objects.get(owner=my_user, favorite=object)
+        favorite.delete()
+
+        return HttpResponse(status=202)
+
+    @detail_route(methods=['get'], url_path='hide-recommendation')
+    def hide_experiment_recommendation(self, request, pk=None):
+        object = self.get_object()
+        my_user = models.MyUser.objects.get(user=self.request.user)
+        recommendation = models.ExperimentRecommendation.objects.get(owner=my_user, recommended=object)
+        recommendation.hidden = True
+        recommendation.save()
+        return HttpResponse(status=202)
+
+
 class DatasetViewset(viewsets.ModelViewSet):
 
     # @detail_route(methods=['get'])

@@ -3,22 +3,22 @@
 {% block content %}
 
 <div class="container">
-    <h3>{{dataset.name}}</h3>
+    <h3>{{experiment.name}}</h3>
 
-    {% if dataset.data_type %}
-    <p>Data type: {{dataset.data_type}}</p>
+    {% if experiment.data_type %}
+    <p>Data type: {{experiment.data_type}}</p>
     {% endif %}
 
-    {% if dataset.cell_type %}
-    <p>Cell type: {{dataset.cell_type}}</p>
+    {% if experiment.cell_type %}
+    <p>Cell type: {{experiment.cell_type}}</p>
     {% endif %}
 
-    {% if dataset.antibody %}
-    <p>Antibody: {{dataset.antibody}}</p>
+    {% if experiment.target %}
+    <p>Antibody: {{experiment.target}}</p>
     {% endif %}
 
-    {% if dataset.description %}
-    <p>Description: {{dataset.description}}</p>
+    {% if experiment.description %}
+    <p>Description: {{experiment.description}}</p>
     {% endif %}
 
     <div class="row">
@@ -38,22 +38,20 @@
 
 {% block extra-js %}
 <script type='text/javascript'>
+var assembly_name = Object.keys({{display_data.plot_data|safe}})[0];
+var display_data = {{display_data|safe}};
 $(document).ready(function(){
-    {% if dataset.promoter_metaplot.meta_plot %}
-        window.apps.createMetaPlot(
-            $('#meta1')[0],
-            {{dataset.promoter_metaplot.meta_plot|safe}}
-        );
-    {% endif %}
-    {% if dataset.enhancer_metaplot.meta_plot %}
-        window.apps.createMetaPlot(
-            $('#meta2')[0],
-            {{dataset.enhancer_metaplot.meta_plot|safe}}
-        );
-    {% endif %}
+    window.apps.createMetaPlot(
+        $('#meta1')[0],
+        display_data['plot_data'][assembly_name]['promoters']
+    );
+    window.apps.createMetaPlot(
+        $('#meta2')[0],
+        display_data['plot_data'][assembly_name]['enhancers']
+    );
     window.apps.createBrowser(
         $('#browser')[0],
-        {{dataset.id}},
+        {{experiment.id}},
         '{{dataset.assembly}}',
         200,
         $('#browser').width(),

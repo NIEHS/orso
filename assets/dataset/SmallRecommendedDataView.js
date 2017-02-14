@@ -65,6 +65,7 @@ class SmallRecommendedDataView extends React.Component {
     render(){
         var id_select = 'panel_' + this.props.meta_data['id'];
         var id_css_select = '#' + id_select;
+        var assembly = Object.keys(this.props.plot_data['rec'])[0];
 
         return <div className="panel panel-default" id={id_select}>
             <div className="panel-heading">
@@ -115,8 +116,7 @@ class SmallRecommendedDataView extends React.Component {
                         <ul>
                             <li><b>Data type:</b> {this.props.meta_data['data_type']}</li>
                             <li><b>Cell type:</b> {this.props.meta_data['cell_type']}</li>
-                            <li><b>Antibody:</b> {this.props.meta_data['antibody']}</li>
-                            <li>{this.props.meta_data['strand']}</li>
+                            <li><b>Target:</b> {this.props.meta_data['target']}</li>
                             {this.props.meta_data['description'] &&
                                 <li><b>Description:</b> {this.props.meta_data['description']}</li>}
                         </ul>
@@ -129,16 +129,16 @@ class SmallRecommendedDataView extends React.Component {
                                 <IntersectionComparison
                                     x_name={this.props.meta_data['name']}
                                     y_name={this.props.meta_data['reference_name']}
-                                    x_data={this.props.plot_data['rec_promoter_intersection']}
-                                    y_data={this.props.plot_data['ref_promoter_intersection']}/>
+                                    x_data={this.props.plot_data['rec'][assembly]['promoters']}
+                                    y_data={this.props.plot_data['ref'][assembly]['promoters']}/>
                             </div>
                             <div style={{height:"150px", padding:0}} className="col-sm-6">
                                 <h4 style={{textAlign:"center"}}>Enhancers</h4>
                                 <IntersectionComparison style={{position:"absolute"}}
                                     x_name={this.props.meta_data['name']}
                                     y_name={this.props.meta_data['reference_name']}
-                                    x_data={this.props.plot_data['rec_enhancer_intersection']}
-                                    y_data={this.props.plot_data['ref_enhancer_intersection']}/>
+                                    x_data={this.props.plot_data['rec'][assembly]['enhancers']}
+                                    y_data={this.props.plot_data['ref'][assembly]['enhancers']}/>
                             </div>
                         </div>
                     </div>

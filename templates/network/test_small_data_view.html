@@ -1,4 +1,4 @@
-{% extends 'base_DATASETS.html' %}
+{% extends 'base_EXPERIMENTS.html' %}
 
 {% block extra-js %}
 <script type='text/javascript'>
@@ -12,7 +12,7 @@ $(document).ready(function(){
         'display_remove_favorite': true
     };
     window.apps.appendSmallDataView(
-        $('#dataset_container')[0],
+        $('#experiment_container')[0],
         {{i.meta_data|safe}},
         {{i.plot_data|safe}},
         {{i.urls|safe}},

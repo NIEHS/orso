@@ -17,7 +17,7 @@
 
 <div class="container container-fluid">
     <div id="processing_container"></div>
-    <div id="dataset_container"></div>
+    <div id="experiment_container"></div>
 </div>
 {% endblock content %}
 
@@ -27,7 +27,7 @@
 {% if i.promoter_metaplot and i.enhancer_metaplot %}
 $(document).ready(function(){
     window.apps.appendSmallFavoriteDataView(
-        $('#dataset_container')[0],
+        $('#experiment_container')[0],
         {{i.get_metadata|safe}},
         {{i.promoter_metaplot.meta_plot|safe}},
         {{i.enhancer_metaplot.meta_plot|safe}},

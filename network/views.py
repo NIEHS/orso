@@ -71,33 +71,33 @@ class AddMyUserMixin(ContextMixin, LoginRequiredMixin):
         return context
 
 
-class DatasetCreate(NeverCacheFormMixin, CreateView):
-    model = models.Dataset
-    form_class = forms.DatasetForm
+class ExperimentCreate(NeverCacheFormMixin, CreateView):
+    model = models.Experiment
+    # form_class = forms.DatasetForm
 
-    def form_valid(self, form):
-        form.instance.slug = form.instance.name
-        form.instance.promoter_intersection = None
-        form.instance.enhancer_intersection = None
-        form.instance.promoter_metaplot = None
-        form.instance.enhancer_metaplot = None
-
-        self.object = form.save()
-        self.object.owners.add(models.MyUser.objects.get(user=self.request.user))
-        return super(DatasetCreate, self).form_valid(form)
-
-
-class DatasetUpdate(NeverCacheFormMixin, UpdateView):
-    model = models.Dataset
-    form_class = forms.DatasetForm
+    # def form_valid(self, form):
+    #     form.instance.slug = form.instance.name
+    #     form.instance.promoter_intersection = None
+    #     form.instance.enhancer_intersection = None
+    #     form.instance.promoter_metaplot = None
+    #     form.instance.enhancer_metaplot = None
+    #
+    #     self.object = form.save()
+    #     self.object.owners.add(models.MyUser.objects.get(user=self.request.user))
+    #     return super(DatasetCreate, self).form_valid(form)
 
 
-class DatasetDelete(NeverCacheFormMixin, DeleteView):
-    model = models.Dataset
-    form_class = forms.DatasetForm
+class ExperimentUpdate(NeverCacheFormMixin, UpdateView):
+    model = models.Experiment
+    # form_class = forms.ExperimentForm
+
+
+class ExperimentDelete(NeverCacheFormMixin, DeleteView):
+    model = models.Experiment
+    # form_class = forms.DatasetForm
 
     def get_success_url(self):
-        return reverse('personal_datasets')
+        return reverse('personal_experiments')
 
 
 class Index(View):
@@ -109,17 +109,20 @@ class Home(TemplateView, AddMyUserMixin):
     template_name = 'network/home.html'
 
 
-class Dataset(DetailView, AddMyUserMixin):
-    template_name = 'network/dataset.html'
-    model = models.Dataset
+class Experiment(DetailView, AddMyUserMixin):
+    template_name = 'network/experiment.html'
+    model = models.Experiment
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         login_user = context['login_user']
+        exp = self.get_object()
 
         context['selectable'] = dict()
-        context['selectable']['personal'] = login_user.get_personal_dataset_ids()
-        context['selectable']['favorite'] = login_user.get_favorite_dataset_ids()
+        context['selectable']['personal'] = login_user.get_personal_experiment_ids()
+        context['selectable']['favorite'] = login_user.get_favorite_experiment_ids()
+
+        context['display_data'] = exp.get_display_data(context['login_user'])
 
         return context
 
@@ -143,53 +146,53 @@ class MyUser(DetailView, AddMyUserMixin):
         return context
 
 
-class PersonalDatasets(TemplateView, AddMyUserMixin):
-    template_name = 'network/personal_datasets.html'
+class PersonalExperiments(TemplateView, AddMyUserMixin):
+    template_name = 'network/personal_experiments.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         my_user = models.MyUser.objects.get(user=self.request.user)
 
-        datasets = []
-        for ds in models.Dataset.objects.filter(owners__in=[my_user]):
-            datasets.append(ds.get_display_data(my_user))
+        experiments = []
+        for exp in models.Experiment.objects.filter(owners__in=[my_user]):
+            experiments.append(exp.get_display_data(my_user))
 
-        context['datasets'] = datasets
-        context['dataset_counts'] = my_user.get_dataset_counts()
+        context['experiments'] = experiments
+        context['experiment_counts'] = my_user.get_experiment_counts()
 
         return context
 
 
-class FavoriteDatasets(TemplateView, AddMyUserMixin):
-    template_name = 'network/favorite_datasets.html'
+class FavoriteExperiments(TemplateView, AddMyUserMixin):
+    template_name = 'network/favorite_experiments.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         my_user = models.MyUser.objects.get(user=self.request.user)
 
-        datasets = []
-        for fav in models.DataFavorite.objects.filter(owner=my_user):
-            datasets.append(fav.favorite.get_display_data(my_user))
+        experiments = []
+        for fav in models.ExperimentFavorite.objects.filter(owner=my_user):
+            experiments.append(fav.favorite.get_display_data(my_user))
 
-        context['datasets'] = datasets
-        context['dataset_counts'] = my_user.get_dataset_counts()
+        context['experiments'] = experiments
+        context['experiment_counts'] = my_user.get_experiment_counts()
 
         return context
 
 
-class RecommendedDatasets(TemplateView, AddMyUserMixin):
-    template_name = 'network/recommended_datasets.html'
+class RecommendedExperiments(TemplateView, AddMyUserMixin):
+    template_name = 'network/recommended_experiments.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         my_user = models.MyUser.objects.get(user=self.request.user)
 
-        datasets = []
-        for rec in models.DataRecommendation.objects.filter(owner=my_user, hidden=False):
-            datasets.append(rec.get_recommendation_data(my_user))
+        experiments = []
+        for rec in models.ExperimentRecommendation.objects.filter(owner=my_user, hidden=False):
+            experiments.append(rec.get_recommendation_data(my_user))
 
-        context['datasets'] = datasets
-        context['dataset_counts'] = my_user.get_dataset_counts()
+        context['experiments'] = experiments
+        context['experiment_counts'] = my_user.get_experiment_counts()
 
         return context
 
