@@ -39,7 +39,6 @@
 {% block extra-js %}
 <script type='text/javascript'>
 $(document).ready(function(){
-    console.log({{meta_data|safe}});
     let star_glyph = $('#star_glyph');
     $('#favorite_button').on('click', function () {
         if (star_glyph.hasClass('glyphicon-star-empty')) {
