@@ -136,9 +136,8 @@ class MyUser(DetailView, AddMyUserMixin):
         my_user = self.get_object()
         login_user = context['login_user']
 
-        latest = (models.Dataset.objects
+        latest = (models.Experiment.objects
                         .filter(owners__in=[my_user])
-                        .exclude(promoter_metaplot=None, enhancer_metaplot=None)
                         .latest())
         context.update(my_user.get_display_data(login_user))
         context['latest_dataset'] = latest.get_display_data(login_user)
