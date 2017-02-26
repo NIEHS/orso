@@ -211,6 +211,7 @@ class Experiment(models.Model):
     name = models.CharField(max_length=128)
     slug = models.CharField(max_length=128)
     description = models.TextField(blank=True)
+    created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         get_latest_by = 'created'
