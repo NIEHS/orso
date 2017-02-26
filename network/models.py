@@ -42,12 +42,12 @@ class MyUser(models.Model):
         detail['username'] = self.user.username
         detail['pk'] = self.pk
 
-        datasets = Dataset.objects.filter(owners__in=[self])
-        detail['dataset_number'] = len(datasets)
+        experiments = Experiment.objects.filter(owners__in=[self])
+        detail['dataset_number'] = len(experiments)
         detail['data_favorited_by_number'] = 0
-        for ds in datasets:
+        for exp in experiments:
             detail['data_favorited_by_number'] += \
-                len(ExperimentFavorite.objects.filter(favorite=ds))
+                len(ExperimentFavorite.objects.filter(favorite=exp))
 
         detail['data_favorite_number'] = \
             len(ExperimentFavorite.objects.filter(owner=self))
@@ -63,7 +63,10 @@ class MyUser(models.Model):
         return detail
 
     def get_dataset_assembly_counts(self):
-        datasets = Dataset.objects.filter(owners__in=[self])
+        experiments = Experiment.objects.filter(owners__in=[self])
+        datasets = []
+        for exp in experiments:
+            datasets.extend(Dataset.objects.filter(experiment=exp))
         assembly_counts = dict()
 
         for ds in datasets:
@@ -75,7 +78,7 @@ class MyUser(models.Model):
         return assembly_counts
 
     def get_dataset_experiment_type_counts(self):
-        datasets = Dataset.objects.filter(owners__in=[self])
+        datasets = Experiment.objects.filter(owners__in=[self])
         experiment_type_counts = dict()
 
         for ds in datasets:
@@ -472,39 +475,6 @@ class Dataset(models.Model):
 
     def get_favorites_count(self):
         pass
-
-    # def get_urls(self):
-    #     add_favorite = \
-    #         reverse('api:dataset-add-favorite', kwargs={'pk': self.pk})
-    #     remove_favorite = \
-    #         reverse('api:dataset-remove-favorite', kwargs={'pk': self.pk})
-    #     hide_recommendation = \
-    #         reverse('api:dataset-hide-recommendation', kwargs={'pk': self.pk})
-    #
-    #     edit = reverse('update_dataset', kwargs={'pk': self.pk})
-    #     delete = reverse('delete_dataset', kwargs={'pk': self.pk})
-    #     detail = reverse('dataset', kwargs={'pk': self.pk})
-    #
-    #     return {
-    #         'add_favorite': add_favorite,
-    #         'remove_favorite': remove_favorite,
-    #         'hide_recommendation': hide_recommendation,
-    #         'edit': edit,
-    #         'delete': delete,
-    #         'detail': detail,
-    #     }
-    #
-    # def is_favorite(self, my_user):
-    #     if DataFavorite.objects.filter(owner=my_user, favorite=self).exists():
-    #         return 'true'
-    #     else:
-    #         return 'false'
-    #
-    # def is_recommended(self, my_user):
-    #     if DataRecommendation.objects.filter(owner=my_user, recommended=self).exists():  # noqa
-    #         return 'true'
-    #     else:
-    #         return 'false'
 
     def get_display_data(self, my_user):
         plot_data = dict()
