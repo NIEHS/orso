@@ -255,93 +255,76 @@ class Experiment(models.Model):
         else:
             return 'false'
 
-    def get_average_metaplots(self, assemblies=None):
-        if assemblies:
-            datasets = []
-            for assembly in assemblies:
-                assembly_obj = GenomeAssembly.objects.get(pk=assembly)
-                datasets.extend(Dataset.objects.filter(
-                    experiment=self, assembly=assembly_obj))
-        else:
-            datasets = Dataset.objects.filter(experiment=self)
+    def get_assemblies(self):
+        assemblies = set()
+        for ds in Dataset.objects.filter(experiment=self):
+            assemblies.add(ds.assembly)
+        return assemblies
 
+    def get_average_metaplots(self):
         average_metaplots = dict()
-        assembly_count = defaultdict(int)
+        counts = defaultdict(int)
 
-        for ds in datasets:
-            assembly_count[ds.assembly.name] += 1
-            if ds.assembly.name in average_metaplots:
-                for i, entry in enumerate(
-                    ds.promoter_metaplot.meta_plot['metaplot_values']
-                ):
-                    average_metaplots[ds.assembly.name]['promoters'][i] += \
-                        entry
-                for i, entry in enumerate(
-                    ds.enhancer_metaplot.meta_plot['metaplot_values']
-                ):
-                    average_metaplots[ds.assembly.name]['enhancers'][i] += \
+        #  Add similar metaplots together
+        for mp in MetaPlot.objects.filter(dataset__experiment=self):
+            gr = mp.genomic_regions
+            counts[gr] += 1
+            if gr in average_metaplots:
+                for i, entry in enumerate(mp.meta_plot['metaplot_values']):
+                    average_metaplots[gr]['metaplot_values'][i] += \
                         entry
             else:
-                average_metaplots[ds.assembly.name] = {
-                    'promoters': ds.promoter_metaplot.meta_plot,
-                    'enhancers': ds.enhancer_metaplot.meta_plot,
-                }
+                average_metaplots[gr] = mp.meta_plot
 
         #  Divide by assembly counts
-        for assembly in average_metaplots.keys():
-            count = assembly_count[assembly]
+        for gr in average_metaplots.keys():
+            count = counts[gr]
             for i, entry in enumerate(
-                average_metaplots[assembly]['promoters']['metaplot_values']
+                average_metaplots[gr]['metaplot_values']
             ):
-                average_metaplots[assembly]['promoters']['metaplot_values'][i] = entry / count  # noqa
-            for i, entry in enumerate(
-                average_metaplots[assembly]['enhancers']['metaplot_values']
-            ):
-                average_metaplots[assembly]['enhancers']['metaplot_values'][i] = entry / count  # noqa
+                average_metaplots[gr]['metaplot_values'][i] = entry / count
 
-        return average_metaplots
+        #  Put into output format
+        out = []
+        for gr, metaplot in average_metaplots.items():
+            out.append({
+                'regions': gr.short_label,
+                'regions_pk': gr.pk,
+                'assembly': gr.assembly.name,
+                'metaplot': metaplot,
+            })
 
-    def get_average_intersections(self, assemblies=None):
-        if assemblies:
-            datasets = []
-            for assembly in assemblies:
-                assembly_obj = GenomeAssembly.objects.get(pk=assembly)
-                datasets.extend(Dataset.objects.filter(
-                    experiment=self, assembly=assembly_obj))
-        else:
-            datasets = Dataset.objects.filter(experiment=self)
+        return out
 
+    def get_average_intersections(self):
         average_intersections = dict()
-        assembly_count = defaultdict(int)
+        counts = defaultdict(int)
 
-        for ds in datasets:
-            assembly_count[ds.assembly.name] += 1
-            if ds.assembly.name in average_intersections:
-                for i, entry in enumerate(
-                    ds.promoter_intersection.intersection_values
-                ):
-                    average_intersections[ds.assembly.name]['promoters'][i] += entry  # noqa
-                for i, entry in enumerate(
-                    ds.enhancer_intersection.intersection_values
-                ):
-                    average_intersections[ds.assembly.name]['enhancers'][i] += entry  # noqa
+        #  Add similar intersections together
+        for iv in IntersectionValues.objects.filter(dataset__experiment=self):
+            gr = iv.genomic_regions
+            counts[gr] += 1
+            if gr in average_intersections:
+                for i, entry in enumerate(iv.intersection_values):
+                    average_intersections[gr][i] += entry
             else:
-                average_intersections[ds.assembly.name] = {
-                    'promoters': ds.promoter_intersection.intersection_values,
-                    'enhancers': ds.enhancer_intersection.intersection_values,
-                }
+                average_intersections[gr] = iv.intersection_values
 
         #  Divide by assembly counts
-        for assembly in average_intersections.keys():
-            count = assembly_count[assembly]
-            for i, entry in enumerate(
-                average_intersections[assembly]['promoters']
-            ):
-                average_intersections[assembly]['promoters'][i] = entry / count
-            for i, entry in enumerate(
-                average_intersections[assembly]['enhancers']
-            ):
-                average_intersections[assembly]['enhancers'][i] = entry / count
+        for gr in average_intersections.keys():
+            count = counts[gr]
+            for i, entry in enumerate(average_intersections[gr]):
+                average_intersections[gr][i] = entry / count
+
+        #  Put into output format
+        out = []
+        for gr, intersection_values in average_intersections.items():
+            out.append({
+                'regions': gr.short_label,
+                'regions_pk': gr.pk,
+                'assembly': gr.assembly.name,
+                'intersection_values': intersection_values,
+            })
 
         return average_intersections
 
@@ -442,7 +425,8 @@ class Experiment(models.Model):
 
 
 class Dataset(models.Model):
-
+    #  TODO: change promoter/enhancer intersection to single intersection list
+    #  TODO: change promoter/enhancer metaplots to single metaplot list
     description = models.TextField(blank=True)
 
     ambiguous_url = models.URLField()
@@ -456,16 +440,6 @@ class Dataset(models.Model):
     created = models.DateTimeField(
         auto_now_add=True)
     assembly = models.ForeignKey('GenomeAssembly')
-
-    promoter_intersection = models.ForeignKey(
-        'IntersectionValues', related_name='promoter', blank=True, null=True)
-    enhancer_intersection = models.ForeignKey(
-        'IntersectionValues', related_name='enhancer', blank=True, null=True)
-
-    promoter_metaplot = models.ForeignKey(
-        'MetaPlot', related_name='promoter', blank=True, null=True)
-    enhancer_metaplot = models.ForeignKey(
-        'MetaPlot', related_name='enhancer', blank=True, null=True)
 
     class Meta:
         get_latest_by = 'created'
@@ -551,41 +525,10 @@ class Dataset(models.Model):
 
         return out_data
 
-    # def get_metadata(self, my_user=None):
-    #     metadata = dict()
-    #
-    #     metadata['id'] = self.id
-    #     metadata['name'] = self.name
-    #     metadata['data_type'] = self.data_type
-    #     metadata['cell_type'] = self.cell_type
-    #
-    #     if self.target:
-    #         metadata['target'] = self.target
-    #     if self.ambiguous_url:
-    #         metadata['strand'] = 'Unstranded'
-    #     else:
-    #         metadata['strand'] = 'Stranded'
-    #     if self.description:
-    #         metadata['description'] = self.description
-    #
-    #     metadata['owners'] = []
-    #     if self.owners:
-    #         for owner in self.owners.all():
-    #             metadata['owners'].append(owner.user.username)
-    #
-    #     if my_user:
-    #         metadata['is_favorite'] = self.is_favorite(my_user)
-    #         metadata['is_recommended'] = self.is_recommended(my_user)
-    #
-    #     return metadata
-
 
 class MetaPlot(models.Model):
     genomic_regions = models.ForeignKey('GenomicRegions')
-    bigwig_url = models.URLField()
-
-    relative_start = models.IntegerField()
-    relative_end = models.IntegerField()
+    dataset = models.ForeignKey('Dataset')
     meta_plot = JSONField()
     last_updated = models.DateTimeField(
         auto_now=True)
@@ -593,10 +536,7 @@ class MetaPlot(models.Model):
 
 class IntersectionValues(models.Model):
     genomic_regions = models.ForeignKey('GenomicRegions')
-    bigwig_url = models.URLField()
-
-    relative_start = models.IntegerField()
-    relative_end = models.IntegerField()
+    dataset = models.ForeignKey('Dataset')
     intersection_values = JSONField()
     last_updated = models.DateTimeField(
         auto_now=True)
@@ -637,7 +577,18 @@ class UserRecommendation(Recommendation):
 
 class ExperimentRecommendation(Recommendation):
     recommended = models.ForeignKey('Experiment')
-    reference_experiment = models.ForeignKey('Experiment', related_name='reference')  # noqa
+
+    correlation_rank = models.IntegerField()
+    correlation_experiment = \
+        models.ForeignKey('Experiment', related_name='correlation')
+
+    metadata_rank = models.IntegerField()
+    metadata_experiment = \
+        models.ForeignKey('Experiment', related_name='metadata')
+
+    collaborative_rank = models.IntegerField()
+    collaborative_experiment = \
+        models.ForeignKey('Experiment', related_name='collaborative')
 
     def get_recommendation_data(self, my_user):
         plot_data = dict()
@@ -772,25 +723,13 @@ class GeneAnnotation(models.Model):
     last_updated = models.DateTimeField(
         auto_now=True)
 
-    promoters = models.ForeignKey(
-        'GenomicRegions',
-        related_name='promoters',
-        blank=True,
-        null=True,
-    )
-    enhancers = models.ForeignKey(
-        'GenomicRegions',
-        related_name='enhancers',
-        blank=True,
-        null=True,
-    )
-
 
 class GenomicRegions(models.Model):
     name = models.CharField(
         max_length=32)
     assembly = models.ForeignKey('GenomeAssembly')
     bed_file = models.FileField()
+    short_label = models.CharField(max_length=32)
     last_updated = models.DateTimeField(
         auto_now=True)
 
