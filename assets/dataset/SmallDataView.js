@@ -63,7 +63,13 @@ class SmallDataView extends React.Component {
     render(){
         var id_select = 'panel_' + this.props.meta_data['id'];
         var id_css_select = '#' + id_select;
-        var assembly_name = Object.keys(this.props.plot_data)[0];
+        for (var i = 0; i < this.props.plot_data.length; i++) {
+            if (this.props.plot_data[i]['regions'] == 'Promoters') {
+                var promoter_metaplot = this.props.plot_data[i]['metaplot'];
+            } else if (this.props.plot_data[i]['regions'] == 'Enhancers') {
+                var enhancer_metaplot = this.props.plot_data[i]['metaplot'];
+            }
+        }
 
         return <div className="panel panel-default" id={id_select}>
             <div className="panel-heading">
@@ -121,17 +127,17 @@ class SmallDataView extends React.Component {
                     </div>
                     <div style={{height:"150px"}} className="col-sm-3">
                         <h4 style={{textAlign:"center"}}>Promoters</h4>
-                        {this.props.plot_data[assembly_name]['promoters']  &&
+                        {promoter_metaplot  &&
                             <MetaPlot
-                                data={this.props.plot_data[assembly_name]['promoters']}
+                                data={promoter_metaplot}
                             />
                         }
                     </div>
                     <div style={{height:"150px"}} className="col-sm-3">
                         <h4 style={{textAlign:"center"}}>Enhancers</h4>
-                        {this.props.plot_data[assembly_name]['enhancers'] &&
+                        {enhancer_metaplot &&
                             <MetaPlot
-                                data={this.props.plot_data[assembly_name]['enhancers']}
+                                data={enhancer_metaplot}
                             />
                         }
                     </div>
@@ -145,7 +151,7 @@ class SmallDataView extends React.Component {
 
 SmallDataView.propTypes = {
     meta_data: React.PropTypes.object.isRequired,
-    plot_data: React.PropTypes.object.isRequired,
+    plot_data: React.PropTypes.array.isRequired,
     urls: React.PropTypes.object.isRequired,
 
     display_favorite: React.PropTypes.bool,
