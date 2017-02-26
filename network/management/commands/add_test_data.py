@@ -21,6 +21,21 @@ class Command(BaseCommand):
                 cell_type = r['cell_type']
                 target = r['antibody']
 
+                exp = models.Experiment.objects.create(
+                    name=name,
+                    slug=name,
+                    data_type=data_type,
+                    cell_type=cell_type,
+                    target=target,
+                )
+                ds = models.Dataset.objects.create(
+                    experiment=exp,
+                    ambiguous_url=url,
+                    name=name,
+                    slug=name,
+                    assembly=assembly,
+                )
+
                 promoter_bed = curr_dir + '/data/genomic_regions/mm9_RefSeq_promoters.bed'  # noqa
                 enhancer_bed = curr_dir + '/data/genomic_regions/mm9_vista_enhancers.bed'  # noqa
 
@@ -34,55 +49,26 @@ class Command(BaseCommand):
                 enhancer_metaplot = curr_dir + '/data/metaplots/' + r['header'] + '.enhancers.metaplot.json'  # noqa
 
                 with open(promoter_metaplot) as f:
-                    promoter_metaplot_obj = models.MetaPlot.objects.create(
+                    models.MetaPlot.objects.create(
                         genomic_regions=promoter_gr,
-                        bigwig_url=url,
-                        relative_start=-2500,
-                        relative_end=2499,
+                        dataset=ds,
                         meta_plot=json.load(f),
                     )
                 with open(enhancer_metaplot) as f:
-                    enhancer_metaplot_obj = models.MetaPlot.objects.create(
+                    models.MetaPlot.objects.create(
                         genomic_regions=enhancer_gr,
-                        bigwig_url=url,
-                        relative_start=-2500,
-                        relative_end=2499,
+                        dataset=ds,
                         meta_plot=json.load(f),
                     )
                 with open(promoter_intersection) as f:
-                    promoter_intersection_obj = \
-                        models.IntersectionValues.objects.create(
-                            genomic_regions=promoter_gr,
-                            bigwig_url=url,
-                            relative_start=-2500,
-                            relative_end=2499,
-                            intersection_values=json.load(f),
-                        )
+                    models.IntersectionValues.objects.create(
+                        genomic_regions=promoter_gr,
+                        dataset=ds,
+                        intersection_values=json.load(f),
+                    )
                 with open(enhancer_intersection) as f:
-                    enhancer_intersection_obj = \
-                        models.IntersectionValues.objects.create(
-                            genomic_regions=enhancer_gr,
-                            bigwig_url=url,
-                            relative_start=-2500,
-                            relative_end=2499,
-                            intersection_values=json.load(f),
-                        )
-
-                exp = models.Experiment.objects.create(
-                    name=name,
-                    slug=name,
-                    data_type=data_type,
-                    cell_type=cell_type,
-                    target=target,
-                )
-                models.Dataset.objects.create(
-                    experiment=exp,
-                    ambiguous_url=url,
-                    name=name,
-                    slug=name,
-                    promoter_intersection=promoter_intersection_obj,
-                    enhancer_intersection=enhancer_intersection_obj,
-                    promoter_metaplot=promoter_metaplot_obj,
-                    enhancer_metaplot=enhancer_metaplot_obj,
-                    assembly=assembly,
-                )
+                    models.IntersectionValues.objects.create(
+                        genomic_regions=enhancer_gr,
+                        dataset=ds,
+                        intersection_values=json.load(f),
+                    )

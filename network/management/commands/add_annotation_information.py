@@ -130,6 +130,7 @@ class Command(BaseCommand):
                     name=assembly + '_RefSeq_promoters',
                     assembly=assembly_obj,
                     bed_file=output_file,
+                    short_label='Promoters',
                 )
 
                 #  Add objects for genes and transcripts

@@ -23,4 +23,5 @@ class Command(BaseCommand):
                     name=enhancer_bed.split('/')[-1].split('.bed')[0],
                     assembly=assembly_obj,
                     bed_file=enhancer_bed,
+                    short_label='Enhancers',
                 )
