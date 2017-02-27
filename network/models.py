@@ -647,57 +647,22 @@ class ExperimentCorrelation(models.Model):
         else:
             return (None, None)
 
-    #  TODO: check for new Project>Experiment>Dataset hierarchy
     @staticmethod
-    def get_z_score_list():
-        z_scores = []
+    def get_max_z_scores():
+        max_z_scores = defaultdict(float)
+        z_scores = defaultdict(list)
 
-        corr_stats = dict()
-        for assembly in GenomeAssembly.objects.all():
-            promoter_mean, promoter_stdev = \
-                ExperimentCorrelation.get_correlation_stats(
-                    assembly.default_annotation.promoters)
-            enhancer_mean, enhancer_stdev = \
-                ExperimentCorrelation.get_correlation_stats(
-                    assembly.default_annotation.enhancers)
-            corr_stats[assembly] = {
-                'promoter_mean': promoter_mean,
-                'promoter_stdev': promoter_stdev,
-                'enhancer_mean': enhancer_mean,
-                'enhancer_stdev': enhancer_stdev,
-            }
+        for gr in GenomicRegions.objects.all():
+            mean, std_dev = ExperimentCorrelation.get_correlation_stats(gr)
+            for corr in ExperimentCorrelation.objects.filter(
+                    genomic_regions=gr):
+                z_scores[(corr.x_experiment, corr.y_experiment)].append(
+                    (corr.score - mean) / std_dev)
 
-        for assembly in GenomeAssembly.objects.all():
-            experiments = []
-            for ds in Dataset.objects.filter(assembly=assembly).order_by('id'):
-                experiments.append(ds.experiment)
-            for i, exp_1 in enumerate(experiments):
-                for j, exp_2 in enumerate(experiments[i + 1:]):
-                    scores = []
-                    for corr in ExperimentCorrelation.objects.filter(
-                            x_experiment=exp_1,
-                            y_experiment=exp_2):
-                        if corr.genomic_regions == \
-                                assembly.default_annotation.promoters:
-                            mean = corr_stats[assembly]['promoter_mean']
-                            stdev = corr_stats[assembly]['promoter_stdev']
-                        elif corr.genomic_regions == \
-                                assembly.default_annotation.enhancers:
-                            mean = corr_stats[assembly]['enhancer_mean']
-                            stdev = corr_stats[assembly]['enhancer_stdev']
-                        scores.append((corr.score - mean) / stdev)
-                    if scores:
-                        z_scores.append({
-                            'experiment_1': exp_1.id,
-                            'experiment_2': exp_2.id,
-                            'users_1':
-                                [user.id for user in exp_1.owners.all()],
-                            'users_2':
-                                [user.id for user in exp_2.owners.all()],
-                            'max_z_score': max(scores),
-                        })
+        for exps, scores in z_scores.items():
+            max_z_scores[exps] = max(scores)
 
-        return z_scores
+        return max_z_scores
 
 
 class GenomeAssembly(models.Model):
