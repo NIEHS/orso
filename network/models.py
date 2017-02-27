@@ -326,7 +326,7 @@ class Experiment(models.Model):
                 'intersection_values': intersection_values,
             })
 
-        return average_intersections
+        return out
 
     def get_display_data(self, my_user):
         return {
