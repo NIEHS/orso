@@ -192,39 +192,31 @@ def update_user_recommendations():
 @periodic_task(run_every=timedelta(seconds=5))
 @single_instance_task('correlation_values')
 def update_correlation_values():
-    for assembly in models.GenomeAssembly.objects.all():
+    experiments = models.Experiment.objects.all().order_by('id')
 
-        datasets = models.Dataset.objects.filter(
-            assembly=assembly,
-            promoter_intersection__isnull=False,
-            enhancer_intersection__isnull=False,
-        ).order_by('id')
-        annotation = assembly.default_annotation
+    for i, exp_1 in enumerate(experiments):
+        intersections_1 = exp_1.get_average_intersections()
+        for j, exp_2 in enumerate(experiments[i:]):
+            intersections_2 = exp_2.get_average_intersections()
 
-        for regions in [annotation.promoters, annotation.enhancers]:
-            for i, ds_1 in enumerate(datasets):
-                for j, ds_2 in enumerate(datasets[i + 1:]):
-                    if not (models.CorrelationCell.objects
-                            .filter(
-                                x_experiment=ds_1,
-                                y_experiment=ds_2,
-                                genomic_regions=regions
-                            ).exists()):
-
-                        if regions == annotation.promoters:
+            for int_1 in intersections_1:
+                for int_2 in intersections_2:
+                    if int_1['regions_pk'] == int_2['regions_pk']:
+                        gr = models.GenomicRegions.objects.get(
+                            pk=int_1['regions_pk'])
+                        if not (models.ExperimentCorrelation.objects
+                                .filter(
+                                    x_experiment=exp_1,
+                                    y_experiment=exp_2,
+                                    genomic_regions=gr,
+                                ).exists()):
                             corr = Correlation(
-                                ds_1.promoter_intersection.intersection_values,
-                                ds_2.promoter_intersection.intersection_values,
+                                int_1['intersection_values'],
+                                int_2['intersection_values'],
                             ).get_correlation()[0]
-                        elif regions == annotation.enhancers:
-                            corr = Correlation(
-                                ds_1.enhancer_intersection.intersection_values,
-                                ds_2.enhancer_intersection.intersection_values,
-                            ).get_correlation()[0]
-
-                        models.CorrelationCell.objects.create(
-                            x_experiment=ds_1,
-                            y_experiment=ds_2,
-                            genomic_regions=regions,
-                            score=corr,
-                        )
+                            models.ExperimentCorrelation.objects.create(
+                                x_experiment=exp_1,
+                                y_experiment=exp_2,
+                                genomic_regions=gr,
+                                score=corr,
+                            )
