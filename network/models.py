@@ -563,12 +563,10 @@ class Recommendation(models.Model):
     owner = models.ForeignKey('MyUser')
     last_updated = models.DateTimeField(
         auto_now=True)
-    score = models.FloatField()
     hidden = models.BooleanField(default=False)
 
     class Meta:
         abstract = True
-        ordering = ('score', '-last_updated',)
 
 
 class UserRecommendation(Recommendation):
