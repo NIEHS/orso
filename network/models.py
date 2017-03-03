@@ -585,8 +585,6 @@ class ExperimentRecommendation(Recommendation):
         models.ForeignKey('Experiment', related_name='metadata')
 
     collaborative_rank = models.IntegerField()
-    collaborative_experiment = \
-        models.ForeignKey('Experiment', related_name='collaborative')
 
     def get_recommendation_data(self, my_user):
         plot_data = dict()
