@@ -10,6 +10,11 @@ from datetime import timedelta
 from collections import defaultdict
 from functools import wraps
 
+import string
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+from sklearn.metrics import jaccard_similarity_score
+
 
 def single_instance_task(cache_id, timeout=None):
     def decorator(func):
@@ -73,76 +78,201 @@ def process_dataset(id_):
     dataset.save()
 
 
+def get_metadata_similarities():
+    EXPERIMENT_DESCRIPTION_FIELDS = [
+        'assay_slims',
+        'assay_synonyms',
+        'assay_term_name',
+        'assay_title',
+        'biosample_summary',
+        'biosample_synonyms',
+        'biosample_term_name',
+        'biosample_type',
+        'category_slims',
+        'objective_slims',
+        'organ_slims',
+        'target',
+        'system_slims',
+    ]
+
+    descriptions = []
+    exps = []
+
+    for exp in models.Experiment.objects.all():
+        description = exp.description
+
+        description = description.translate(
+            str.maketrans('', '', string.punctuation))
+        description = description.split()
+        for field in EXPERIMENT_DESCRIPTION_FIELDS:
+            description = [x for x in description if x != field]
+        if exp.data_type:
+            description.append(exp.data_type)
+        if exp.cell_type:
+            description.append(exp.cell_type)
+        if exp.target:
+            description.append(exp.target)
+
+        descriptions.append(' '.join(description))
+        exps.append(exp)
+
+    tf = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), min_df=0,
+                         stop_words='english')
+    tfidf_matrix = tf.fit_transform(descriptions)
+    cosine_similarities = linear_kernel(tfidf_matrix, tfidf_matrix)
+
+    similarities = dict()
+    for i, row in enumerate(cosine_similarities):
+        similarities[exps[i]] = dict()
+        for j, value in enumerate(row):
+            if i != j:
+                similarities[exps[i]][exps[j]] = value
+    return similarities
+
+
+def get_user_similarites():
+    experiments = models.Experiment.objects.all()
+    users = models.MyUser.objects.all()
+    user_vectors = dict()
+    similarities = dict()
+
+    for user in users:
+        user_vectors[user] = []
+        for exp in experiments:
+            if models.ExperimentFavorite.objects.filter(
+                    owner=user, favorite=exp).exists():
+                user_vectors[user].append(1)
+            else:
+                user_vectors[user].append(0)
+
+    for user_1 in users:
+        similarities[user_1] = dict()
+        for user_2 in users:
+            similarities[user_1][user_2] = jaccard_similarity_score(
+                user_vectors[user_1],
+                user_vectors[user_2],
+            )
+
+    return similarities
+
+
 @periodic_task(run_every=timedelta(seconds=5))
 @single_instance_task('data_recommendations')
 def update_data_recommendations():
-    def add_or_update_data_recommendations():
-        # Find top 20 datasets not owned by user with highest Z score
-        z_scores = models.CorrelationCell.get_z_score_list()
+    users = models.MyUser.objects.all()
+    z_scores = models.ExperimentCorrelation.get_max_z_scores()
+    metadata_similarities = get_metadata_similarities()
+    user_similarities = get_user_similarites()
 
-        # Only consider z_scores where one or more datasets is owned
-        z_scores = [score for score in z_scores if score['users_1'] or score['users_2']]
+    for user in users:
+        recs = dict()
+        owned_exps = models.Experiment.objects.filter(owners__in=[user])
 
-        for user in models.MyUser.objects.all():
+        #  Find genomic regions where user owns an associated experiment
+        user_grs = set()
+        for intersection in models.IntersectionValues.objects.filter(
+                dataset__experiment__owners__in=[user]):
+            user_grs.add(intersection.genomic_regions)
 
-            user_score_dict = dict()
-            for score in z_scores:
-                in_1 = user.id in score['users_1']
-                in_2 = user.id in score['users_2']
-                if (in_1 or in_2) and not (in_1 and in_2):
-                    if in_1:
-                        recommended_id = score['dataset_2']
-                    elif in_2:
-                        recommended_id = score['dataset_1']
-                    if not models.DataFavorite.objects.filter(
-                            owner=user, favorite__id=recommended_id).exists():
-                        if recommended_id in user_score_dict:
-                            if score['max_z_score'] > \
-                                    user_score_dict[recommended_id]['max_z_score']:
-                                user_score_dict[recommended_id] = score
-                        else:
-                            user_score_dict[recommended_id] = score
+        #  Find all potential experiments for comparison
+        compare_exps = set()
+        for gr in user_grs:
+            for intersection in (models.IntersectionValues.objects
+                                 .filter(genomic_regions=gr)
+                                 .exclude(dataset__experiment__owners__in=[user])):  # noqa
+                compare_exps.add(intersection.dataset.experiment)
+        #  Populate rec dict with all potential experiments
+        for exp in compare_exps:
+            recs[exp] = {
+                'correlation_rank': None,
+                'correlation_experiment': None,
+                'metadata_rank': None,
+                'metadata_experiment': None,
+                'collaborative_rank': None,
+                'collaborative_experiment': None,
+            }
 
-            user_score_list = sorted(user_score_dict.values(), key=lambda x: -x['max_z_score'])
+        #  Find dataset correlation rank order
+        #  Get z scores for each experiment
+        z_score_dict = defaultdict(list)
+        for exps, score in z_scores.items():
+            exp_1, exp_2 = exps
+            if exp_1 in owned_exps and exp_2 in compare_exps:
+                z_score_dict[exp_2].append([score, exp_1])
+            elif exp_1 in compare_exps and exp_2 in owned_exps:
+                z_score_dict[exp_1].append([score, exp_2])
 
-            for score in user_score_list[:20]:
-                if user.id in score['users_1']:
-                    reference_id = score['dataset_1']
-                    recommended_id = score['dataset_2']
-                elif user.id in score['users_2']:
-                    reference_id = score['dataset_2']
-                    recommended_id = score['dataset_1']
-                recommended = models.Dataset.objects.get(id=recommended_id)
-                reference = models.Dataset.objects.get(id=reference_id)
+        #  Find max z score for each experiment
+        max_z_score_dict = dict()
+        for exp, scores in z_score_dict.items():
+            _sorted = sorted(scores, key=lambda x: (-x[0], x[1]))
+            max_z_score_dict[exp] = {
+                'max_z_score': _sorted[0][0],
+                'exp': _sorted[0][1],
+            }
 
-                dr = models.DataRecommendation.objects.filter(
-                    owner=user,
-                    recommended=recommended,
-                    reference_dataset=reference,
-                )
-                df = models.DataFavorite.objects.filter(
-                    owner=user,
-                    favorite=recommended,
-                )
+        #  Get rank from sorted list
+        for i, entry in enumerate(sorted(
+            max_z_score_dict.items(),
+            key=lambda x: (-x[1]['max_z_score'], x[1]['exp'].name))
+        ):
+            recs[entry[0]]['correlation_rank'] = i
+            recs[entry[0]]['correlation_experiment'] = entry[1]['exp']
 
-                if not df.exists():
-                    if dr.exists():
-                        dr[0].score = score['max_z_score']
-                        dr[0].save()
-                    else:
-                        models.DataRecommendation.objects.create(
-                            owner=user,
-                            score=score['max_z_score'],
-                            recommended=recommended,
-                            reference_dataset=reference,
-                        )
+        #  Find metadata comparison rank order
+        #  Get similarities for each experiment
+        metadata_sim_dict = defaultdict(list)
+        for exp_1 in compare_exps:
+            for exp_2 in owned_exps:
+                metadata_sim_dict[exp_1].append(
+                    (metadata_similarities[exp_1][exp_2], exp_2))
 
-    def clean_up_data_recommendations():
-        time_threshold = timezone.now() - timedelta(days=7)
-        models.DataRecommendation.objects.filter(last_updated__lt=time_threshold).delete()
+        #  Find max similarities
+        max_sim_dict = dict()
+        for exp, similarities in metadata_sim_dict.items():
+            _sorted = sorted(similarities, key=lambda x: (-x[0], x[1].name))
+            max_sim_dict[exp] = {
+                'max_sim': _sorted[0][0],
+                'exp': _sorted[0][1],
+            }
 
-    add_or_update_data_recommendations()
-    clean_up_data_recommendations()
+        #  Get rank from sorted list
+        for i, entry in enumerate(sorted(
+            max_sim_dict.items(),
+            key=lambda x: (-x[1]['max_sim'], x[1]['exp'].name))
+        ):
+            recs[entry[0]]['metadata_rank'] = i
+            recs[entry[0]]['metadata_experiment'] = entry[1]['exp']
+
+        #  Find user comparison rank order
+        #  Get weighted scores for each experiment
+        user_scores = defaultdict(list)
+        for exp in compare_exps:
+            for comp_user in users:
+                if models.ExperimentFavorite.objects.filter().exists():
+                    score = 1 * user_similarities[user][comp_user]
+                else:
+                    score = 0
+                user_scores[exp].append(score)
+
+        #  Sum weighted scores for each experiment
+        total_user_score = dict()
+        for exp, scores in user_scores.items():
+            total_user_score[exp] = sum(scores)
+
+        #  Get rank from sorted list
+        for i, entry in enumerate(sorted(
+            max_sim_dict.items(),
+            key=lambda x: -x[1]['max_sim']
+        )):
+            recs[entry[0]]['collaborative_rank'] = i
+
+        for rec, ranks in recs.items():
+            models.ExperimentRecommendation.objects.update_or_create(
+                owner=user,
+                recommended=exp,
+                defaults=ranks,
+            )
 
 
 @periodic_task(run_every=timedelta(seconds=5))
