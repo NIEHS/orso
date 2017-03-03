@@ -586,6 +586,11 @@ class ExperimentRecommendation(Recommendation):
 
     collaborative_rank = models.IntegerField()
 
+    class Meta:
+        unique_together = (
+            ('owner', 'recommended',),
+        )
+
     def get_recommendation_data(self, my_user):
         plot_data = dict()
 
