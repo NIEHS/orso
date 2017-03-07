@@ -40,14 +40,21 @@
 <script type='text/javascript'>
 var assembly_name = Object.keys({{display_data.plot_data|safe}})[0];
 var display_data = {{display_data|safe}};
+for (var i = 0; i < display_data['plot_data'].length; i++) {
+    if (display_data['plot_data'][i]['regions'] == 'Promoters') {
+        var promoter_metaplot = display_data['plot_data'][i]['metaplot'];
+    } else if (display_data['plot_data'][i]['regions'] == 'Enhancers') {
+        var enhancer_metaplot = display_data['plot_data'][i]['metaplot'];
+    }
+}
 $(document).ready(function(){
     window.apps.createMetaPlot(
         $('#meta1')[0],
-        display_data['plot_data'][assembly_name]['promoters']
+        promoter_metaplot
     );
     window.apps.createMetaPlot(
         $('#meta2')[0],
-        display_data['plot_data'][assembly_name]['enhancers']
+        enhancer_metaplot
     );
     window.apps.createBrowser(
         $('#browser')[0],
