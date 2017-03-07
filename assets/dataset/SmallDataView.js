@@ -8,7 +8,25 @@ class SmallDataView extends React.Component {
 
     constructor(props) {
         super(props);
-        this.state = {is_favorite: (props.meta_data['is_favorite'] === 'true')};
+        var assemblies = []
+        for (var i = 0; i < this.props.plot_data.length; i++) {
+            var assembly = this.props.plot_data[i]['assembly']
+            if ($.inArray(assembly, assemblies) == -1) {
+                assemblies.push(assembly);
+            }
+        }
+        this.state = {
+            is_favorite: (props.meta_data['is_favorite'] === 'true'),
+            assemblies: assemblies,
+            selected_assembly: assemblies[0],
+        };
+        this.selectAssembly = this.selectAssembly.bind(this);
+    }
+
+    selectAssembly(event) {
+        this.setState({
+            selected_assembly: event.target.value
+        });
     }
 
     componentDidMount(){
@@ -17,6 +35,16 @@ class SmallDataView extends React.Component {
             remove_favorite_url = this.props.urls['remove_favorite'],
             hide_recommendation_url = this.props.urls['hide_recommendation'];
         let self = this;
+
+        $('.assembly_select').each(function() {
+            if (this.value == self.state.selected_assembly_index) {
+                console.log(this);
+                $(this).prop('checked', true);
+                console.log(this);
+            } else {
+                $(this).prop('checked', false);
+            }
+        })
 
         $(this.refs.favorite_button).on('click', function () {
             if (self.state.is_favorite) {
@@ -63,13 +91,15 @@ class SmallDataView extends React.Component {
     render(){
         var id_select = 'panel_' + this.props.meta_data['id'];
         var id_css_select = '#' + id_select;
+
         for (var i = 0; i < this.props.plot_data.length; i++) {
-            if (this.props.plot_data[i]['regions'] == 'Promoters') {
+            if (this.props.plot_data[i]['regions'] == 'Promoters' && this.props.plot_data[i]['assembly'] == this.state.selected_assembly) {
                 var promoter_metaplot = this.props.plot_data[i]['metaplot'];
-            } else if (this.props.plot_data[i]['regions'] == 'Enhancers') {
+            } else if (this.props.plot_data[i]['regions'] == 'Enhancers' && this.props.plot_data[i]['assembly'] == this.state.selected_assembly) {
                 var enhancer_metaplot = this.props.plot_data[i]['metaplot'];
             }
         }
+        var self = this;
 
         return <div className="panel panel-default" id={id_select}>
             <div className="panel-heading">
@@ -118,6 +148,17 @@ class SmallDataView extends React.Component {
                 <div className="row">
                     <div style={{height:"200px"}} className="col-sm-6">
                         <ul>
+                            <li><b>Assembly:</b></li>
+                            {this.state.assemblies.map(function(assembly, index){
+                                return <div className='radio' key={index}>
+                                    <label>
+                                        <input type='radio' value={assembly}
+                                            checked={self.state.selected_assembly == assembly}
+                                            onChange={self.selectAssembly} />
+                                        {assembly}
+                                    </label>
+                                </div>
+                            })}
                             <li><b>Data type:</b> {this.props.meta_data['data_type']}</li>
                             <li><b>Cell type:</b> {this.props.meta_data['cell_type']}</li>
                             <li><b>Target:</b> {this.props.meta_data['target']}</li>
@@ -145,7 +186,6 @@ class SmallDataView extends React.Component {
             </div>
             </div>
         </div>;
-
     }
 }
 
