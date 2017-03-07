@@ -718,3 +718,12 @@ class Transcript(models.Model):
     start = models.IntegerField()
     end = models.IntegerField()
     exons = ArrayField(ArrayField(models.IntegerField(), size=2))
+
+    @staticmethod
+    def get_transcripts_in_range(annotation, chromosome, start, end):
+        return Transcript.objects.filter(
+            gene__annotation=annotation,
+            chromosome=chromosome,
+            start__lte=end,
+            end__gte=start,
+        )
