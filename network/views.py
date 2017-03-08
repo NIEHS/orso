@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic import View, TemplateView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView
 from django.views.generic.base import ContextMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import available_attrs, method_decorator
@@ -145,20 +146,22 @@ class MyUser(DetailView, AddMyUserMixin):
         return context
 
 
-class PersonalExperiments(TemplateView, AddMyUserMixin):
+class PersonalExperiments(ListView, AddMyUserMixin):
+    model = models.Experiment
     template_name = 'network/personal_experiments.html'
+    paginate_by = 2
+
+    def get_queryset(self):
+        my_user = models.MyUser.objects.get(user=self.request.user)
+        qs = self.model.objects.filter(owners__in=[my_user])
+        for obj in qs:
+            obj.plot_data = obj.get_average_metaplots()
+            obj.meta_data = obj.get_metadata(my_user)
+            obj.urls = obj.get_urls()
+        return qs
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        my_user = models.MyUser.objects.get(user=self.request.user)
-
-        experiments = []
-        for exp in models.Experiment.objects.filter(owners__in=[my_user]):
-            experiments.append(exp.get_display_data(my_user))
-
-        context['experiments'] = experiments
-        context['experiment_counts'] = my_user.get_experiment_counts()
-
+        context = super(PersonalExperiments, self).get_context_data(**kwargs)
         return context
 
 
