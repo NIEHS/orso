@@ -2,6 +2,8 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic import View, TemplateView, DetailView, CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
+from django.db.models import Q
+from django.views.generic.edit import FormMixin
 from django.views.generic.base import ContextMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import available_attrs, method_decorator
@@ -188,14 +190,39 @@ class FavoriteExperiments(ListView, AddMyUserMixin):
         return context
 
 
-class RecommendedExperiments(ListView, AddMyUserMixin):
+class RecommendedExperiments(ListView, AddMyUserMixin, FormMixin):
     model = models.Experiment
     template_name = 'network/recommended_experiments.html'
-    paginate_by = 10
+    form_class = forms.ExperimentFilterForm
+
+    def post(self, request, *args, **kwargs):
+        pass
+
+    def get(self, request, *args, **kwargs):
+        if len(self.request.GET) > 0:
+            self.form = self.form_class(
+                self.request.GET
+            )
+        else:
+            self.form = self.form_class()
+        return super().get(request, *args, **kwargs)
+
+    def get_paginate_by(self, qs):
+        val = 10
+        try:
+            val = int(self.request.GET.get('paginate_by', val))
+        except ValueError:
+            pass
+        return val
 
     def get_queryset(self):
         my_user = models.MyUser.objects.get(user=self.request.user)
-        qs = self.model.objects.filter(experimentrecommendation__owner=my_user)
+        query = Q(experimentrecommendation__owner=my_user)
+
+        if self.form.is_valid():
+            query &= self.form.get_query()
+
+        qs = self.model.objects.filter(query)
         for obj in qs:
             obj.plot_data = obj.get_average_metaplots()
             obj.meta_data = obj.get_metadata(my_user)
