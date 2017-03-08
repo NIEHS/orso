@@ -167,21 +167,38 @@ class PersonalExperiments(ListView, AddMyUserMixin):
         return context
 
 
-class FavoriteExperiments(TemplateView, AddMyUserMixin):
+class FavoriteExperiments(ListView, AddMyUserMixin):
+    model = models.Experiment
     template_name = 'network/favorite_experiments.html'
+    paginate_by = 10
+
+    def get_queryset(self):
+        my_user = models.MyUser.objects.get(user=self.request.user)
+        qs = self.model.objects.filter(experimentfavorite__owner=my_user)
+        for obj in qs:
+            obj.plot_data = obj.get_average_metaplots()
+            obj.meta_data = obj.get_metadata(my_user)
+            obj.urls = obj.get_urls()
+        return qs
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
         my_user = models.MyUser.objects.get(user=self.request.user)
-
-        experiments = []
-        for fav in models.ExperimentFavorite.objects.filter(owner=my_user):
-            experiments.append(fav.favorite.get_display_data(my_user))
-
-        context['experiments'] = experiments
+        context = super(FavoriteExperiments, self).get_context_data(**kwargs)
         context['experiment_counts'] = my_user.get_experiment_counts()
-
         return context
+
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+    #     my_user = models.MyUser.objects.get(user=self.request.user)
+    #
+    #     experiments = []
+    #     for fav in models.ExperimentFavorite.objects.filter(owner=my_user):
+    #         experiments.append(fav.favorite.get_display_data(my_user))
+    #
+    #     context['experiments'] = experiments
+    #     context['experiment_counts'] = my_user.get_experiment_counts()
+    #
+    #     return context
 
 
 class RecommendedExperiments(TemplateView, AddMyUserMixin):
