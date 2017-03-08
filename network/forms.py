@@ -1,5 +1,8 @@
 from django import forms
 from django.db.models import Q
+from selectable.forms import AutoCompleteWidget
+
+from . import lookups
 # from selectable import forms as selectable
 
 # from . import models
@@ -11,6 +14,7 @@ class ExperimentFilterForm(forms.Form):
     data_type = forms.CharField(
         label='Data type',
         help_text="ex: ChIP-seq",
+        widget=AutoCompleteWidget(lookups.DataTypeLookup),
         required=False)
 
     paginate_by = forms.IntegerField(

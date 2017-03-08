@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'webpack_loader',
     'rest_framework',
+    'selectable',
 ]
 
 MIDDLEWARE = [

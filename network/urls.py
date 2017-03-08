@@ -41,4 +41,6 @@ urlpatterns = [
 
     url(r'^api/',
         include(router.urls, namespace='api')),
+
+    url(r'^selectable/', include('selectable.urls')),
 ]

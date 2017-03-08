@@ -1,5 +1,9 @@
 {% load render_bundle from webpack_loader %}
 {% load static from staticfiles %}
+{% load selectable_tags %}
+{% include_jquery_libs %}
+{{ form.media.css }}
+{{ form.media.js }} 
 
 <!DOCTYPE html>
 <html lang='en' class='no-js'>
