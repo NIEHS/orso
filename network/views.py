@@ -149,7 +149,7 @@ class MyUser(DetailView, AddMyUserMixin):
 class PersonalExperiments(ListView, AddMyUserMixin):
     model = models.Experiment
     template_name = 'network/personal_experiments.html'
-    paginate_by = 2
+    paginate_by = 10
 
     def get_queryset(self):
         my_user = models.MyUser.objects.get(user=self.request.user)
@@ -161,7 +161,9 @@ class PersonalExperiments(ListView, AddMyUserMixin):
         return qs
 
     def get_context_data(self, **kwargs):
+        my_user = models.MyUser.objects.get(user=self.request.user)
         context = super(PersonalExperiments, self).get_context_data(**kwargs)
+        context['experiment_counts'] = my_user.get_experiment_counts()
         return context
 
 
