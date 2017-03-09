@@ -195,8 +195,9 @@ class RecommendedExperiments(ListView, AddMyUserMixin, FormMixin):
     template_name = 'network/recommended_experiments.html'
     form_class = forms.ExperimentFilterForm
 
-    def post(self, request, *args, **kwargs):
-        pass
+    def dispatch(self, request, *args, **kwargs):
+        self.my_user = models.MyUser.objects.get(user=self.request.user)
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         if len(self.request.GET) > 0:
@@ -216,24 +217,21 @@ class RecommendedExperiments(ListView, AddMyUserMixin, FormMixin):
         return val
 
     def get_queryset(self):
-        my_user = models.MyUser.objects.get(user=self.request.user)
-        query = Q(experimentrecommendation__owner=my_user)
-
+        query = Q(experimentrecommendation__owner=self.my_user)
         if self.form.is_valid():
             query &= self.form.get_query()
-
         qs = self.model.objects.filter(query)
+
         for obj in qs:
             obj.plot_data = obj.get_average_metaplots()
-            obj.meta_data = obj.get_metadata(my_user)
+            obj.meta_data = obj.get_metadata(self.my_user)
             obj.urls = obj.get_urls()
         return qs
 
     def get_context_data(self, **kwargs):
-        my_user = models.MyUser.objects.get(user=self.request.user)
         context = \
             super(RecommendedExperiments, self).get_context_data(**kwargs)
-        context['experiment_counts'] = my_user.get_experiment_counts()
+        context['experiment_counts'] = self.my_user.get_experiment_counts()
         return context
 
 
