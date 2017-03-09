@@ -24,16 +24,38 @@ class ExperimentFilterForm(forms.Form):
         initial=[c[0] for c in order_choices],
         required=False)
 
+    name = forms.CharField(
+        label='Name',
+        widget=AutoCompleteWidget(lookups.NameLookup),
+        required=False)
+
+    description = forms.CharField(
+        label='Description',
+        widget=AutoCompleteWidget(lookups.DescriptionLookup),
+        required=False)
+
     data_type = forms.CharField(
         label='Data type',
         help_text="ex: ChIP-seq",
         widget=AutoCompleteWidget(lookups.DataTypeLookup),
         required=False)
 
+    cell_type = forms.CharField(
+        label='Cell type',
+        help_text='ex: K562',
+        widget=AutoCompleteWidget(lookups.CellTypeLookup),
+        required=False)
+
     assembly = forms.CharField(
         label='Assembly',
         help_text='ex: hg19',
         widget=AutoCompleteWidget(lookups.AssemblyLookup),
+        required=False)
+
+    target = forms.CharField(
+        label='Target',
+        help_text='Target antibody',
+        widget=AutoCompleteWidget(lookups.TargetLookup),
         required=False)
 
     paginate_by = forms.IntegerField(
@@ -45,14 +67,23 @@ class ExperimentFilterForm(forms.Form):
 
     def get_query(self):
 
+        name = self.cleaned_data.get('name')
+        description = self.cleaned_data.get('description')
         data_type = self.cleaned_data.get('data_type')
+        cell_type = self.cleaned_data.get('cell_type')
         assembly = self.cleaned_data.get('assembly')
 
         query = Q()
+        if name:
+            query &= Q(name__icontains=name)
+        if description:
+            query &= Q(description__icontains=name)
         if data_type:
-            query &= Q(data_type=data_type)
+            query &= Q(data_type__icontains=data_type)
+        if cell_type:
+            query &= Q(cell_type__icontains=cell_type)
         if assembly:
-            query &= Q(dataset__assembly__name=assembly)
+            query &= Q(dataset__assembly__name__icontains=assembly)
 
         return query
 

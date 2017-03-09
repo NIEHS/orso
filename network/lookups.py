@@ -25,9 +25,29 @@ class DistinctStringLookup(ModelLookup):
         return self.get_item_value(item)
 
 
+class NameLookup(DistinctStringLookup):
+    model = models.Experiment
+    distinct_field = 'name'
+
+
+class DescriptionLookup(DistinctStringLookup):
+    model = models.Experiment
+    distinct_field = 'description'
+
+
 class DataTypeLookup(DistinctStringLookup):
     model = models.Experiment
     distinct_field = 'data_type'
+
+
+class CellTypeLookup(DistinctStringLookup):
+    model = models.Experiment
+    distinct_field = 'cell_type'
+
+
+class TargetLookup(DistinctStringLookup):
+    model = models.Experiment
+    distinct_field = 'target'
 
 
 class AssemblyLookup(ModelLookup):
@@ -50,5 +70,9 @@ class AssemblyLookup(ModelLookup):
     def get_item_label(self, item):
         return self.get_item_value(item)
 
+registry.register(NameLookup)
+registry.register(DescriptionLookup)
 registry.register(DataTypeLookup)
+registry.register(CellTypeLookup)
+registry.register(TargetLookup)
 registry.register(AssemblyLookup)

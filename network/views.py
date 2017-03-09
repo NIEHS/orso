@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
-from django.views.generic import View, TemplateView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic \
+    import View, TemplateView, DetailView, CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.db.models import Q, F  # noqa
 from django.views.generic.edit import FormMixin
