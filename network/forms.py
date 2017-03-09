@@ -11,6 +11,19 @@ from . import lookups
 
 class ExperimentFilterForm(forms.Form):
 
+    order_choices = [
+        ('correlation_rank', 'correlation'),
+        ('metadata_rank', 'metadata'),
+        ('collaborative_rank', 'collaboration'),
+    ]
+
+    order = forms.MultipleChoiceField(
+        label='Recommendation criteria',
+        choices=order_choices,
+        widget=forms.CheckboxSelectMultiple(),
+        initial=[c[0] for c in order_choices],
+        required=False)
+
     data_type = forms.CharField(
         label='Data type',
         help_text="ex: ChIP-seq",
@@ -42,6 +55,9 @@ class ExperimentFilterForm(forms.Form):
             query &= Q(dataset__assembly__name=assembly)
 
         return query
+
+    def get_order(self):
+        return self.cleaned_data.get('order')
 
 
 class ExperimentForm(forms.ModelForm):

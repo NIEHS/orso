@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic import View, TemplateView, DetailView, CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
-from django.db.models import Q
+from django.db.models import Q, F  # noqa
 from django.views.generic.edit import FormMixin
 from django.views.generic.base import ContextMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -217,15 +217,32 @@ class RecommendedExperiments(ListView, AddMyUserMixin, FormMixin):
         return val
 
     def get_queryset(self):
+
         query = Q(experimentrecommendation__owner=self.my_user)
+        order_fields = [x[0] for x in forms.ExperimentFilterForm.order_choices]
+
         if self.form.is_valid():
             query &= self.form.get_query()
-        qs = self.model.objects.filter(query)
+            order_fields = self.form.get_order()
+
+        rank_eval = '+'.join(
+            ['F(\'experimentrecommendation__{}\')'.format(x)
+             for x in order_fields])
+        if rank_eval:
+            qs = (
+                self.model.objects
+                .filter(query)
+                .annotate(rank=eval(rank_eval))
+                .order_by('rank')
+            )
+        else:
+            qs = self.model.objects.filter(query)
 
         for obj in qs:
             obj.plot_data = obj.get_average_metaplots()
             obj.meta_data = obj.get_metadata(self.my_user)
             obj.urls = obj.get_urls()
+
         return qs
 
     def get_context_data(self, **kwargs):
