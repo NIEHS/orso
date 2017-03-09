@@ -29,4 +29,26 @@ class DataTypeLookup(DistinctStringLookup):
     model = models.Experiment
     distinct_field = 'data_type'
 
+
+class AssemblyLookup(ModelLookup):
+    #  TODO: double check when Experiments exist with multiple assemblies
+    model = models.Experiment
+    displayed = set()
+
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        return self.get_queryset()\
+            .filter(**{'dataset__assembly__name__icontains': term,
+                    'experimentrecommendation__owner': my_user})\
+            .order_by('dataset__assembly__name')\
+            .distinct('dataset__assembly__name')
+
+    def get_item_value(self, item):
+        value = models.Dataset.objects.get(experiment=item).assembly.name
+        return value
+
+    def get_item_label(self, item):
+        return self.get_item_value(item)
+
 registry.register(DataTypeLookup)
+registry.register(AssemblyLookup)

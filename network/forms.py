@@ -17,6 +17,12 @@ class ExperimentFilterForm(forms.Form):
         widget=AutoCompleteWidget(lookups.DataTypeLookup),
         required=False)
 
+    assembly = forms.CharField(
+        label='Assembly',
+        help_text='ex: hg19',
+        widget=AutoCompleteWidget(lookups.AssemblyLookup),
+        required=False)
+
     paginate_by = forms.IntegerField(
         label='Items per page',
         min_value=1,
@@ -27,10 +33,13 @@ class ExperimentFilterForm(forms.Form):
     def get_query(self):
 
         data_type = self.cleaned_data.get('data_type')
+        assembly = self.cleaned_data.get('assembly')
 
         query = Q()
         if data_type:
             query &= Q(data_type=data_type)
+        if assembly:
+            query &= Q(dataset__assembly__name=assembly)
 
         return query
 
