@@ -11,8 +11,10 @@ class DistinctStringLookup(ModelLookup):
     distinct_field = None
 
     def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
         return self.get_queryset()\
-            .filter(**{self.distinct_field + "__icontains": term})\
+            .filter(**{self.distinct_field + "__icontains": term,
+                    'experimentrecommendation__owner': my_user})\
             .order_by(self.distinct_field)\
             .distinct(self.distinct_field)
 
