@@ -247,9 +247,9 @@ class RecommendedExperiments(AddMyUserMixin, FormMixin, ListView):
         return qs
 
     def get_context_data(self, **kwargs):
-        context = \
-            super(RecommendedExperiments, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context['experiment_counts'] = self.my_user.get_experiment_counts()
+        context['form'] = self.form
         return context
 
 
