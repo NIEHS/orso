@@ -250,6 +250,11 @@ class RecommendedExperiments(AddMyUserMixin, FormMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['experiment_counts'] = self.my_user.get_experiment_counts()
         context['form'] = self.form
+        context['search_field'] = self.form['search']
+        context['other_fields'] = []
+        for field in self.form:
+            if field.name != 'search':
+                context['other_fields'].append(field)
         return context
 
 

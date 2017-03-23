@@ -14,46 +14,51 @@
         </ul>
     </div>
 </nav>
-
+<form action="." method="get">
+<fieldset>
 <div class="container">
     <div class="accordion" id="filterForm">
         <div class="accordion-group">
+            <div>{{search_field.label_tag}}</div>
+            <div class="row">
+                <div class="col-sm-10 col-extend">
+                    {{search_field}}
+                </div>
+                <div class="col-sm-2">
+                    <button type="submit" class="btn btn-primary btn-block">Go</button>
+                </div>
+            </div>
             <div class="accordion-heading">
                 <a class="accordion-toggle" data-toggle="collapse" data-parent="#filterForm" href="#EndpointForm" title="Filter endpoints">
-                Filter experiments
+                Advanced search options
                 </a>
             </div>
             <div id="EndpointForm" class="accordion-body collapse">
                 <div class="accordion-inner container">
-                    <form action="." method="get">
-                        <fieldset>
-                            {{ form.non_field_errors}}
-                            {% for field in form %}
-                                {% if forloop.counter0|divisibleby:4 %}
-                                <div class="row">
-                                {% endif %}
-                                    <div class="col-sm-3">
-                                        {{field.label_tag}}
-                                        <div class="controls">
-                                            {{field}}<br>
-                                            <span class='help-inline'>{{field.help_text}}</span>
-                                        </div>
-                                        {{field.errors}}
-                                    </div>
-                                {% if forloop.counter0|add:1|divisibleby:4 %}
+                    {{ form.non_field_errors}}
+                    {% for field in other_fields %}
+                        {% if forloop.counter0|divisibleby:4 %}
+                        <div class="row">
+                        {% endif %}
+                            <div class="col-sm-3">
+                                {{field.label_tag}}
+                                <div class="controls">
+                                    {{field}}<br>
+                                    <span class='help-inline'>{{field.help_text}}</span>
                                 </div>
-                                {% endif %}
-                            {% endfor %}
-                        </fieldset>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Apply filters</button>
+                                {{field.errors}}
+                            </div>
+                        {% if forloop.counter0|add:1|divisibleby:4 %}
                         </div>
-                    </form>
+                        {% endif %}
+                    {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+</fieldset>
+</form>
 <div class="container">
     <div id="processing_container"></div>
     <div id="experiment_container"></div>

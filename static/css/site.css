@@ -7,7 +7,6 @@ body {
   margin-bottom: 6em;
 }
 
-
 /* NIEHS look and feel */
 .navbar-default {
     background-image: linear-gradient(to bottom, #698B00, #81AB00);
@@ -184,4 +183,8 @@ input[type=number] {
   margin-bottom: 0;
   max-width: 70em;
   overflow: auto;
+}
+
+.col-extend * {
+  width:100%;
 }

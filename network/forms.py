@@ -11,6 +11,11 @@ from . import lookups
 
 class ExperimentFilterForm(forms.Form):
 
+    search = forms.CharField(
+        label='Search',
+        widget=AutoCompleteWidget(lookups.RecommendationSearchLookup),
+        required=False)
+
     order_choices = [
         ('correlation_rank', 'correlation'),
         ('metadata_rank', 'metadata'),
@@ -67,25 +72,35 @@ class ExperimentFilterForm(forms.Form):
 
     def get_query(self):
 
+        search = self.cleaned_data.get('search')
+
+        search_query = Q()
+        if search:
+            search_query |= Q(name__icontains=search)
+            search_query |= Q(description__icontains=search)
+            search_query |= Q(data_type__icontains=search)
+            search_query |= Q(cell_type__icontains=search)
+            search_query |= Q(dataset__assembly__name__icontains=search)
+
         name = self.cleaned_data.get('name')
         description = self.cleaned_data.get('description')
         data_type = self.cleaned_data.get('data_type')
         cell_type = self.cleaned_data.get('cell_type')
         assembly = self.cleaned_data.get('assembly')
 
-        query = Q()
+        filter_query = Q()
         if name:
-            query &= Q(name__icontains=name)
+            filter_query &= Q(name__icontains=name)
         if description:
-            query &= Q(description__icontains=name)
+            filter_query &= Q(description__icontains=description)
         if data_type:
-            query &= Q(data_type__icontains=data_type)
+            filter_query &= Q(data_type__icontains=data_type)
         if cell_type:
-            query &= Q(cell_type__icontains=cell_type)
+            filter_query &= Q(cell_type__icontains=cell_type)
         if assembly:
-            query &= Q(dataset__assembly__name__icontains=assembly)
+            filter_query &= Q(dataset__assembly__name__icontains=assembly)
 
-        return query
+        return Q(search_query & filter_query)
 
     def get_order(self):
         return self.cleaned_data.get('order')
