@@ -191,7 +191,7 @@ class FavoriteExperiments(ListView, AddMyUserMixin):
         return context
 
 
-class RecommendedExperiments(ListView, AddMyUserMixin, FormMixin):
+class RecommendedExperiments(AddMyUserMixin, FormMixin, ListView):
     model = models.Experiment
     template_name = 'network/recommended_experiments.html'
     form_class = forms.ExperimentFilterForm
