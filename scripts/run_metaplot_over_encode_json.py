@@ -4,14 +4,12 @@ from datetime import datetime
 import json
 import click
 import os
-import tempfile
 import multiprocessing
-import urllib.request
-import shutil
+from subprocess import call
 
 BED_DICT = None
 OUTPUT_DIR = None
-TEMP_DIR = None
+WORKING_DIR = os.getcwd()
 
 
 def get_encode_url(url):
@@ -75,26 +73,15 @@ def process_dataset(dataset):
                 str(datetime.now()),
                 dataset['ambiguous'],
             ))
-            url = get_encode_url(dataset['ambiguous_href'])
-            dataset_name = dataset['ambiguous']
-            temp_bw = tempfile.NamedTemporaryFile(dir=TEMP_DIR)
-            print('{}: downloading {}.'.format(
-                str(datetime.now()),
-                dataset['ambiguous'],
-            ))
-            with urllib.request.urlopen(url) as response:
-                shutil.copyfileobj(response, temp_bw)
-            print('{}: {} download complete.'.format(
-                str(datetime.now()),
-                dataset['ambiguous'],
-            ))
+
             for bed in bed_files:
                 print('{}: processing {} over {}.'.format(
                     str(datetime.now()),
                     dataset['ambiguous'],
                     bed['name'],
                 ))
-                meta = MetaPlot(bed['file'], single_bw=temp_bw.name)
+                meta = MetaPlot(bed['file'], single_bw=os.path.join(
+                    OUTPUT_DIR, dataset['ambiguous'] + '.bigWig'))
                 out_header = '{}.{}'.format(
                     dataset_name,
                     bed['name']
@@ -116,7 +103,7 @@ def process_dataset(dataset):
                         dataset['ambiguous'],
                         bed['name'],
                     ))
-            temp_bw.close()
+
             print('{}: processing {} complete.'.format(
                 str(datetime.now()),
                 dataset['ambiguous'],
@@ -127,34 +114,6 @@ def process_dataset(dataset):
                 dataset['plus'],
                 dataset['minus'],
             ))
-            url_f = get_encode_url(dataset['plus_href'])
-            url_r = get_encode_url(dataset['minus_href'])
-            dataset_f = dataset['plus']
-            dataset_r = dataset['minus']
-            temp_bw_f = tempfile.NamedTemporaryFile(dir=TEMP_DIR)
-            temp_bw_r = tempfile.NamedTemporaryFile(dir=TEMP_DIR)
-
-            print('{}: downloading {}.'.format(
-                str(datetime.now()),
-                dataset['plus'],
-            ))
-            with urllib.request.urlopen(url_f) as response:
-                shutil.copyfileobj(response, temp_bw_f)
-            print('{}: {} download complete.'.format(
-                str(datetime.now()),
-                dataset['plus'],
-            ))
-
-            print('{}: downloading {}.'.format(
-                str(datetime.now()),
-                dataset['minus'],
-            ))
-            with urllib.request.urlopen(url_r) as response:
-                shutil.copyfileobj(response, temp_bw_r)
-            print('{}: {} download complete.'.format(
-                str(datetime.now()),
-                dataset['minus'],
-            ))
 
             for bed in bed_files:
                 print('{}: processing {}/{} over {}.'.format(
@@ -163,12 +122,17 @@ def process_dataset(dataset):
                     dataset['minus'],
                     bed['name'],
                 ))
-                meta = MetaPlot(bed['file'], paired_1_bw=temp_bw_f.name,
-                                paired_2_bw=temp_bw_r.name)
+                meta = MetaPlot(
+                    bed['file'],
+                    paired_1_bw=os.path.join(
+                        OUTPUT_DIR, dataset['plus'] + '.bigWig'),
+                    paired_2_bw=os.path.join(
+                        OUTPUT_DIR, dataset['minus'] + '.bigWig'),
+                )
                 out_header = '{}.{}.{}'.format(
                     dataset_f,
                     dataset_r,
-                    bed['name']
+                    bed['name'],
                 )
                 try:
                     meta.create_intersection_json(os.path.join(
@@ -189,8 +153,7 @@ def process_dataset(dataset):
                         dataset['minus'],
                         bed['name'],
                     ))
-            temp_bw_f.close()
-            temp_bw_r.close()
+
             print('{}: processing {}/{} complete.'.format(
                 str(datetime.now()),
                 dataset['plus'],
@@ -213,7 +176,7 @@ def cli(json_input, bed_list, output_directory, processes):
 
     global BED_DICT
     global OUTPUT_DIR
-    global TEMP_DIR
+
     BED_DICT = read(bed_list)
     OUTPUT_DIR = output_directory
 
@@ -221,10 +184,44 @@ def cli(json_input, bed_list, output_directory, processes):
     for experiment in experiments:
         for dataset in experiment['datasets']:
             dataset_list.append(dataset)
-    p = multiprocessing.Pool(processes)
-    TEMP_DIR = tempfile.mkdtemp(dir=os.getcwd())
-    p.map(process_dataset, dataset_list)
-    shutil.rmtree(TEMP_DIR)
+    dataset_list = dataset_list[:10]
+
+    for i in range(0, len(dataset_list), 100):
+        if i + 100 <= len(dataset_list):
+            dataset_chunk = dataset_list[i:i + 100]
+        else:
+            dataset_chunk = dataset_list[i:len(dataset_list)]
+
+        chunk_files = []
+        for field in ['ambiguous_href', 'plus_href', 'minus_href']:
+            for dataset in dataset_chunk:
+                if field in dataset:
+                    chunk_files.append(dataset[field])
+
+        download_list_path = os.path.join(OUTPUT_DIR, 'download_list.txt')
+        download_list_file = open(download_list_path, 'w')
+
+        for fn in chunk_files:
+            download_list_file.write('{}\n'.format(get_encode_url(fn)))
+
+        download_list_file.close()
+
+        os.chdir(OUTPUT_DIR)
+        call([
+            'aria2c', '-x', '16', '-s', '16', '-i',
+            os.path.basename(download_list_path),
+        ])
+        os.chdir(WORKING_DIR)
+
+        p = multiprocessing.Pool(processes)
+        p.map(process_dataset, dataset_chunk)
+        p.close()
+        p.join()
+
+        os.chdir(OUTPUT_DIR)
+        for fn in chunk_files:
+            os.remove(os.path.basename(fn))
+        os.chdir(WORKING_DIR)
 
 
 if __name__ == '__main__':
