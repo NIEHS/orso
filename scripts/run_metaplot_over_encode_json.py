@@ -32,133 +32,103 @@ def process_dataset(dataset):
     assembly = dataset['assembly']
     bed_files = BED_DICT[assembly]
 
-    run = False
     if 'ambiguous_href' in dataset:
         dataset_name = dataset['ambiguous']
+
+        print('{}: processing {}.'.format(
+            str(datetime.now()),
+            dataset['ambiguous'],
+        ))
+
         for bed in bed_files:
+            print('{}: processing {} over {}.'.format(
+                str(datetime.now()),
+                dataset['ambiguous'],
+                bed['name'],
+            ))
+            meta = MetaPlot(bed['file'], single_bw=os.path.join(
+                OUTPUT_DIR, dataset['ambiguous'] + '.bigWig'))
             out_header = '{}.{}'.format(
                 dataset_name,
                 bed['name']
             )
-            intersection_file = os.path.join(
-                OUTPUT_DIR, out_header + '.intersection.json')
-            metaplot_file = os.path.join(
-                OUTPUT_DIR, out_header + '.metaplot.json')
-            if not (os.path.isfile(intersection_file) and
-                    os.path.isfile(metaplot_file)):
-                run = True
-    else:
-        dataset_f = dataset['plus']
-        dataset_r = dataset['minus']
-        dataset_name = '{}.{}'.format(dataset_f, dataset_r)
-        for bed in bed_files:
-            out_header = '{}.{}.{}'.format(
-                dataset_f,
-                dataset_r,
-                bed['name']
-            )
-            intersection_file = os.path.join(
-                OUTPUT_DIR, out_header + '.intersection.json')
-            metaplot_file = os.path.join(
-                OUTPUT_DIR, out_header + '.metaplot.json')
-            if not (os.path.isfile(intersection_file) and
-                    os.path.isfile(metaplot_file)):
-                run = True
-
-    if not run:
-        print('{}: files found; skipped.'.format(dataset_name))
-    else:
-        if 'ambiguous_href' in dataset:
-            print('{}: processing {}.'.format(
-                str(datetime.now()),
-                dataset['ambiguous'],
-            ))
-
-            for bed in bed_files:
-                print('{}: processing {} over {}.'.format(
+            try:
+                meta.create_intersection_json(os.path.join(
+                    OUTPUT_DIR, out_header + '.intersection.json'))
+                meta.create_metaplot_json(os.path.join(
+                    OUTPUT_DIR, out_header + '.metaplot.json'))
+            except:
+                print('{}: processing {} over {} failed.'.format(
                     str(datetime.now()),
                     dataset['ambiguous'],
                     bed['name'],
                 ))
-                meta = MetaPlot(bed['file'], single_bw=os.path.join(
-                    OUTPUT_DIR, dataset['ambiguous'] + '.bigWig'))
-                out_header = '{}.{}'.format(
-                    dataset_name,
-                    bed['name']
-                )
-                try:
-                    meta.create_intersection_json(os.path.join(
-                        OUTPUT_DIR, out_header + '.intersection.json'))
-                    meta.create_metaplot_json(os.path.join(
-                        OUTPUT_DIR, out_header + '.metaplot.json'))
-                except:
-                    print('{}: processing {} over {} failed.'.format(
-                        str(datetime.now()),
-                        dataset['ambiguous'],
-                        bed['name'],
-                    ))
-                else:
-                    print('{}: processing {} over {} complete.'.format(
-                        str(datetime.now()),
-                        dataset['ambiguous'],
-                        bed['name'],
-                    ))
+            else:
+                print('{}: processing {} over {} complete.'.format(
+                    str(datetime.now()),
+                    dataset['ambiguous'],
+                    bed['name'],
+                ))
 
-            print('{}: processing {} complete.'.format(
-                str(datetime.now()),
-                dataset['ambiguous'],
-            ))
-        else:
-            print('{}: processing {}/{}.'.format(
+        print('{}: processing {} complete.'.format(
+            str(datetime.now()),
+            dataset['ambiguous'],
+        ))
+    else:
+        dataset_f = dataset['plus']
+        dataset_r = dataset['minus']
+        dataset_name = '{}.{}'.format(dataset_f, dataset_r)
+
+        print('{}: processing {}/{}.'.format(
+            str(datetime.now()),
+            dataset['plus'],
+            dataset['minus'],
+        ))
+
+        for bed in bed_files:
+            print('{}: processing {}/{} over {}.'.format(
                 str(datetime.now()),
                 dataset['plus'],
                 dataset['minus'],
+                bed['name'],
             ))
-
-            for bed in bed_files:
-                print('{}: processing {}/{} over {}.'.format(
+            meta = MetaPlot(
+                bed['file'],
+                paired_1_bw=os.path.join(
+                    OUTPUT_DIR, dataset['plus'] + '.bigWig'),
+                paired_2_bw=os.path.join(
+                    OUTPUT_DIR, dataset['minus'] + '.bigWig'),
+            )
+            out_header = '{}.{}.{}'.format(
+                dataset_f,
+                dataset_r,
+                bed['name'],
+            )
+            try:
+                meta.create_intersection_json(os.path.join(
+                    OUTPUT_DIR, out_header + '.intersection.json'))
+                meta.create_metaplot_json(os.path.join(
+                    OUTPUT_DIR, out_header + '.metaplot.json'))
+            except:
+                print('{}: processing {}/{} over {} failed.'.format(
                     str(datetime.now()),
                     dataset['plus'],
                     dataset['minus'],
                     bed['name'],
                 ))
-                meta = MetaPlot(
-                    bed['file'],
-                    paired_1_bw=os.path.join(
-                        OUTPUT_DIR, dataset['plus'] + '.bigWig'),
-                    paired_2_bw=os.path.join(
-                        OUTPUT_DIR, dataset['minus'] + '.bigWig'),
-                )
-                out_header = '{}.{}.{}'.format(
-                    dataset_f,
-                    dataset_r,
+            else:
+                print('{}: processing {}/{} over {} complete.'.format(
+                    str(datetime.now()),
+                    dataset['plus'],
+                    dataset['minus'],
                     bed['name'],
-                )
-                try:
-                    meta.create_intersection_json(os.path.join(
-                        OUTPUT_DIR, out_header + '.intersection.json'))
-                    meta.create_metaplot_json(os.path.join(
-                        OUTPUT_DIR, out_header + '.metaplot.json'))
-                except:
-                    print('{}: processing {}/{} over {} failed.'.format(
-                        str(datetime.now()),
-                        dataset['plus'],
-                        dataset['minus'],
-                        bed['name'],
-                    ))
-                else:
-                    print('{}: processing {}/{} over {} complete.'.format(
-                        str(datetime.now()),
-                        dataset['plus'],
-                        dataset['minus'],
-                        bed['name'],
-                    ))
+                ))
 
-            print('{}: processing {}/{} complete.'.format(
-                str(datetime.now()),
-                dataset['plus'],
-                dataset['minus'],
-            ))
+        print('{}: processing {}/{} complete.'.format(
+            str(datetime.now()),
+            dataset['plus'],
+            dataset['minus'],
+        ))
 
 
 @click.command()
@@ -184,7 +154,6 @@ def cli(json_input, bed_list, output_directory, processes):
     for experiment in experiments:
         for dataset in experiment['datasets']:
             dataset_list.append(dataset)
-    dataset_list = dataset_list[:10]
 
     for i in range(0, len(dataset_list), 100):
         if i + 100 <= len(dataset_list):
