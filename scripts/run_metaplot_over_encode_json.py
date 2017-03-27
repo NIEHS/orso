@@ -153,7 +153,34 @@ def cli(json_input, bed_list, output_directory, processes):
     dataset_list = []
     for experiment in experiments:
         for dataset in experiment['datasets']:
-            dataset_list.append(dataset)
+            assembly = dataset['assembly']
+            bed_files = BED_DICT[assembly]
+
+            run = False
+
+            if 'ambiguous_href' in dataset:
+                dataset_name = dataset['ambiguous']
+            else:
+                dataset_f = dataset['plus']
+                dataset_r = dataset['minus']
+                dataset_name = '{}.{}'.format(dataset_f, dataset_r)
+
+            for bed in bed_files:
+                out_header = '{}.{}'.format(
+                    dataset_name,
+                    bed['name']
+                )
+                intersection_file = os.path.join(
+                    OUTPUT_DIR, out_header + '.intersection.json')
+                metaplot_file = os.path.join(
+                    OUTPUT_DIR, out_header + '.metaplot.json')
+                if not (os.path.isfile(intersection_file) and
+                        os.path.isfile(metaplot_file)):
+                    run = True
+            if run:
+                dataset_list.append(dataset)
+            else:
+                print('{}: files found; skipped.'.format(dataset_name))
 
     for i in range(0, len(dataset_list), 100):
         if i + 100 <= len(dataset_list):
