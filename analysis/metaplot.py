@@ -2,7 +2,6 @@
 
 import pyBigWig
 import os
-import bisect
 import json
 import numpy
 import click
@@ -41,16 +40,16 @@ def is_header(line):
         return True
 
 
-def find_intersection(start, end, intervals, interval_starts, interval_ends):
-    index_1 = bisect.bisect_right(interval_starts, start)
-    index_2 = bisect.bisect_left(interval_ends, end)
+def check_position(value, max_length):
+    if value < 1:
+        return 1
+    elif value > max_length:
+        return max_length
+    else:
+        return value
 
-    intersecting_intervals = intervals[index_1 - 1:index_2 + 1]
-    return intersecting_intervals
 
-
-def find_bin_values(bin_start, bin_num, bin_size, intervals, interval_starts,
-                    interval_ends):
+def find_bin_values(bin_start, bin_num, bin_size, intervals):
 
     bin_values = []
 
@@ -60,53 +59,38 @@ def find_bin_values(bin_start, bin_num, bin_size, intervals, interval_starts,
 
         bin_range = (start, end)
 
-        overlapping_intervals = find_intersection(
-            start, end, intervals, interval_starts, interval_ends
-        )
-
         coverage = 0
-        for overlapping_interval in overlapping_intervals:
-            val = min(bin_range[1], overlapping_interval[1]) - \
-                max(bin_range[0], overlapping_interval[0]) + 1
-            positions = max(0, val)
-            coverage += positions * overlapping_interval[2]
+        if intervals:
+            for interval in intervals:
+                val = min(bin_range[1], interval[1]) - \
+                    max(bin_range[0], interval[0]) + 1
+                positions = max(0, val)
+                coverage += positions * interval[2]
         bin_values.append(coverage / bin_size)
 
     return bin_values
 
 
-def get_starts_and_ends(intervals):
-    starts = [r[0] for r in intervals]
-    ends = [r[1] for r in intervals]
-    return starts, ends
-
-
-def get_bw_intervals(bw, chromosome):
-    intervals = bw.intervals(chromosome)
-
-    # Convert from 0-based to 1-based
+def convert_intervals(intervals):
     converted_intervals = []
-    for interval in intervals:
-        converted_intervals.append((interval[0] + 1, interval[1], interval[2]))
-    converted_intervals = tuple(converted_intervals)
+    if intervals:
+        for interval in intervals:
+            converted_intervals.append(
+                (interval[0] + 1, interval[1], interval[2]))
+        converted_intervals = tuple(converted_intervals)
+        return converted_intervals
+    else:
+        return intervals
 
-    starts, ends = get_starts_and_ends(converted_intervals)
 
-    return converted_intervals, starts, ends
-
-
-def read_bed_by_chrom(bed_fn):
-    chrom_entries = defaultdict(list)
-
+def read_bed(bed_fn):
+    bed_entries = []
     with open(bed_fn) as f:
-
         for line in f:
             line_split = line.strip().split('\t')
             if not is_header(line):
-                chromosome = line_split[0]
-                chrom_entries[chromosome].append(line_split)
-
-    return chrom_entries
+                bed_entries.append(line_split)
+    return bed_entries
 
 
 class MetaPlot(object):
@@ -133,148 +117,100 @@ class MetaPlot(object):
 
     def find_data_matrix(self):
 
-        chrom_entries = read_bed_by_chrom(self.bed_fn)
+        # chrom_entries = read_bed_by_chrom(self.bed_fn)
+        bed_entries = read_bed(self.bed_fn)
         data_dict = defaultdict(list)
         self.data_matrix = {'matrix_rows': [], 'matrix_columns': []}
 
         if self.single_bw:
             bw = pyBigWig.open(self.single_bw)
             bw_chroms = set(bw.chroms().keys())
-            # intervals, interval_starts, interval_ends = \
-            #     get_bw_intervals(bw, chromosome)
+            chrom_sizes = bw.chroms()
         else:
             bw_1 = pyBigWig.open(self.paired_1_bw)
             bw_2 = pyBigWig.open(self.paired_2_bw)
             bw_chroms = set(bw_1.chroms().keys())
             for chrom in bw_2.chroms().keys():
                 bw_chroms.add(chrom)
-            # intervals_1, interval_starts_1, interval_ends_1 = \
-            #     get_bw_intervals(bw_1, chromosome)
-            # intervals_2, interval_starts_2, interval_ends_2 = \
-            #     get_bw_intervals(bw_2, chromosome)
-
-        for chromosome, bed_values in chrom_entries.items():
-            if chromosome in bw_chroms:
-
-                if self.single_bw:
-                    # bw = pyBigWig.open(self.single_bw)
-                    intervals, interval_starts, interval_ends = \
-                        get_bw_intervals(bw, chromosome)
+            chrom_sizes = bw_1.chroms()
+            for key, value in bw_2.chroms().items():
+                if key in chrom_sizes:
+                    chrom_sizes[key] = max([chrom_sizes[key], value])
                 else:
-                    # bw_1 = pyBigWig.open(self.paired_1_bw)
-                    # bw_2 = pyBigWig.open(self.paired_2_bw)
-                    intervals_1, interval_starts_1, interval_ends_1 = \
-                        get_bw_intervals(bw_1, chromosome)
-                    intervals_2, interval_starts_2, interval_ends_2 = \
-                        get_bw_intervals(bw_2, chromosome)
+                    chrom_sizes[key] = value
 
-                for entry in bed_values:
+        for entry in bed_entries:
 
-                    chromosome, start, end, name = entry[:4]
-                    if len(entry) > 5:
-                        strand = entry[5]
-                    else:
-                        strand = '.'
-                    center = \
-                        int((int(end) - int(start) + 1) / 2 + (int(start) + 1))
+            chromosome, start, end, name = entry[:4]
+            if len(entry) > 5:
+                strand = entry[5]
+            else:
+                strand = '.'
+            center = \
+                int((int(end) - int(start) + 1) / 2 + (int(start) + 1))
 
-                    if strand == '+' or strand == '.':
-                        intersection_start = center + self.bin_start
-                        intersection_end = center + self.bin_start + \
-                            self.bin_num * self.bin_size
-                    else:
-                        intersection_start = center - self.bin_start - \
-                            self.bin_num * self.bin_size
-                        intersection_end = center - self.bin_start
+            if strand == '+' or strand == '.':
+                intersection_start = center + self.bin_start
+                intersection_end = center + self.bin_start + \
+                    self.bin_num * self.bin_size
+            else:
+                intersection_start = center - self.bin_start - \
+                    self.bin_num * self.bin_size
+                intersection_end = center - self.bin_start
 
-                    if self.single_bw:
-                        intersected_intervals = find_intersection(
-                            intersection_start, intersection_end, intervals,
-                            interval_starts, interval_ends)
-                        intersected_starts, intersected_ends = \
-                            get_starts_and_ends(intersected_intervals)
-                    else:
-                        if strand == '+':
-                            intersected_intervals = find_intersection(
-                                intersection_start,
-                                intersection_end,
-                                intervals_1,
-                                interval_starts_1,
-                                interval_ends_1,
-                            )
-                            intersected_starts, intersected_ends = \
-                                get_starts_and_ends(intersected_intervals)
-                        if strand == '-':
-                            intersected_intervals = find_intersection(
-                                intersection_start,
-                                intersection_end,
-                                intervals_2,
-                                interval_starts_2,
-                                interval_ends_2,
-                            )
-                            intersected_starts, intersected_ends = \
-                                get_starts_and_ends(intersected_intervals)
-                        if strand == '.':
-                            intersected_intervals_1 = find_intersection(
-                                intersection_start,
-                                intersection_end,
-                                intervals_1,
-                                interval_starts_1,
-                                interval_ends_1,
-                            )
-                            intersected_starts_1, intersected_ends_1 = \
-                                get_starts_and_ends(intersected_intervals_1)
+            intersection_start = \
+                check_position(intersection_start, chrom_sizes[chromosome])
+            intersection_end = \
+                check_position(intersection_end, chrom_sizes[chromosome])
 
-                            intersected_intervals_2 = find_intersection(
-                                intersection_start,
-                                intersection_end,
-                                intervals_2,
-                                interval_starts_2,
-                                interval_ends_2,
-                            )
-                            intersected_starts_2, intersected_ends_2 = \
-                                get_starts_and_ends(intersected_intervals_2)
+            if self.single_bw:
+                intervals = convert_intervals(bw.intervals(
+                    chromosome, intersection_start - 1, intersection_end))
+            else:
+                if strand == '+':
+                    intervals = convert_intervals(bw_1.intervals(
+                        chromosome, intersection_start - 1, intersection_end))
+                if strand == '-':
+                    intervals = convert_intervals(bw_2.intervals(
+                        chromosome, intersection_start - 1, intersection_end))
+                if strand == '.':
+                    intervals_1 = convert_intervals(bw_1.intervals(
+                        chromosome, intersection_start - 1, intersection_end))
+                    intervals_2 = convert_intervals(bw_2.intervals(
+                        chromosome, intersection_start - 1, intersection_end))
 
-                    if strand == '+' or strand == '-':
-                        bin_values = find_bin_values(
-                            intersection_start,
-                            self.bin_num,
-                            self.bin_size,
-                            intersected_intervals,
-                            intersected_starts,
-                            intersected_ends)
-                        if strand == '-':
-                            bin_values.reverse()
+            if strand == '+' or strand == '-':
+                bin_values = find_bin_values(
+                    intersection_start,
+                    self.bin_num,
+                    self.bin_size,
+                    intervals)
+                if strand == '-':
+                    bin_values.reverse()
 
-                    if strand == '.':
-                        if self.single_bw:
-                            bin_values = find_bin_values(
-                                intersection_start,
-                                self.bin_num,
-                                self.bin_size,
-                                intersected_intervals,
-                                intersected_starts,
-                                intersected_ends)
-                        else:
-                            bin_values_1 = find_bin_values(
-                                intersection_start,
-                                self.bin_num,
-                                self.bin_size,
-                                intersected_intervals_1,
-                                intersected_starts_1,
-                                intersected_ends_1)
-                            bin_values_2 = find_bin_values(
-                                intersection_start,
-                                self.bin_num,
-                                self.bin_size,
-                                intersected_intervals_2,
-                                intersected_starts_2,
-                                intersected_ends_2)
-                            bin_values = \
-                                [x + y for x, y in zip(bin_values_1,
-                                                       bin_values_2)]
+            if strand == '.':
+                if self.single_bw:
+                    bin_values = find_bin_values(
+                        intersection_start,
+                        self.bin_num,
+                        self.bin_size,
+                        intervals)
+                else:
+                    bin_values_1 = find_bin_values(
+                        intersection_start,
+                        self.bin_num,
+                        self.bin_size,
+                        intervals_1)
+                    bin_values_2 = find_bin_values(
+                        intersection_start,
+                        self.bin_num,
+                        self.bin_size,
+                        intervals_2)
+                    bin_values = \
+                        [x + y for x, y in zip(bin_values_1,
+                                               bin_values_2)]
 
-                    data_dict[name] = bin_values
+            data_dict[name] = bin_values
 
         with open(self.bed_fn) as f:
             for line in f:
