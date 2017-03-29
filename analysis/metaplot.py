@@ -53,20 +53,24 @@ def find_bin_values(bin_start, bin_num, bin_size, intervals):
 
     bin_values = []
 
-    for i in range(bin_num):
-        start = bin_start + i * bin_size
-        end = start + bin_size - 1
+    if bin_start:
+        for i in range(bin_num):
+            start = bin_start + i * bin_size
+            end = start + bin_size - 1
 
-        bin_range = (start, end)
+            bin_range = (start, end)
 
-        coverage = 0
-        if intervals:
-            for interval in intervals:
-                val = min(bin_range[1], interval[1]) - \
-                    max(bin_range[0], interval[0]) + 1
-                positions = max(0, val)
-                coverage += positions * interval[2]
-        bin_values.append(coverage / bin_size)
+            coverage = 0
+            if intervals:
+                for interval in intervals:
+                    val = min(bin_range[1], interval[1]) - \
+                        max(bin_range[0], interval[0]) + 1
+                    positions = max(0, val)
+                    coverage += positions * interval[2]
+            bin_values.append(coverage / bin_size)
+    else:
+        for i in range(bin_num):
+            bin_values.append(0)
 
     return bin_values
 
@@ -158,26 +162,53 @@ class MetaPlot(object):
                     self.bin_num * self.bin_size
                 intersection_end = center - self.bin_start
 
-            intersection_start = \
-                check_position(intersection_start, chrom_sizes[chromosome])
-            intersection_end = \
-                check_position(intersection_end, chrom_sizes[chromosome])
+            try:
+                intersection_start = \
+                    check_position(intersection_start, chrom_sizes[chromosome])
+                intersection_end = \
+                    check_position(intersection_end, chrom_sizes[chromosome])
+            except KeyError:  # if chromosome not in chrom_sizes
+                intersection_start = None
+                intersection_end = None
 
             if self.single_bw:
-                intervals = convert_intervals(bw.intervals(
-                    chromosome, intersection_start - 1, intersection_end))
+                try:
+                    intervals = convert_intervals(bw.intervals(
+                        chromosome, intersection_start - 1, intersection_end))
+                except:
+                    intervals = ()
             else:
                 if strand == '+':
-                    intervals = convert_intervals(bw_1.intervals(
-                        chromosome, intersection_start - 1, intersection_end))
+                    try:
+                        intervals = convert_intervals(bw_1.intervals(
+                            chromosome,
+                            intersection_start - 1,
+                            intersection_end))
+                    except:
+                        intervals = ()
                 if strand == '-':
-                    intervals = convert_intervals(bw_2.intervals(
-                        chromosome, intersection_start - 1, intersection_end))
+                    try:
+                        intervals = convert_intervals(bw_2.intervals(
+                            chromosome,
+                            intersection_start - 1,
+                            intersection_end))
+                    except:
+                        intervals = ()
                 if strand == '.':
-                    intervals_1 = convert_intervals(bw_1.intervals(
-                        chromosome, intersection_start - 1, intersection_end))
-                    intervals_2 = convert_intervals(bw_2.intervals(
-                        chromosome, intersection_start - 1, intersection_end))
+                    try:
+                        intervals_1 = convert_intervals(bw_1.intervals(
+                            chromosome,
+                            intersection_start - 1,
+                            intersection_end))
+                    except:
+                        intervals_1 = ()
+                    try:
+                        intervals_2 = convert_intervals(bw_2.intervals(
+                            chromosome,
+                            intersection_start - 1,
+                            intersection_end))
+                    except:
+                        intervals_2 = ()
 
             if strand == '+' or strand == '-':
                 bin_values = find_bin_values(
@@ -217,11 +248,11 @@ class MetaPlot(object):
                 if not is_header(line):
                     chrom = line.strip().split()[0]
                     name = line.strip().split()[3]
-                    if chrom in bw_chroms:
-                        self.data_matrix['matrix_rows'].append({
-                            'name': name,
-                            'row_values': data_dict[name]
-                        })
+
+                    self.data_matrix['matrix_rows'].append({
+                        'name': name,
+                        'row_values': data_dict[name]
+                    })
 
         for i in range(self.bin_num):
             s = self.bin_start + i * self.bin_size
