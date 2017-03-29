@@ -3,6 +3,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic \
     import View, TemplateView, DetailView, CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
+from django.forms.models import inlineformset_factory
 from django.db.models import Q, F  # noqa
 from django.views.generic.edit import FormMixin
 from django.views.generic.base import ContextMixin
@@ -71,34 +72,104 @@ class AddMyUserMixin(ContextMixin, LoginRequiredMixin):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['login_user'] = models.MyUser.objects.get(user=self.request.user)
+        context['login_user'] = models.MyUser.objects.get(
+            user=self.request.user)
         return context
 
 
-class ExperimentCreate(NeverCacheFormMixin, CreateView):
+class ExperimentCreate(NeverCacheFormMixin, AddMyUserMixin, CreateView):
     model = models.Experiment
-    # form_class = forms.DatasetForm
+    form_class = forms.ExperimentForm
+    DatasetFormSet = inlineformset_factory(
+        models.Experiment, models.Dataset, form=forms.DatasetForm, extra=1)
 
-    # def form_valid(self, form):
-    #     form.instance.slug = form.instance.name
-    #     form.instance.promoter_intersection = None
-    #     form.instance.enhancer_intersection = None
-    #     form.instance.promoter_metaplot = None
-    #     form.instance.enhancer_metaplot = None
-    #
-    #     self.object = form.save()
-    #     self.object.owners.add(models.MyUser.objects.get(user=self.request.user))
-    #     return super(DatasetCreate, self).form_valid(form)
+    def get_success_url(self):
+        return reverse('personal_experiments')
+
+    def get(self, request, *args, **kwargs):
+        self.object = None
+        form = self.get_form(self.form_class)
+        dataset_formset = self.DatasetFormSet(self.request.GET or None)
+        return self.render_to_response(
+            self.get_context_data(
+                form=form,
+                dataset_formset=dataset_formset))
+
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        form = self.get_form(self.form_class)
+        dataset_formset = self.DatasetFormSet(self.request.POST or None)
+        if form.is_valid() and dataset_formset.is_valid():
+            return self.form_valid(form, dataset_formset)
+        else:
+            return self.form_invalid(form, dataset_formset)
+
+    def form_valid(self, form, dataset_formset):
+        context = super().get_context_data()
+        login_user = context['login_user']
+
+        self.object = form.save()
+        self.object.owners.add(login_user)
+        dataset_formset.instance = self.object
+        dataset_formset.save()
+        return HttpResponseRedirect(self.get_success_url())
+
+    def form_invalid(self, form, dataset_formset):
+        return self.render_to_response(
+            self.get_context_data(
+                form=form,
+                dataset_formset=dataset_formset))
 
 
-class ExperimentUpdate(NeverCacheFormMixin, UpdateView):
+class ExperimentUpdate(NeverCacheFormMixin, AddMyUserMixin, UpdateView):
     model = models.Experiment
-    # form_class = forms.ExperimentForm
+    form_class = forms.ExperimentForm
+    DatasetFormSet = inlineformset_factory(
+        models.Experiment, models.Dataset, form=forms.DatasetForm, extra=0)
+
+    def get_success_url(self):
+        return reverse('personal_experiments')
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        if self.request.POST:
+            context['form'] = forms.ExperimentForm(
+                self.request.POST, instance=self.object)
+            context['datatset_formset'] = self.DatasetFormSet(
+                self.request.POST, instance=self.object)
+        else:
+            context['form'] = forms.ExperimentForm(
+                instance=self.object)
+            context['dataset_formset'] = self.DatasetFormSet(
+                instance=self.object)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form(self.form_class)
+        dataset_formset = self.DatasetFormSet(
+            self.request.POST, instance=self.object)
+        if form.is_valid() and dataset_formset.is_valid():
+            return self.form_valid(form, dataset_formset)
+        else:
+            return self.form_invalid(form, dataset_formset)
+
+    def form_valid(self, form, dataset_formset):
+        self.object = form.save()
+        dataset_formset.instance = self.object
+        dataset_formset.save()
+        return HttpResponseRedirect(self.get_success_url())
+
+    def form_invalid(self, form, dataset_formset):
+        return self.render_to_response(
+            self.get_context_data(
+                form=form,
+                dataset_formset=dataset_formset))
 
 
 class ExperimentDelete(NeverCacheFormMixin, DeleteView):
     model = models.Experiment
-    # form_class = forms.DatasetForm
+    form_class = forms.ExperimentForm
 
     def get_success_url(self):
         return reverse('personal_experiments')

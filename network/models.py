@@ -429,9 +429,9 @@ class Dataset(models.Model):
     #  TODO: change promoter/enhancer metaplots to single metaplot list
     description = models.TextField(blank=True)
 
-    ambiguous_url = models.URLField()
-    plus_url = models.URLField()
-    minus_url = models.URLField()
+    ambiguous_url = models.URLField(null=True, blank=True)
+    plus_url = models.URLField(null=True, blank=True)
+    minus_url = models.URLField(null=True, blank=True)
 
     experiment = models.ForeignKey('Experiment', blank=True, null=True)
     name = models.CharField(max_length=128)
