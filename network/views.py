@@ -265,7 +265,7 @@ class FavoriteExperiments(ListView, AddMyUserMixin):
 class RecommendedExperiments(AddMyUserMixin, FormMixin, ListView):
     model = models.Experiment
     template_name = 'network/recommended_experiments.html'
-    form_class = forms.ExperimentFilterForm
+    form_class = forms.ExperimentRecFilterForm
 
     def dispatch(self, request, *args, **kwargs):
         self.my_user = models.MyUser.objects.get(user=self.request.user)
@@ -291,7 +291,7 @@ class RecommendedExperiments(AddMyUserMixin, FormMixin, ListView):
     def get_queryset(self):
 
         query = Q(experimentrecommendation__owner=self.my_user)
-        order_fields = [x[0] for x in forms.ExperimentFilterForm.order_choices]
+        order_fields = [x[0] for x in self.form_class.order_choices]
 
         if self.form.is_valid():
             query &= self.form.get_query()

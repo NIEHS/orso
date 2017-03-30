@@ -6,7 +6,7 @@ from . import lookups
 # from selectable import forms as selectable
 
 from . import models
-from django.forms.models import inlineformset_factory
+# from django.forms.models import inlineformset_factory
 # from analysis import metaplot
 
 
@@ -15,19 +15,6 @@ class ExperimentFilterForm(forms.Form):
     search = forms.CharField(
         label='Search',
         widget=AutoCompleteWidget(lookups.RecommendationSearchLookup),
-        required=False)
-
-    order_choices = [
-        ('correlation_rank', 'correlation'),
-        ('metadata_rank', 'metadata'),
-        ('collaborative_rank', 'collaboration'),
-    ]
-
-    order = forms.MultipleChoiceField(
-        label='Recommendation criteria',
-        choices=order_choices,
-        widget=forms.CheckboxSelectMultiple(),
-        initial=[c[0] for c in order_choices],
         required=False)
 
     name = forms.CharField(
@@ -102,6 +89,25 @@ class ExperimentFilterForm(forms.Form):
             filter_query &= Q(dataset__assembly__name__icontains=assembly)
 
         return Q(search_query & filter_query)
+
+
+class ExperimentRecFilterForm(ExperimentFilterForm):
+    order_choices = [
+        ('correlation_rank', 'correlation'),
+        ('metadata_rank', 'metadata'),
+        ('collaborative_rank', 'collaboration'),
+    ]
+
+    order = forms.MultipleChoiceField(
+        label='Recommendation criteria',
+        choices=order_choices,
+        widget=forms.CheckboxSelectMultiple(),
+        initial=[c[0] for c in order_choices],
+        required=False)
+
+    field_order = [
+        'order'
+    ]
 
     def get_order(self):
         return self.cleaned_data.get('order')
