@@ -125,5 +125,21 @@ class DatasetForm(forms.ModelForm):
             'minus_url'
         )
 
-DatasetFormSet = inlineformset_factory(
-    models.Experiment, models.Dataset, form=DatasetForm, extra=1)
+    def clean(self):
+        cleaned_data = super().clean()
+
+        ambiguous_url = cleaned_data.get('ambiguous_url')
+        plus_url = cleaned_data.get('plus_url')
+        minus_url = cleaned_data.get('minus_url')
+
+        error_text = 'An ambiguous URL may not be included with stranded URLs.'
+
+        if ambiguous_url:
+            if plus_url or minus_url:
+                raise forms.ValidationError(error_text)
+        elif plus_url and minus_url:
+            if ambiguous_url:
+                raise forms.ValidationError(error_text)
+        else:
+            raise forms.ValidationError(
+                'Either ambiguous or stranded URLs required.')
