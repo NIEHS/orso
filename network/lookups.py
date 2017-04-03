@@ -11,6 +11,14 @@ class DistinctStringLookup(ModelLookup):
     """
     distinct_field = None
 
+    def get_item_value(self, item):
+        return getattr(item, self.distinct_field)
+
+    def get_item_label(self, item):
+        return self.get_item_value(item)
+
+
+class RecExpLookup(DistinctStringLookup):
     def get_query(self, request, term):
         my_user = models.MyUser.objects.get(user=request.user)
         return self.get_queryset()\
@@ -19,34 +27,98 @@ class DistinctStringLookup(ModelLookup):
             .order_by(self.distinct_field)\
             .distinct(self.distinct_field)
 
-    def get_item_value(self, item):
-        return getattr(item, self.distinct_field)
 
-    def get_item_label(self, item):
-        return self.get_item_value(item)
-
-
-class NameLookup(DistinctStringLookup):
+class RecExpNameLookup(RecExpLookup):
     model = models.Experiment
     distinct_field = 'name'
 
 
-class DescriptionLookup(DistinctStringLookup):
+class RecExpDescriptionLookup(RecExpLookup):
     model = models.Experiment
     distinct_field = 'description'
 
 
-class DataTypeLookup(DistinctStringLookup):
+class RecExpDataTypeLookup(RecExpLookup):
     model = models.Experiment
     distinct_field = 'data_type'
 
 
-class CellTypeLookup(DistinctStringLookup):
+class RecExpCellTypeLookup(RecExpLookup):
     model = models.Experiment
     distinct_field = 'cell_type'
 
 
-class TargetLookup(DistinctStringLookup):
+class RecExpTargetLookup(RecExpLookup):
+    model = models.Experiment
+    distinct_field = 'target'
+
+
+class PerExpLookup(DistinctStringLookup):
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        return self.get_queryset()\
+            .filter(**{self.distinct_field + "__icontains": term,
+                    'owners__in': [my_user]})\
+            .order_by(self.distinct_field)\
+            .distinct(self.distinct_field)
+
+
+class PerExpNameLookup(PerExpLookup):
+    model = models.Experiment
+    distinct_field = 'name'
+
+
+class PerExpDescriptionLookup(PerExpLookup):
+    model = models.Experiment
+    distinct_field = 'description'
+
+
+class PerExpDataTypeLookup(PerExpLookup):
+    model = models.Experiment
+    distinct_field = 'data_type'
+
+
+class PerExpCellTypeLookup(PerExpLookup):
+    model = models.Experiment
+    distinct_field = 'cell_type'
+
+
+class PerExpTargetLookup(PerExpLookup):
+    model = models.Experiment
+    distinct_field = 'target'
+
+
+class FavExpLookup(DistinctStringLookup):
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        return self.get_queryset()\
+            .filter(**{self.distinct_field + "__icontains": term,
+                    'experimentfavorite__owner': my_user})\
+            .order_by(self.distinct_field)\
+            .distinct(self.distinct_field)
+
+
+class FavExpNameLookup(FavExpLookup):
+    model = models.Experiment
+    distinct_field = 'name'
+
+
+class FavExpDescriptionLookup(FavExpLookup):
+    model = models.Experiment
+    distinct_field = 'description'
+
+
+class FavExpDataTypeLookup(FavExpLookup):
+    model = models.Experiment
+    distinct_field = 'data_type'
+
+
+class FavExpCellTypeLookup(FavExpLookup):
+    model = models.Experiment
+    distinct_field = 'cell_type'
+
+
+class FavExpTargetLookup(FavExpLookup):
     model = models.Experiment
     distinct_field = 'target'
 
@@ -54,15 +126,6 @@ class TargetLookup(DistinctStringLookup):
 class AssemblyLookup(ModelLookup):
     #  TODO: double check when Experiments exist with multiple assemblies
     model = models.Experiment
-    displayed = set()
-
-    def get_query(self, request, term):
-        my_user = models.MyUser.objects.get(user=request.user)
-        return self.get_queryset()\
-            .filter(**{'dataset__assembly__name__icontains': term,
-                    'experimentrecommendation__owner': my_user})\
-            .order_by('dataset__assembly__name')\
-            .distinct('dataset__assembly__name')
 
     def get_item_value(self, item):
         value = models.Dataset.objects.get(experiment=item).assembly.name
@@ -72,46 +135,126 @@ class AssemblyLookup(ModelLookup):
         return self.get_item_value(item)
 
 
-class RecommendationSearchLookup(ModelLookup):
-    model = models.Experiment
-    displayed = set()
-
+class RecExpAssemblyLookup(AssemblyLookup):
     def get_query(self, request, term):
         my_user = models.MyUser.objects.get(user=request.user)
+        return self.get_queryset()\
+            .filter(**{'dataset__assembly__name__icontains': term,
+                    'experimentrecommendation__owner': my_user})\
+            .order_by('dataset__assembly__name')\
+            .distinct('dataset__assembly__name')
 
+
+class PerExpAssemblyLookup(AssemblyLookup):
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        return self.get_queryset()\
+            .filter(**{'dataset__assembly__name__icontains': term,
+                    'owners__in': [my_user]})\
+            .order_by('dataset__assembly__name')\
+            .distinct('dataset__assembly__name')
+
+
+class FavExpAssemblyLookup(AssemblyLookup):
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        return self.get_queryset()\
+            .filter(**{'dataset__assembly__name__icontains': term,
+                    'experimentfavorite__owner': my_user})\
+            .order_by('dataset__assembly__name')\
+            .distinct('dataset__assembly__name')
+
+
+class ExperimentSearchLookup(ModelLookup):
+    model = models.Experiment
+
+    def get_base_query(self, request, term):
         query = Q()
         query |= Q(name__icontains=term)
         query |= Q(data_type__icontains=term)
         query |= Q(cell_type__icontains=term)
         query |= Q(description__icontains=term)
+        query |= Q(target__icontains=term)
         query |= Q(dataset__assembly__name__icontains=term)
 
+        return query
+
+    def get_item_value(self, item):
+        values = []
+        spacer = ' | '
+
+        assemblies = set()
+        for a in models.GenomeAssembly.objects.filter(dataset__experiment=item):  # noqa
+            assemblies.add(a.name)
+
+        if item.name:
+            values.append(item.name)
+        if item.data_type:
+            values.append(item.data_type)
+        if item.cell_type:
+            values.append(item.cell_type)
+        if item.target:
+            values.append(item.target)
+        if assemblies:
+            values.append(spacer.join(list(assemblies)))
+        if item.description:
+            values.append(item.description)
+
+        return spacer.join(values)
+
+    def get_item_label(self, item):
+        return self.get_item_value(item)
+
+
+class RecExpSearchLookup(ExperimentSearchLookup):
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        query = self.get_base_query(request, term)
         return self.get_queryset()\
             .filter(Q(experimentrecommendation__owner=my_user) & query)\
             .order_by('name')\
             .distinct()
 
-    def get_item_value(self, item):
-        value = ' '.join([
-            item.name,
-            item.data_type,
-            item.cell_type,
-            ' '.join([
-                a.name for a in
-                models.GenomeAssembly.objects
-                .filter(dataset__experiment=item)
-            ]),
-            item.description,
-        ])
-        return value
 
-    def get_item_label(self, item):
-        return self.get_item_value(item)
+class PerExpSearchLookup(ExperimentSearchLookup):
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        query = self.get_base_query(request, term)
+        return self.get_queryset()\
+            .filter(Q(owners__in=[my_user]) & query)\
+            .order_by('name')\
+            .distinct()
 
-registry.register(NameLookup)
-registry.register(DescriptionLookup)
-registry.register(DataTypeLookup)
-registry.register(CellTypeLookup)
-registry.register(TargetLookup)
-registry.register(AssemblyLookup)
-registry.register(RecommendationSearchLookup)
+
+class FavExpSearchLookup(ExperimentSearchLookup):
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        query = self.get_base_query(request, term)
+        return self.get_queryset()\
+            .filter(Q(experimentfavorite__owner=my_user) & query)\
+            .order_by('name')\
+            .distinct()
+
+registry.register(RecExpNameLookup)
+registry.register(RecExpDescriptionLookup)
+registry.register(RecExpDataTypeLookup)
+registry.register(RecExpCellTypeLookup)
+registry.register(RecExpTargetLookup)
+registry.register(RecExpAssemblyLookup)
+registry.register(RecExpSearchLookup)
+
+registry.register(PerExpNameLookup)
+registry.register(PerExpDescriptionLookup)
+registry.register(PerExpDataTypeLookup)
+registry.register(PerExpCellTypeLookup)
+registry.register(PerExpTargetLookup)
+registry.register(PerExpAssemblyLookup)
+registry.register(PerExpSearchLookup)
+
+registry.register(FavExpNameLookup)
+registry.register(FavExpDescriptionLookup)
+registry.register(FavExpDataTypeLookup)
+registry.register(FavExpCellTypeLookup)
+registry.register(FavExpTargetLookup)
+registry.register(FavExpAssemblyLookup)
+registry.register(FavExpSearchLookup)

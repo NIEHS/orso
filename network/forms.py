@@ -14,41 +14,34 @@ class ExperimentFilterForm(forms.Form):
 
     search = forms.CharField(
         label='Search',
-        widget=AutoCompleteWidget(lookups.RecommendationSearchLookup),
         required=False)
 
     name = forms.CharField(
         label='Name',
-        widget=AutoCompleteWidget(lookups.NameLookup),
         required=False)
 
     description = forms.CharField(
         label='Description',
-        widget=AutoCompleteWidget(lookups.DescriptionLookup),
         required=False)
 
     data_type = forms.CharField(
         label='Data type',
         help_text="ex: ChIP-seq",
-        widget=AutoCompleteWidget(lookups.DataTypeLookup),
         required=False)
 
     cell_type = forms.CharField(
         label='Cell type',
         help_text='ex: K562',
-        widget=AutoCompleteWidget(lookups.CellTypeLookup),
         required=False)
 
     assembly = forms.CharField(
         label='Assembly',
         help_text='ex: hg19',
-        widget=AutoCompleteWidget(lookups.AssemblyLookup),
         required=False)
 
     target = forms.CharField(
         label='Target',
         help_text='Target antibody',
-        widget=AutoCompleteWidget(lookups.TargetLookup),
         required=False)
 
     paginate_by = forms.IntegerField(
@@ -69,12 +62,14 @@ class ExperimentFilterForm(forms.Form):
             search_query |= Q(data_type__icontains=search)
             search_query |= Q(cell_type__icontains=search)
             search_query |= Q(dataset__assembly__name__icontains=search)
+            search_query |= Q(target__icontains=search)
 
         name = self.cleaned_data.get('name')
         description = self.cleaned_data.get('description')
         data_type = self.cleaned_data.get('data_type')
         cell_type = self.cleaned_data.get('cell_type')
         assembly = self.cleaned_data.get('assembly')
+        target = self.cleaned_data.get('target')
 
         filter_query = Q()
         if name:
@@ -87,11 +82,13 @@ class ExperimentFilterForm(forms.Form):
             filter_query &= Q(cell_type__icontains=cell_type)
         if assembly:
             filter_query &= Q(dataset__assembly__name__icontains=assembly)
+        if target:
+            filter_query &= Q(target__icontains=target)
 
         return Q(search_query & filter_query)
 
 
-class ExperimentRecFilterForm(ExperimentFilterForm):
+class RecommendedExperimentFilterForm(ExperimentFilterForm):
     order_choices = [
         ('correlation_rank', 'correlation'),
         ('metadata_rank', 'metadata'),
@@ -109,8 +106,68 @@ class ExperimentRecFilterForm(ExperimentFilterForm):
         'order'
     ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['search'].widget = \
+            AutoCompleteWidget(lookups.RecExpSearchLookup)
+        self.fields['name'].widget = \
+            AutoCompleteWidget(lookups.RecExpNameLookup)
+        self.fields['description'].widget = \
+            AutoCompleteWidget(lookups.RecExpDescriptionLookup)
+        self.fields['data_type'].widget = \
+            AutoCompleteWidget(lookups.RecExpDataTypeLookup)
+        self.fields['cell_type'].widget = \
+            AutoCompleteWidget(lookups.RecExpCellTypeLookup)
+        self.fields['assembly'].widget = \
+            AutoCompleteWidget(lookups.RecExpAssemblyLookup)
+        self.fields['target'].widget = \
+            AutoCompleteWidget(lookups.RecExpTargetLookup)
+
     def get_order(self):
         return self.cleaned_data.get('order')
+
+
+class PersonalExperimentFilterForm(ExperimentFilterForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['search'].widget = \
+            AutoCompleteWidget(lookups.PerExpSearchLookup)
+        self.fields['name'].widget = \
+            AutoCompleteWidget(lookups.PerExpNameLookup)
+        self.fields['description'].widget = \
+            AutoCompleteWidget(lookups.PerExpDescriptionLookup)
+        self.fields['data_type'].widget = \
+            AutoCompleteWidget(lookups.PerExpDataTypeLookup)
+        self.fields['cell_type'].widget = \
+            AutoCompleteWidget(lookups.PerExpCellTypeLookup)
+        self.fields['assembly'].widget = \
+            AutoCompleteWidget(lookups.PerExpAssemblyLookup)
+        self.fields['target'].widget = \
+            AutoCompleteWidget(lookups.PerExpTargetLookup)
+
+
+class FavoriteExperimentFilterForm(ExperimentFilterForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['search'].widget = \
+            AutoCompleteWidget(lookups.FavExpSearchLookup)
+        self.fields['name'].widget = \
+            AutoCompleteWidget(lookups.FavExpNameLookup)
+        self.fields['description'].widget = \
+            AutoCompleteWidget(lookups.FavExpDescriptionLookup)
+        self.fields['data_type'].widget = \
+            AutoCompleteWidget(lookups.FavExpDataTypeLookup)
+        self.fields['cell_type'].widget = \
+            AutoCompleteWidget(lookups.FavExpCellTypeLookup)
+        self.fields['assembly'].widget = \
+            AutoCompleteWidget(lookups.FavExpAssemblyLookup)
+        self.fields['target'].widget = \
+            AutoCompleteWidget(lookups.FavExpTargetLookup)
 
 
 class ExperimentForm(forms.ModelForm):
