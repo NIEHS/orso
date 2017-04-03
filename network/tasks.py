@@ -350,3 +350,17 @@ def update_correlation_values():
                                 genomic_regions=gr,
                                 score=corr,
                             )
+
+
+@periodic_task(run_every=timedelta(seconds=5))
+@single_instance_task('correlation_values')
+def update_metadata_correlation_values():
+    experiments = models.Experiment.objects.all().order_by('id')
+    similarities = get_metadata_similarities()
+    for i, exp_1 in enumerate(experiments):
+        for j, exp_2 in enumerate(experiments[i + 1:]):
+            models.MetadataCorrelation.objects.update_or_create(
+                x_experiment=exp_1,
+                y_experiment=exp_2,
+                score=similarities[exp_1][exp_2],
+            )
