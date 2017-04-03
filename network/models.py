@@ -622,21 +622,21 @@ class ExperimentRecommendation(Recommendation):
 
 
 class MetadataCorrelation(models.Model):
-    x_experiment = models.ForeignKey('Experiment', related_name='x')
-    y_experiment = models.ForeignKey('Experiment', related_name='y')
+    x_experiment = models.ForeignKey('Experiment', related_name='x_meta')
+    y_experiment = models.ForeignKey('Experiment', related_name='y_meta')
 
     score = models.FloatField()
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = (
-            ('x_experiment', 'y_experiment', 'genomic_regions',),
+            ('x_experiment', 'y_experiment',),
         )
 
 
 class ExperimentCorrelation(models.Model):
-    x_experiment = models.ForeignKey('Experiment', related_name='x')
-    y_experiment = models.ForeignKey('Experiment', related_name='y')
+    x_experiment = models.ForeignKey('Experiment', related_name='x_value')
+    y_experiment = models.ForeignKey('Experiment', related_name='y_value')
     genomic_regions = models.ForeignKey('GenomicRegions')
 
     score = models.FloatField()
