@@ -5,7 +5,6 @@ from django.views.generic \
 from django.views.generic import ListView
 from django.forms.models import inlineformset_factory
 from django.db.models import Q, F  # noqa
-from django.views.generic.edit import FormMixin
 from django.views.generic.base import ContextMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import available_attrs, method_decorator
@@ -220,18 +219,27 @@ class MyUser(DetailView, AddMyUserMixin):
         return context
 
 
-class ExperimentMixin(AddMyUserMixin, FormMixin):
+class ExperimentList(AddMyUserMixin, ListView):
     def dispatch(self, request, *args, **kwargs):
         self.my_user = models.MyUser.objects.get(user=self.request.user)
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        if len(self.request.GET) > 0:
-            self.form = self.form_class(
-                self.request.GET
-            )
-        else:
-            self.form = self.form_class()
+        try:
+            pk = self.kwargs['pk']
+            if self.request.GET:
+                self.form = self.form_class(
+                    self.request.GET, pk=pk,
+                )
+            else:
+                self.form = self.form_class(pk=pk)
+        except:
+            if self.request.GET:
+                self.form = self.form_class(
+                    self.request.GET
+                )
+            else:
+                self.form = self.form_class()
         return super().get(request, *args, **kwargs)
 
     def get_paginate_by(self, qs):
@@ -254,7 +262,7 @@ class ExperimentMixin(AddMyUserMixin, FormMixin):
         return context
 
 
-class PersonalExperiments(ExperimentMixin, ListView):
+class PersonalExperiments(ExperimentList):
     model = models.Experiment
     template_name = 'network/personal_experiments.html'
     form_class = forms.PersonalExperimentFilterForm
@@ -276,7 +284,7 @@ class PersonalExperiments(ExperimentMixin, ListView):
         return qs
 
 
-class FavoriteExperiments(ExperimentMixin, ListView):
+class FavoriteExperiments(ExperimentList):
     model = models.Experiment
     template_name = 'network/favorite_experiments.html'
     form_class = forms.FavoriteExperimentFilterForm
@@ -298,7 +306,7 @@ class FavoriteExperiments(ExperimentMixin, ListView):
         return qs
 
 
-class RecommendedExperiments(ExperimentMixin, ListView):
+class RecommendedExperiments(ExperimentList):
     model = models.Experiment
     template_name = 'network/recommended_experiments.html'
     form_class = forms.RecommendedExperimentFilterForm
