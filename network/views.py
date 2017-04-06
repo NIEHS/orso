@@ -341,6 +341,45 @@ class RecommendedExperiments(ExperimentList):
         return qs
 
 
+class SimilarExperiments(ExperimentList):
+    model = models.Experiment
+    template_name = 'network/similar_experiments.html'
+    form_class = forms.SimilarExperimentFilterForm
+    correlation_model = None
+
+    def get_queryset(self):
+
+        exp = models.Experiment.objects.get(pk=self.kwargs['pk'])
+        assemblies = \
+            models.GenomeAssembly.objects.filter(dataset__experiment=exp)
+
+        base_query = Q()
+        for a in assemblies:
+            base_query |= Q(dataset__assembly=a)
+
+        form_query = Q()
+        if self.form.is_valid():
+            form_query &= self.form.get_query()
+        qs = self.model.objects.filter(
+            base_query & form_query).exclude(pk=exp.pk).distinct().all()
+
+        for obj in qs:
+            obj.plot_data = obj.get_average_metaplots()
+            obj.meta_data = obj.get_metadata(self.my_user)
+            obj.urls = obj.get_urls()
+            obj.score = self.correlation_model.get_score(exp, obj)
+
+        return sorted(qs, key=lambda x: x.score)
+
+
+class SimilarValuesExperiments(SimilarExperiments):
+    correlation_model = models.ExperimentCorrelation
+
+
+class SimilarMetadataExperiments(SimilarExperiments):
+    correlation_model = models.MetadataCorrelation
+
+
 class FavoriteUsers(TemplateView, AddMyUserMixin):
     template_name = 'network/favorite_users.html'
 

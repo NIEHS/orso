@@ -20,6 +20,14 @@ urlpatterns = [
     url(r'^home/$', views.Home.as_view(), name='home'),
     url(r'^experiment/(?P<pk>\d+)/$', views.Experiment.as_view(),
         name='experiment'),
+
+    url(r'^experiment/(?P<pk>\d+)/similar_values/$',
+        views.SimilarValuesExperiments.as_view(),
+        name='similar_values'),
+    url(r'^experiment/(?P<pk>\d+)/similar_metadata/$',
+        views.SimilarMetadataExperiments.as_view(),
+        name='similar_metadata'),
+
     url(r'^user/(?P<pk>\d+)/$', views.MyUser.as_view(), name='user'),
 
     url(r'^personal_experiments/$', views.PersonalExperiments.as_view(),

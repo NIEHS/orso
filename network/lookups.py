@@ -123,6 +123,47 @@ class FavExpTargetLookup(FavExpLookup):
     distinct_field = 'target'
 
 
+class SimExpLookup(DistinctStringLookup):
+    def get_query(self, request, term):
+        exp = models.Experiment.objects.get(pk=request.GET['pk'])
+        assemblies = \
+            models.GenomeAssembly.objects.filter(dataset__experiment=exp)
+        query = Q()
+        for a in assemblies:
+            query |= Q(dataset__assembly=a)
+        return self.get_queryset()\
+            .filter(**{self.distinct_field + "__icontains": term})\
+            .filter(query)\
+            .exclude(pk=exp.pk)\
+            .order_by(self.distinct_field)\
+            .distinct(self.distinct_field)
+
+
+class SimExpNameLookup(SimExpLookup):
+    model = models.Experiment
+    distinct_field = 'name'
+
+
+class SimExpDescriptionLookup(SimExpLookup):
+    model = models.Experiment
+    distinct_field = 'description'
+
+
+class SimExpDataTypeLookup(SimExpLookup):
+    model = models.Experiment
+    distinct_field = 'data_type'
+
+
+class SimExpCellTypeLookup(SimExpLookup):
+    model = models.Experiment
+    distinct_field = 'cell_type'
+
+
+class SimExpTargetLookup(SimExpLookup):
+    model = models.Experiment
+    distinct_field = 'target'
+
+
 class AssemblyLookup(ModelLookup):
     #  TODO: double check when Experiments exist with multiple assemblies
     model = models.Experiment
@@ -161,6 +202,16 @@ class FavExpAssemblyLookup(AssemblyLookup):
         return self.get_queryset()\
             .filter(**{'dataset__assembly__name__icontains': term,
                     'experimentfavorite__owner': my_user})\
+            .order_by('dataset__assembly__name')\
+            .distinct('dataset__assembly__name')
+
+
+class SimExpAssemblyLookup(AssemblyLookup):
+    def get_query(self, request, term):
+        pk = request.GET['pk']
+        return self.get_queryset()\
+            .filter(**{'dataset__assembly__name__icontains': term})\
+            .exclude(pk=pk)\
             .order_by('dataset__assembly__name')\
             .distinct('dataset__assembly__name')
 
@@ -235,6 +286,22 @@ class FavExpSearchLookup(ExperimentSearchLookup):
             .order_by('name')\
             .distinct()
 
+
+class SimExpSearchLookup(ExperimentSearchLookup):
+    def get_query(self, request, term):
+        exp = models.Experiment.objects.get(pk=request.GET['pk'])
+        assemblies = \
+            models.GenomeAssembly.objects.filter(dataset__experiment=exp)
+        query = Q()
+        for a in assemblies:
+            query |= Q(dataset__assembly=a)
+        base_query = self.get_base_query(request, term)
+        return self.get_queryset()\
+            .filter(query & base_query)\
+            .exclude(pk=exp.pk)\
+            .order_by('name')\
+            .distinct()
+
 registry.register(RecExpNameLookup)
 registry.register(RecExpDescriptionLookup)
 registry.register(RecExpDataTypeLookup)
@@ -258,3 +325,11 @@ registry.register(FavExpCellTypeLookup)
 registry.register(FavExpTargetLookup)
 registry.register(FavExpAssemblyLookup)
 registry.register(FavExpSearchLookup)
+
+registry.register(SimExpNameLookup)
+registry.register(SimExpDescriptionLookup)
+registry.register(SimExpDataTypeLookup)
+registry.register(SimExpCellTypeLookup)
+registry.register(SimExpTargetLookup)
+registry.register(SimExpAssemblyLookup)
+registry.register(SimExpSearchLookup)

@@ -170,6 +170,34 @@ class FavoriteExperimentFilterForm(ExperimentFilterForm):
             AutoCompleteWidget(lookups.FavExpTargetLookup)
 
 
+class SimilarExperimentFilterForm(ExperimentFilterForm):
+
+    def __init__(self, *args, **kwargs):
+        pk = kwargs.pop('pk', None)
+        print('form', pk)
+        super().__init__(*args, **kwargs)
+
+        self.fields['search'].widget = \
+            AutoCompleteWidget(lookups.SimExpSearchLookup)
+        self.fields['name'].widget = \
+            AutoCompleteWidget(lookups.SimExpNameLookup)
+        self.fields['description'].widget = \
+            AutoCompleteWidget(lookups.SimExpDescriptionLookup)
+        self.fields['data_type'].widget = \
+            AutoCompleteWidget(lookups.SimExpDataTypeLookup)
+        self.fields['cell_type'].widget = \
+            AutoCompleteWidget(lookups.SimExpCellTypeLookup)
+        self.fields['assembly'].widget = \
+            AutoCompleteWidget(lookups.SimExpAssemblyLookup)
+        self.fields['target'].widget = \
+            AutoCompleteWidget(lookups.SimExpTargetLookup)
+
+        for field in self.fields:
+            if isinstance(self.fields[field].widget, AutoCompleteWidget):
+                self.fields[field].widget.update_query_parameters(
+                    {'pk': pk})
+
+
 class ExperimentForm(forms.ModelForm):
 
     class Meta:

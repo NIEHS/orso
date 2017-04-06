@@ -633,6 +633,15 @@ class MetadataCorrelation(models.Model):
             ('x_experiment', 'y_experiment',),
         )
 
+    @staticmethod
+    def get_score(exp_1, exp_2):
+        if exp_1.id < exp_2.id:
+            return MetadataCorrelation.objects.get(
+                x_experiment=exp_1, y_experiment=exp_2).score
+        else:
+            return MetadataCorrelation.objects.get(
+                x_experiment=exp_2, y_experiment=exp_1).score
+
 
 class ExperimentCorrelation(models.Model):
     x_experiment = models.ForeignKey('Experiment', related_name='x_value')
@@ -646,6 +655,19 @@ class ExperimentCorrelation(models.Model):
         unique_together = (
             ('x_experiment', 'y_experiment', 'genomic_regions',),
         )
+
+    @staticmethod
+    def get_score(exp_1, exp_2):
+        scores = []
+        if exp_1.id < exp_2.id:
+            corrs = ExperimentCorrelation.objects.filter(
+                x_experiment=exp_1, y_experiment=exp_2)
+        else:
+            corrs = ExperimentCorrelation.objects.filter(
+                x_experiment=exp_2, y_experiment=exp_1)
+        for c in corrs:
+            scores.append(c.score)
+        return max(scores)
 
     @staticmethod
     def get_correlation_stats(regions):

@@ -1,0 +1,19 @@
+{% extends 'base_EXPERIMENTS.html' %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+{% for experiment in object_list %}
+$(document).ready(function(){
+    window.apps.appendSmallDataView(
+        $('#experiment_container')[0],
+        {{experiment.meta_data|safe}},
+        {{experiment.plot_data|safe}},
+        {{experiment.urls|safe}},
+        {
+            'display_remove_favorite': true
+        }
+    );
+});
+{% endfor %}
+</script>
+{% endblock %}
