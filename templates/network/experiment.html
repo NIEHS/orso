@@ -4,22 +4,29 @@
 
 <div class="container">
     <h3>{{experiment.name}}</h3>
+    <div class="row">
+        <div class="col-sm-8">
+            {% if experiment.data_type %}
+            <p>Data type: {{experiment.data_type}}</p>
+            {% endif %}
 
-    {% if experiment.data_type %}
-    <p>Data type: {{experiment.data_type}}</p>
-    {% endif %}
+            {% if experiment.cell_type %}
+            <p>Cell type: {{experiment.cell_type}}</p>
+            {% endif %}
 
-    {% if experiment.cell_type %}
-    <p>Cell type: {{experiment.cell_type}}</p>
-    {% endif %}
+            {% if experiment.target %}
+            <p>Antibody: {{experiment.target}}</p>
+            {% endif %}
 
-    {% if experiment.target %}
-    <p>Antibody: {{experiment.target}}</p>
-    {% endif %}
-
-    {% if experiment.description %}
-    <p>Description: {{experiment.description}}</p>
-    {% endif %}
+            {% if experiment.description %}
+            <p>Description: {{experiment.description}}</p>
+            {% endif %}
+        </div>
+        <div class="col-sm-4">
+            <a href="{% url 'similar_values' pk=experiment.pk %}" class="btn btn-primary btn-block">Experiments with similar values</a>
+            <a href="{% url 'similar_metadata' pk=experiment.pk %}" class="btn btn-primary btn-block">Experiments with similiar metadata</a>
+        </div>
+    </div>
 
     <div class="row">
         <div class="col-sm-6">
