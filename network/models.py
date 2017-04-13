@@ -405,10 +405,6 @@ class Experiment(models.Model):
 
         if self.target:
             metadata['target'] = self.target
-        # if self.ambiguous_url:
-        #     metadata['strand'] = 'Unstranded'
-        # else:
-        #     metadata['strand'] = 'Stranded'
         if self.description:
             metadata['description'] = self.description
 
@@ -416,6 +412,10 @@ class Experiment(models.Model):
         if self.owners:
             for owner in self.owners.all():
                 metadata['owners'].append(owner.user.username)
+
+        metadata['assemblies'] = []
+        for assembly in self.get_assemblies():
+            metadata['assemblies'].append(assembly.name)
 
         if my_user:
             metadata['is_favorite'] = self.is_favorite(my_user)
