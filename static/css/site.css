@@ -188,3 +188,9 @@ input[type=number] {
 .col-extend * {
   width:100%;
 }
+
+.carousel-control.left, .carousel-control.right {
+  background: none !important;
+  filter: progid: none !important;
+  outline: 0;
+ }
