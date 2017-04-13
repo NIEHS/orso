@@ -1,5 +1,6 @@
 import React from 'react';
 import MetaPlot from './MetaPlot';
+import DatasetCarousel from './DatasetCarousel';
 
 import './MetaPlot.css';
 
@@ -8,25 +9,9 @@ class SmallDataView extends React.Component {
 
     constructor(props) {
         super(props);
-        var assemblies = []
-        for (var i = 0; i < this.props.plot_data.length; i++) {
-            var assembly = this.props.plot_data[i]['assembly']
-            if ($.inArray(assembly, assemblies) == -1) {
-                assemblies.push(assembly);
-            }
-        }
         this.state = {
             is_favorite: (props.meta_data['is_favorite'] === 'true'),
-            assemblies: assemblies,
-            selected_assembly: assemblies[0],
         };
-        this.selectAssembly = this.selectAssembly.bind(this);
-    }
-
-    selectAssembly(event) {
-        this.setState({
-            selected_assembly: event.target.value
-        });
     }
 
     componentDidMount(){
@@ -35,16 +20,6 @@ class SmallDataView extends React.Component {
             remove_favorite_url = this.props.urls['remove_favorite'],
             hide_recommendation_url = this.props.urls['hide_recommendation'];
         let self = this;
-
-        $('.assembly_select').each(function() {
-            if (this.value == self.state.selected_assembly_index) {
-                console.log(this);
-                $(this).prop('checked', true);
-                console.log(this);
-            } else {
-                $(this).prop('checked', false);
-            }
-        })
 
         $(this.refs.favorite_button).on('click', function () {
             if (self.state.is_favorite) {
@@ -92,15 +67,6 @@ class SmallDataView extends React.Component {
         var id_select = 'panel_' + this.props.meta_data['id'];
         var id_css_select = '#' + id_select;
 
-        for (var i = 0; i < this.props.plot_data.length; i++) {
-            if (this.props.plot_data[i]['regions'] == 'Promoters' && this.props.plot_data[i]['assembly'] == this.state.selected_assembly) {
-                var promoter_metaplot = this.props.plot_data[i]['metaplot'];
-            } else if (this.props.plot_data[i]['regions'] == 'Enhancers' && this.props.plot_data[i]['assembly'] == this.state.selected_assembly) {
-                var enhancer_metaplot = this.props.plot_data[i]['metaplot'];
-            }
-        }
-        var self = this;
-
         return <div className="panel panel-default" id={id_select}>
             <div className="panel-heading">
                 <div className="panel-title pull-left">
@@ -146,19 +112,9 @@ class SmallDataView extends React.Component {
             <div className="panel-body">
             <div className='small_data_view'>
                 <div className="row">
-                    <div style={{height:"200px"}} className="col-sm-6">
+                    <div style={{height:"200px"}} className="col-sm-5">
                         <ul>
-                            <li><b>Assembly:</b></li>
-                            {this.state.assemblies.map(function(assembly, index){
-                                return <div className='radio' key={index}>
-                                    <label>
-                                        <input type='radio' value={assembly}
-                                            checked={self.state.selected_assembly == assembly}
-                                            onChange={self.selectAssembly} />
-                                        {assembly}
-                                    </label>
-                                </div>
-                            })}
+                            <li><b>Assembly:</b> {this.props.meta_data['assemblies'].join(', ')}</li>
                             <li><b>Data type:</b> {this.props.meta_data['data_type']}</li>
                             <li><b>Cell type:</b> {this.props.meta_data['cell_type']}</li>
                             <li><b>Target:</b> {this.props.meta_data['target']}</li>
@@ -166,21 +122,11 @@ class SmallDataView extends React.Component {
                                 <li><b>Description:</b> {this.props.meta_data['description']}</li>}
                         </ul>
                     </div>
-                    <div style={{height:"150px"}} className="col-sm-3">
-                        <h4 style={{textAlign:"center"}}>Promoters</h4>
-                        {promoter_metaplot  &&
-                            <MetaPlot
-                                data={promoter_metaplot}
-                            />
-                        }
-                    </div>
-                    <div style={{height:"150px"}} className="col-sm-3">
-                        <h4 style={{textAlign:"center"}}>Enhancers</h4>
-                        {enhancer_metaplot &&
-                            <MetaPlot
-                                data={enhancer_metaplot}
-                            />
-                        }
+                    <div style={{height:"200px"}} className="col-sm-7">
+                        <DatasetCarousel
+                            data={this.props.plot_data}
+                            id={this.props.meta_data['id']}
+                        />
                     </div>
                 </div>
             </div>
