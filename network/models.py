@@ -734,6 +734,10 @@ class GenomicRegions(models.Model):
     last_updated = models.DateTimeField(
         auto_now=True)
 
+    variance = JSONField(blank=True, null=True)
+    # Use to only display/consider regions with high variance across datasets
+    variance_mask = JSONField(blank=True, null=True)
+
 
 class Gene(models.Model):
     name = models.CharField(
