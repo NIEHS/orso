@@ -11,6 +11,7 @@ from collections import defaultdict
 from functools import wraps
 
 import string
+import numpy
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 from sklearn.metrics import jaccard_similarity_score
@@ -128,6 +129,47 @@ def get_metadata_similarities():
             if i != j:
                 similarities[exps[i]][exps[j]] = value
     return similarities
+
+
+def get_region_variance(gr):
+    intersection_values = models.IntersectionValues.objects.filter(
+        genomic_regions=gr)
+
+    #  Populate intersection matrix
+    intersection_matrix = []
+    for iv in intersection_values:
+        intersection_matrix.append(iv.intersection_values)
+
+    #  Normalize by sum
+    for i, row in enumerate(intersection_matrix):
+        _sum = sum(row)
+        norm_row = []
+        for entry in row:
+            norm_row.append(entry / _sum)
+        intersection_matrix[i] = norm_row
+
+    #  Calculate variance
+    variance = numpy.var(intersection_matrix, 0)
+
+    #  Calculate variance mask
+    n = 0.1 * len(variance)  # Find top 10%; min of 200, max of 1000
+    if n < 200:
+        n = 200
+    elif n > 1000:
+        n = 1000
+    cutoff = sorted(variance, reverse=True)[n - 1]
+
+    variance_mask = []
+    for var in variance:
+        if var >= cutoff:
+            variance_mask.append(1)
+        else:
+            variance_mask.append(0)
+
+    #  Update GR model
+    gr.variance = variance
+    gr.variance_mask = variance_mask
+    gr.save()
 
 
 def get_user_similarites():
