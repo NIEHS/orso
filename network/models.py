@@ -738,6 +738,8 @@ class GenomicRegions(models.Model):
     # Use to only display/consider regions with high variance across datasets
     variance_mask = JSONField(blank=True, null=True)
 
+    pca = JSONField(blank=True, null=True)
+
 
 class Gene(models.Model):
     name = models.CharField(
