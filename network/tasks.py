@@ -15,6 +15,10 @@ import numpy
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 from sklearn.metrics import jaccard_similarity_score
+from sklearn.decomposition import PCA
+
+from combat.combat import combat
+import pandas as pd
 
 
 def single_instance_task(cache_id, timeout=None):
@@ -171,6 +175,55 @@ def get_region_variance(gr):
         #  Update GR model
         gr.variance = list(variance)
         gr.variance_mask = variance_mask
+        gr.save()
+
+
+def pca_analysis(gr):
+
+    intersection_matrix = []
+    dataset_ids = []
+    dataset_names = []
+    experiment_ids = []
+    experiment_names = []
+    experiment_types = []
+
+    intersection_values = \
+        models.IntersectionValues.objects.filter(genomic_regions=gr)
+
+    if intersection_values:
+        for iv in models.IntersectionValues.objects.filter(genomic_regions=gr):
+            if gr.variance_mask:
+                values = []
+                for i, val in enumerate(iv.intersection_values):
+                    if gr.variance_mask[i]:
+                        values.append(val)
+                intersection_matrix.append(values)
+            else:
+                intersection_matrix.append(iv.intersection_values)
+            ds = models.Dataset.objects.get(intersectionvalues=iv)
+
+            dataset_ids.append(ds.id)
+            dataset_names.append(ds.name)
+            experiment_ids.append(ds.experiment.id)
+            experiment_names.append(ds.experiment.name)
+            experiment_types.append(ds.experiment.data_type)
+
+        df = pd.DataFrame(intersection_matrix)
+        df = pd.DataFrame.transpose(df)
+
+        corrected_df = combat(df, experiment_types)
+        corrected_df = pd.DataFrame.transpose(corrected_df)
+
+        pca = PCA(n_components=3, whiten=True)
+        pca_out = pca.fit_transform(corrected_df)
+
+        gr.pca = {
+            'pca': pca_out.tolist(),
+            'dataset_ids': dataset_ids,
+            'dataset_names': dataset_names,
+            'experiment_ids': experiment_ids,
+            'experiment_names': experiment_names,
+        }
         gr.save()
 
 
