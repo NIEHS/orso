@@ -295,7 +295,6 @@ def update_data_recommendations():
                 'metadata_rank': None,
                 'metadata_experiment': None,
                 'collaborative_rank': None,
-                'collaborative_experiment': None,
             }
 
         #  Find dataset correlation rank order
