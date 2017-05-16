@@ -186,6 +186,8 @@ def pca_analysis(gr):
     experiment_ids = []
     experiment_names = []
     experiment_types = []
+    cell_types = []
+    targets = []
 
     intersection_values = \
         models.IntersectionValues.objects.filter(genomic_regions=gr)
@@ -207,6 +209,8 @@ def pca_analysis(gr):
             experiment_ids.append(ds.experiment.id)
             experiment_names.append(ds.experiment.name)
             experiment_types.append(ds.experiment.data_type)
+            cell_types.append(ds.experiment.cell_type)
+            targets.append(ds.experiment.target)
 
         df = pd.DataFrame(intersection_matrix)
         df = pd.DataFrame.transpose(df)
@@ -219,6 +223,11 @@ def pca_analysis(gr):
 
         gr.pca = {
             'pca': pca_out.tolist(),
+            'attributes': {
+                'Experiment type': experiment_types,
+                'Cell/tissue type': cell_types,
+                'Target': targets,
+            },
             'dataset_ids': dataset_ids,
             'dataset_names': dataset_names,
             'experiment_ids': experiment_ids,
