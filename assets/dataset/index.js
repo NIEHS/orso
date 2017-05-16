@@ -13,6 +13,7 @@ import IntersectionComparison from './IntersectionComparison';
 import PieChart from './PieChart';
 import SmallUserView from './SmallUserView';
 import SmallRecommendedDataView from './SmallRecommendedDataView';
+import PCA from './PCA';
 
 
 let createMetaPlot = function(el, metaplot) {
@@ -179,6 +180,13 @@ let appendSmallRecommendedDataView = function(el, meta_data, plot_data, urls, ar
         display_remove_favorite={Boolean(args.display_remove_favorite)}/>, element[0]);
 };
 
+let appendPCA = function(el, pca_data) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<PCA
+        data={pca_data}/>, element[0]);
+};
+
 export {
     createMetaPlot,
     createBrowser,
@@ -196,4 +204,5 @@ export {
     createPieChart,
     appendSmallUserView,
     appendSmallRecommendedDataView,
+    appendPCA,
 };

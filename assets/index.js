@@ -17,6 +17,7 @@ import {
     createPieChart,
     appendSmallUserView,
     appendSmallRecommendedDataView,
+    appendPCA,
 } from './dataset';
 
 
@@ -37,4 +38,5 @@ window.apps = {
     createPieChart,
     appendSmallUserView,
     appendSmallRecommendedDataView,
+    appendPCA,
 };
