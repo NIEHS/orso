@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h3>{{object.name}}</h3>
+    <div id="pca_plot"/>
+</div>
+{% endblock content %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+console.log({{object.pca|safe}});
+$(document).ready(function(){
+    window.apps.appendPCA(
+        $('#pca_plot')[0],
+        {{object.pca|safe}}
+    );
+});
+</script>
+{% endblock %}
