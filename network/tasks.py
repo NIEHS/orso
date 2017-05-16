@@ -375,7 +375,7 @@ def update_data_recommendations():
         for rec, ranks in recs.items():
             models.ExperimentRecommendation.objects.update_or_create(
                 owner=user,
-                recommended=exp,
+                recommended=rec,
                 defaults=ranks,
             )
 
@@ -432,29 +432,32 @@ def update_correlation_values():
     for i, exp_1 in enumerate(experiments):
         intersections_1 = exp_1.get_average_intersections()
         for j, exp_2 in enumerate(experiments[i:]):
-            intersections_2 = exp_2.get_average_intersections()
 
-            for int_1 in intersections_1:
-                for int_2 in intersections_2:
-                    if int_1['regions_pk'] == int_2['regions_pk']:
-                        gr = models.GenomicRegions.objects.get(
-                            pk=int_1['regions_pk'])
-                        if not (models.ExperimentCorrelation.objects
-                                .filter(
+            if exp_1 != exp_2:
+
+                intersections_2 = exp_2.get_average_intersections()
+
+                for int_1 in intersections_1:
+                    for int_2 in intersections_2:
+                        if int_1['regions_pk'] == int_2['regions_pk']:
+                            gr = models.GenomicRegions.objects.get(
+                                pk=int_1['regions_pk'])
+                            if not (models.ExperimentCorrelation.objects
+                                    .filter(
+                                        x_experiment=exp_1,
+                                        y_experiment=exp_2,
+                                        genomic_regions=gr,
+                                    ).exists()):
+                                corr = Correlation(
+                                    int_1['intersection_values'],
+                                    int_2['intersection_values'],
+                                ).get_correlation()[0]
+                                models.ExperimentCorrelation.objects.create(
                                     x_experiment=exp_1,
                                     y_experiment=exp_2,
                                     genomic_regions=gr,
-                                ).exists()):
-                            corr = Correlation(
-                                int_1['intersection_values'],
-                                int_2['intersection_values'],
-                            ).get_correlation()[0]
-                            models.ExperimentCorrelation.objects.create(
-                                x_experiment=exp_1,
-                                y_experiment=exp_2,
-                                genomic_regions=gr,
-                                score=corr,
-                            )
+                                    score=corr,
+                                )
 
 
 @periodic_task(run_every=timedelta(seconds=5))
