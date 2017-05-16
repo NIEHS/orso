@@ -19,7 +19,7 @@
             {% endif %}
 
             {% if experiment.description %}
-            <p>Description: {{experiment.description}}</p>
+            <p>Description: {{experiment.description|linebreaks}}</p>
             {% endif %}
         </div>
         <div class="col-sm-4">
