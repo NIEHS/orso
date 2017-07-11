@@ -768,3 +768,13 @@ class Transcript(models.Model):
             start__lte=end,
             end__gte=start,
         )
+
+
+class TranscriptIntersection(models.Model):
+    transcript = models.ForeignKey('Transcript')
+    dataset = models.ForeignKey('Dataset')
+
+    promoter_value = models.FloatField()
+    genebody_value = models.FloatField()
+    exon_values = ArrayField(models.FloatField())
+    intron_values = ArrayField(models.FloatField())
