@@ -211,6 +211,12 @@ def generate_metaplot_bed(genomic_regions_obj, chrom_sizes_dict,
     OUT.flush()
 
 
+def is_header(line):
+    line_split = line.strip().split('\t')
+    if 'track' in line_split[0] or 'browser' in line_split[0]:
+        return True
+
+
 def read_bed(bed_file):
     '''
     Return a list of entries for each line in a BED file.
