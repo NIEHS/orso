@@ -712,6 +712,7 @@ class GenomeAssembly(models.Model):
         'GeneAnnotation',
         blank=True,
         null=True)
+    chromosome_sizes = JSONField(blank=True, null=True)
     last_updated = models.DateTimeField(
         auto_now=True)
 
