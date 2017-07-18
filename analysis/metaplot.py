@@ -1,328 +1,240 @@
 #!/usr/bin/env python
 
-import pyBigWig
-import os
 import json
-import numpy
-import click
+import math
+from tempfile import NamedTemporaryFile
 
-from collections import defaultdict
+from analysis.utils import call_bigwig_average_over_bed
+
+START = -2500
+SIZE = 100
+NUM = 50
 
 
-def check_bigwigs(single_bw, paired_1_bw, paired_2_bw):
-    if not single_bw and not paired_1_bw and not paired_2_bw:
-        raise ValueError('No bigWigs specified.')
-    if single_bw and (paired_1_bw or paired_2_bw):
-        raise ValueError('A single bigWig of ambiguous strand may not be run with paired bigWigs.')  # noqa
-    if not single_bw and not (paired_1_bw and paired_2_bw):
-        raise ValueError('If a single bigWig of ambiguous strand is not used, paired bigWigs are required.')  # noqa
+def get_metaplot_values(gr_object, bed_path=None, ambiguous_bigwig=None,
+                        plus_bigwig=None, minus_bigwig=None, bin_start=START,
+                        bin_size=SIZE, bin_num=NUM):
+    '''
+    For GenomicRegions object, create metaplot and intersection values
+    considering input BigWig files.
 
-    if single_bw:
-        try:
-            pyBigWig.open(single_bw)
-        except RuntimeError:
-            print('pyBigWig is unable to open bigWig file.')
-            return False
+    bed_path - Path to BED file with bin information. See
+        generate_metaplot_bed.
+    '''
+    # Generate BED file for intersection
+    if not bed_path:
+        metaplot_bed = NamedTemporaryFile(mode='w')
+        generate_metaplot_bed(
+            gr_object,
+            json.loads(gr_object.assembly.chromosome_sizes),
+            metaplot_bed,
+            bin_start,
+            bin_size,
+            bin_num,
+        )
+        metaplot_bed.flush()
+        bed_path = metaplot_bed.name
+
+    entries = read_bed(gr_object.bed_file)
+
+    # Run intersection, process output
+    if plus_bigwig and minus_bigwig:
+        plus_tab = NamedTemporaryFile(mode='w')
+        minus_tab = NamedTemporaryFile(mode='w')
+
+        call_bigwig_average_over_bed(
+            plus_bigwig,
+            bed_path,
+            plus_tab.name,
+        )
+        call_bigwig_average_over_bed(
+            minus_bigwig,
+            bed_path,
+            minus_tab.name,
+        )
+
+        plus_tab.flush()
+        minus_tab.flush()
+
+        metaplot_values = reconcile_metaplot_stranded_coverage(
+            entries,
+            read_metaplot_bigwig_average_over_bed(
+                open(plus_tab.name), entries, bin_num),
+            read_metaplot_bigwig_average_over_bed(
+                open(minus_tab.name), entries, bin_num),
+        )
+
+        return(
+            read_metaplot_from_values(
+                metaplot_values, bin_start, bin_size, bin_num),
+            read_intersection_from_values(
+                metaplot_values, gr_object, bin_num),
+        )
+
+    elif ambiguous_bigwig:
+        tab = NamedTemporaryFile(mode='w')
+
+        call_bigwig_average_over_bed(
+            ambiguous_bigwig,
+            bed_path,
+            tab.name,
+        )
+
+        tab.flush()
+
+        metaplot_values = read_metaplot_bigwig_average_over_bed(
+            open(tab.name), entries, bin_num)
+
+        return(
+            read_metaplot_from_values(
+                metaplot_values, bin_start, bin_size, bin_num),
+            read_intersection_from_values(
+                metaplot_values, gr_object, bin_num),
+        )
+
     else:
-        try:
-            pyBigWig.open(paired_1_bw)
-            pyBigWig.open(paired_2_bw)
-        except RuntimeError:
-            print('pyBigWig is unable to open bigWig files.')
-            return False
-
-    return True
+        raise ValueError('Improper bigWig files specified.')
 
 
-def is_header(line):
-    line_split = line.strip().split('\t')
-    if 'track' in line_split[0] or 'browser' in line_split[0]:
-        return True
-
-
-def check_position(value, max_length):
-    if value < 1:
-        return 1
-    elif value > max_length:
-        return max_length
-    else:
-        return value
-
-
-def find_bin_values(bin_start, bin_num, bin_size, intervals):
+def read_metaplot_from_values(entry_dict, bin_start, bin_size, bin_num):
+    '''
+    From a dictionary describing binned coverage values for each entry, create
+    a dictionary describing the associated metaplot.
+    '''
+    metaplot_values = [0] * bin_num
+    for entry_values in entry_dict.values():
+        for i, value in enumerate(entry_values):
+            metaplot_values[i] += value
+    entry_num = len(entry_dict)
+    for i, value in enumerate(metaplot_values):
+        metaplot_values[i] = value / entry_num
 
     bin_values = []
+    for i in range(bin_num):
+        bin_values.append([
+            bin_start + i * bin_size,
+            bin_start + (i + 1) * bin_size - 1,
+        ])
 
-    if bin_start:
-        for i in range(bin_num):
-            start = bin_start + i * bin_size
-            end = start + bin_size - 1
-
-            bin_range = (start, end)
-
-            coverage = 0
-            if intervals:
-                for interval in intervals:
-                    val = min(bin_range[1], interval[1]) - \
-                        max(bin_range[0], interval[0]) + 1
-                    positions = max(0, val)
-                    coverage += positions * interval[2]
-            bin_values.append(coverage / bin_size)
-    else:
-        for i in range(bin_num):
-            bin_values.append(0)
-
-    return bin_values
+    return {
+        'metaplot_values': metaplot_values,
+        'bin_values': bin_values,
+    }
 
 
-def convert_intervals(intervals):
-    converted_intervals = []
-    if intervals:
-        for interval in intervals:
-            converted_intervals.append(
-                (interval[0] + 1, interval[1], interval[2]))
-        converted_intervals = tuple(converted_intervals)
-        return converted_intervals
-    else:
-        return intervals
+def read_intersection_from_values(entry_dict, gr_object, bin_num):
+    '''
+    From a dictionary describing binned coverage values for each entry, create
+    a list describing average coverage for each entry, ordered by the
+    GenomicRegions BED file.
+    '''
+    intersection_list = []
+    for line in [_line.decode('utf-8') for _line in gr_object.bed_file]:
+        if not is_header(line):
+            entry_name = line.strip().split()[3]
+            intersection_list.append(sum(entry_dict[entry_name]) / bin_num)
+    return intersection_list
 
 
-def read_bed(bed_fn):
+def read_metaplot_bigwig_average_over_bed(tab_file, entries, bin_num):
+    '''
+    Read metaplot tab file. Return metaplot values.
+    '''
+    metaplot_values = dict()
+    for entry in entries:
+        metaplot_values[entry['name']] = [0] * bin_num
+
+    for line in tab_file:
+        name, size, covered, value_sum, mean, mean0 = line.strip().split()
+        entry_name = '_'.join(name.split('_')[:-1])
+        index = int(name.split('_')[-1])
+        metaplot_values[entry_name][index] = float(mean)
+
+    return metaplot_values
+
+
+def reconcile_metaplot_stranded_coverage(entries, plus_values, minus_values):
+    '''
+    Considering plus and minus metaplot values, return only coverage values of
+    the appropriate strand.
+    '''
+    values = dict()
+    for entry in entries:
+        name, strand = (entry['name'], entry['strand'])
+        if strand == '+':
+            values[name] = plus_values[name]
+        elif strand == '-':
+            values[name] = minus_values[name]
+        elif strand == '.':
+            values[name] = \
+                [x + y for x, y in zip(plus_values[name], minus_values[name])]
+    return values
+
+
+def generate_metaplot_bed(genomic_regions_obj, chrom_sizes_dict,
+                          output_file_obj, bin_start=START, bin_size=SIZE,
+                          bin_num=NUM):
+    '''
+    Write a BED file to output_file_obj containing entries for each genomic
+    ranges entry.
+    '''
+    OUT = output_file_obj
+
+    def write_bin_to_out(entry, _bin, index):
+        '''
+        Write bin to OUT in BED6 format.
+        '''
+        size = chrom_sizes_dict[entry['chromosome']]
+        if _bin[0] < size and _bin[1] > 0:
+            OUT.write('\t'.join([
+                entry['chromosome'],
+                str(max(0, _bin[0])),
+                str(min(size, _bin[1])),
+                '{}_{}'.format(entry['name'], str(index)),
+                '0',
+                entry['strand'],
+            ]) + '\n')
+
+    bed_entries = read_bed(genomic_regions_obj.bed_file)
+    for entry in bed_entries:
+        if entry['strand'] == '+' or entry['strand'] == '.':
+            start = entry['center'] + bin_start
+            for i in range(bin_num):
+                _bin = [start + (i - 1) * bin_size, start + i * bin_size]
+                write_bin_to_out(entry, _bin, i)
+        elif entry['strand'] == '-':
+            start = entry['center'] - bin_start
+            for i in range(bin_num):
+                _bin = [start - i * bin_size, start - (i - 1) * bin_size]
+                write_bin_to_out(entry, _bin, i)
+
+    OUT.flush()
+
+
+def read_bed(bed_file):
+    '''
+    Return a list of entries for each line in a BED file.
+    '''
     bed_entries = []
-    with open(bed_fn) as f:
-        for line in f:
+    for line in [_line.decode('utf-8') for _line in bed_file]:
+        if not is_header(line):
             line_split = line.strip().split('\t')
-            if not is_header(line):
-                bed_entries.append(line_split)
-    return bed_entries
 
-
-class MetaPlot(object):
-
-    def __init__(self, bed_fn, bin_start=-2500, bin_num=50, bin_size=100,
-                 single_bw=None, paired_1_bw=None, paired_2_bw=None):
-
-        self.bed_fn = bed_fn
-        self.bin_start = bin_start
-        self.bin_num = bin_num
-        self.bin_size = bin_size
-
-        self.single_bw = single_bw
-        self.paired_1_bw = paired_1_bw
-        self.paired_2_bw = paired_2_bw
-
-        assert os.path.exists(self.bed_fn)
-        assert isinstance(self.bin_start, int)
-        assert isinstance(self.bin_num, int)
-        assert isinstance(self.bin_size, int)
-
-        if check_bigwigs(self.single_bw, self.paired_1_bw, self.paired_2_bw):
-            self.find_data_matrix()
-
-    def find_data_matrix(self):
-
-        # chrom_entries = read_bed_by_chrom(self.bed_fn)
-        bed_entries = read_bed(self.bed_fn)
-        data_dict = defaultdict(list)
-        self.data_matrix = {'matrix_rows': [], 'matrix_columns': []}
-
-        if self.single_bw:
-            bw = pyBigWig.open(self.single_bw)
-            bw_chroms = set(bw.chroms().keys())
-            chrom_sizes = bw.chroms()
-        else:
-            bw_1 = pyBigWig.open(self.paired_1_bw)
-            bw_2 = pyBigWig.open(self.paired_2_bw)
-            bw_chroms = set(bw_1.chroms().keys())
-            for chrom in bw_2.chroms().keys():
-                bw_chroms.add(chrom)
-            chrom_sizes = bw_1.chroms()
-            for key, value in bw_2.chroms().items():
-                if key in chrom_sizes:
-                    chrom_sizes[key] = max([chrom_sizes[key], value])
-                else:
-                    chrom_sizes[key] = value
-
-        for entry in bed_entries:
-
-            chromosome, start, end, name = entry[:4]
-            if len(entry) > 5:
-                strand = entry[5]
+            chromosome, start, end, name = line_split[:4]
+            start = int(start)
+            end = int(end)
+            center = math.floor((start + end) / 2)
+            if len(line_split) > 5:
+                strand = line_split[5]
             else:
                 strand = '.'
-            center = \
-                int((int(end) - int(start) + 1) / 2 + (int(start) + 1))
 
-            if strand == '+' or strand == '.':
-                intersection_start = center + self.bin_start
-                intersection_end = center + self.bin_start + \
-                    self.bin_num * self.bin_size
-            else:
-                intersection_start = center - self.bin_start - \
-                    self.bin_num * self.bin_size
-                intersection_end = center - self.bin_start
-
-            try:
-                intersection_start = \
-                    check_position(intersection_start, chrom_sizes[chromosome])
-                intersection_end = \
-                    check_position(intersection_end, chrom_sizes[chromosome])
-            except KeyError:  # if chromosome not in chrom_sizes
-                intersection_start = None
-                intersection_end = None
-
-            if self.single_bw:
-                try:
-                    intervals = convert_intervals(bw.intervals(
-                        chromosome, intersection_start - 1, intersection_end))
-                except:
-                    intervals = ()
-            else:
-                if strand == '+':
-                    try:
-                        intervals = convert_intervals(bw_1.intervals(
-                            chromosome,
-                            intersection_start - 1,
-                            intersection_end))
-                    except:
-                        intervals = ()
-                if strand == '-':
-                    try:
-                        intervals = convert_intervals(bw_2.intervals(
-                            chromosome,
-                            intersection_start - 1,
-                            intersection_end))
-                    except:
-                        intervals = ()
-                if strand == '.':
-                    try:
-                        intervals_1 = convert_intervals(bw_1.intervals(
-                            chromosome,
-                            intersection_start - 1,
-                            intersection_end))
-                    except:
-                        intervals_1 = ()
-                    try:
-                        intervals_2 = convert_intervals(bw_2.intervals(
-                            chromosome,
-                            intersection_start - 1,
-                            intersection_end))
-                    except:
-                        intervals_2 = ()
-
-            if strand == '+' or strand == '-':
-                bin_values = find_bin_values(
-                    intersection_start,
-                    self.bin_num,
-                    self.bin_size,
-                    intervals)
-                if strand == '-':
-                    bin_values.reverse()
-
-            if strand == '.':
-                if self.single_bw:
-                    bin_values = find_bin_values(
-                        intersection_start,
-                        self.bin_num,
-                        self.bin_size,
-                        intervals)
-                else:
-                    bin_values_1 = find_bin_values(
-                        intersection_start,
-                        self.bin_num,
-                        self.bin_size,
-                        intervals_1)
-                    bin_values_2 = find_bin_values(
-                        intersection_start,
-                        self.bin_num,
-                        self.bin_size,
-                        intervals_2)
-                    bin_values = \
-                        [x + y for x, y in zip(bin_values_1,
-                                               bin_values_2)]
-
-            data_dict[name] = bin_values
-
-        with open(self.bed_fn) as f:
-            for line in f:
-                if not is_header(line):
-                    chrom = line.strip().split()[0]
-                    name = line.strip().split()[3]
-
-                    self.data_matrix['matrix_rows'].append({
-                        'name': name,
-                        'row_values': data_dict[name]
-                    })
-
-        for i in range(self.bin_num):
-            s = self.bin_start + i * self.bin_size
-            e = s + self.bin_size - 1
-
-            self.data_matrix['matrix_columns'].append((s, e))
-
-    def create_intersection_json(self, json_file=None):
-        intersection_values = []
-
-        for row in self.data_matrix['matrix_rows']:
-            intersection_values.append(sum(row['row_values']))
-
-        if json_file:
-            with open(json_file, 'w') as outfile:
-                json.dump(intersection_values, outfile)
-        else:
-            return intersection_values
-
-    def create_metaplot_json(self, json_file=None):
-        matrix_values = []
-
-        for row in self.data_matrix['matrix_rows']:
-            matrix_values.append(row['row_values'])
-        metaplot = {
-            'metaplot_values':
-                list(numpy.mean(matrix_values, axis=0)),
-            'bin_values': self.data_matrix['matrix_columns'],
-        }
-
-        if json_file:
-            with open(json_file, 'w') as outfile:
-                json.dump(metaplot, outfile)
-        else:
-            return metaplot
-
-
-@click.command()
-@click.argument('feature_bed')
-@click.argument('output_header')
-@click.option('-s', help='Single bigWig (Ambiguous strand)', type=str)
-@click.option('-f', help='Forward strand (+) bigWig', type=str)
-@click.option('-r', help='Reverse strand (-) bigWig', type=str)
-@click.option('--bin_start', default=-2500, help='Relative bin start',
-              type=int)
-@click.option('--bin_number', default=50, help='Number of bins',
-              type=int)
-@click.option('--bin_size', default=100, help='Size of bins',
-              type=int)
-def cli(feature_bed, output_header, s, f, r, bin_start, bin_number, bin_size):
-    """
-    Generate a metaplot and intersection values for bigWig file(s) over BED \
-    file entries.
-    """
-
-    metaplot = MetaPlot(
-        feature_bed,
-        bin_start,
-        bin_number,
-        bin_size,
-        single_bw=s,
-        paired_1_bw=f,
-        paired_2_bw=r,
-    )
-
-    try:
-        metaplot.create_intersection_json(output_header + '.intersection.json')
-        metaplot.create_metaplot_json(output_header + '.metaplot.json')
-    except AttributeError:
-        print('Unable to create output JSONs: {}'.format(str(vars(metaplot))))
-
-if __name__ == '__main__':
-    cli()
+            bed_entries.append({
+                'chromosome': chromosome,
+                'start': start,
+                'end': end,
+                'center': center,
+                'name': name,
+                'strand': strand,
+            })
+    return bed_entries
