@@ -148,7 +148,7 @@ def read_metaplot_bigwig_average_over_bed(tab_file, entries, bin_num):
         name, size, covered, value_sum, mean, mean0 = line.strip().split()
         entry_name = '_'.join(name.split('_')[:-1])
         index = int(name.split('_')[-1])
-        metaplot_values[entry_name][index] = float(mean)
+        metaplot_values[entry_name][index] = float(value_sum)
 
     return metaplot_values
 

@@ -126,7 +126,7 @@ def read_bigwig_average_over_bed_tab_file(tab_file_name):
 
             if transcript_pk not in transcript_values:
                 transcript_values[transcript_pk] = {}
-            transcript_values[transcript_pk][feature_name] = float(mean0)
+            transcript_values[transcript_pk][feature_name] = float(value_sum)
 
     for pk, value_dict in transcript_values.items():
 
