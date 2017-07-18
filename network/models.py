@@ -525,6 +525,9 @@ class Dataset(models.Model):
 
         return out_data
 
+    def is_stranded(self):
+        return bool(self.plus_url) and bool(self.minus_url)
+
 
 class MetaPlot(models.Model):
     genomic_regions = models.ForeignKey('GenomicRegions')
