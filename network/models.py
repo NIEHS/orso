@@ -720,6 +720,9 @@ class GenomeAssembly(models.Model):
     def __str__(self):
         return self.name
 
+    def get_transcripts(self):
+        return Transcript.objects.filter(gene__annotation__assembly=self)
+
     def read_in_chrom_sizes(self, chrom_sizes_path):
         chrom_sizes = dict()
         with open(chrom_sizes_path) as f:
