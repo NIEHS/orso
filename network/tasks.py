@@ -1,9 +1,10 @@
 from celery.decorators import task, periodic_task
+from celery import group
 from django.utils import timezone
 from django.core.cache import cache
 
-from analysis.metaplot import MetaPlot
 from analysis.correlation import Correlation
+from analysis import transcript_coverage
 from . import models
 
 from datetime import timedelta
@@ -20,6 +21,11 @@ from sklearn.decomposition import PCA
 from combat.combat import combat
 import pandas as pd
 
+import os
+from tempfile import NamedTemporaryFile
+import json
+from analysis import metaplot
+
 
 def single_instance_task(cache_id, timeout=None):
     def decorator(func):
@@ -35,52 +41,138 @@ def single_instance_task(cache_id, timeout=None):
 
 
 @task()
-def process_dataset(id_):
-    dataset = models.Dataset.objects.get(id=id_)
+def process_datasets(datasets):
 
-    promoter_regions = dataset.assembly.default_annotation.promoters
-    enhancer_regions = dataset.assembly.default_annotation.enhancers
+    download_list_file = NamedTemporaryFile(mode='w')
+    bigwig_paths = dict()
+    for ds in datasets:
+        if ds.is_stranded():
+            download_list_file.write('{}\n'.format(ds.plus_url))
+            download_list_file.write('{}\n'.format(ds.minus_url))
+            bigwig_paths[ds.pk] = {
+                'ambiguous': None,
+                'plus': os.path.basename(ds.plus_url),
+                'minus': os.path.basename(ds.minus_url),
+            }
+        else:
+            download_list_file.write('{}\n'.format(ds.ambiguous_url))
+            bigwig_paths[ds.pk] = {
+                'ambiguous': os.path.basename(ds.ambiguous_url),
+                'plus': None,
+                'minus': None,
+            }
+    download_list_file.flush()
+    # call([
+    #     'aria2c', '-x', '16', '-s', '16', '-i',
+    #     download_list_file.name,
+    # ])
+    download_list_file.close()
 
-    pm = MetaPlot(
-        promoter_regions.bed_file.path,
-        single_bw=dataset.ambiguous_url
+    assembly_to_intersection_bed = dict()
+    for ds in datasets:
+        if ds.assembly not in assembly_to_intersection_bed:
+            assembly_to_intersection_bed[ds.assembly] = \
+                NamedTemporaryFile(mode='w', delete=False)
+            transcript_coverage.generate_transcript_bed(
+                ds.assembly.get_transcripts(),
+                json.loads(ds.assembly.chromosome_sizes),
+                assembly_to_intersection_bed[ds.assembly],
+            )
+
+    gr_to_metaplot_bed = dict()
+    for ds in datasets:
+        for gr in models.GenomicRegions.objects.filter(assembly=ds.assembly):
+            if gr not in gr_to_metaplot_bed:
+                gr_to_metaplot_bed[gr] = \
+                    NamedTemporaryFile(mode='w', delete=False)
+                metaplot.generate_metaplot_bed(
+                    gr,
+                    json.loads(gr.assembly.chromosome_sizes),
+                    gr_to_metaplot_bed[gr],
+                )
+
+    tasks = []
+    for ds in datasets:
+        tasks.append(process_dataset_intersection.s(
+            ds.pk,
+            assembly_to_intersection_bed[ds.assembly].name,
+            bigwig_paths[ds.pk],
+        ))
+
+        for gr in models.GenomicRegions.objects.filter(assembly=ds.assembly):
+            tasks.append(process_dataset_metaplot.s(
+                ds.pk,
+                gr.pk,
+                gr_to_metaplot_bed[gr].name,
+                bigwig_paths[ds.pk],
+            ))
+
+    job = group(tasks)
+    results = job.apply_async()
+    results.join()
+
+    for temp_bed in assembly_to_intersection_bed.values():
+        temp_bed.close()
+
+    for temp_bed in gr_to_metaplot_bed.values():
+        temp_bed.close()
+
+
+@task()
+def process_dataset_intersection(dataset_pk, transcript_bed, bigwigs):
+
+    dataset = models.Dataset.objects.get(pk=dataset_pk)
+    transcripts = dataset.assembly.get_transcripts()
+
+    transcript_values = transcript_coverage.get_transcript_values(
+        transcripts,
+        transcript_bed,
+        ambiguous_bigwig=bigwigs['ambiguous'],
+        plus_bigwig=bigwigs['plus'],
+        minus_bigwig=bigwigs['minus'],
     )
 
-    em = MetaPlot(
-        enhancer_regions.bed_file.path,
-        single_bw=dataset.ambiguous_url,
+    for pk, value_dict in transcript_values.items():
+        models.TranscriptIntersection.objects.update_or_create(
+            transcript=models.Transcript.objects.get(pk=pk),
+            dataset=dataset,
+            defaults={
+                'promoter_value': value_dict['promoter'],
+                'genebody_value': value_dict['genebody'],
+                'exon_values': value_dict['exons'],
+                'intron_values': value_dict['introns'],
+            },
+        )
+
+
+@task()
+def process_dataset_metaplot(dataset_pk, gr_pk, bed_path, bigwigs):
+
+    dataset = models.Dataset.objects.get(pk=dataset_pk)
+    genomic_regions = models.GenomicRegions.objects.get(pk=gr_pk)
+
+    metaplot_values, intersection_values = metaplot.get_metaplot_values(
+        genomic_regions,
+        bed_path=bed_path,
+        ambiguous_bigwig=bigwigs['ambiguous'],
+        plus_bigwig=bigwigs['plus'],
+        minus_bigwig=bigwigs['minus'],
     )
 
-    dataset.promoter_metaplot = models.MetaPlot.objects.create(
-        genomic_regions=promoter_regions,
-        bigwig_url=dataset.ambiguous_url,
-        relative_start=-2500,
-        relative_end=2499,
-        meta_plot=pm.create_metaplot_json(),
+    models.MetaPlot.objects.update_or_create(
+        dataset=dataset,
+        genomic_regions=genomic_regions,
+        defaults={
+            'metaplot': json.dumps(metaplot_values),
+        }
     )
-    dataset.enhancer_metaplot = models.MetaPlot.objects.create(
-        genomic_regions=enhancer_regions,
-        bigwig_url=dataset.ambiguous_url,
-        relative_start=-2500,
-        relative_end=2499,
-        meta_plot=em.create_metaplot_json(),
+    models.IntersectionValues.objects.update_or_create(
+        dataset=dataset,
+        genomic_regions=genomic_regions,
+        defaults={
+            'intersection_values': json.dumps(intersection_values),
+        }
     )
-    dataset.promoter_intersection = models.IntersectionValues.objects.create(
-        genomic_regions=promoter_regions,
-        bigwig_url=dataset.ambiguous_url,
-        relative_start=-2500,
-        relative_end=2499,
-        intersection_values=pm.create_intersection_json(),
-    )
-    dataset.enhancer_intersection = models.IntersectionValues.objects.create(
-        genomic_regions=enhancer_regions,
-        bigwig_url=dataset.ambiguous_url,
-        relative_start=-2500,
-        relative_end=2499,
-        intersection_values=em.create_intersection_json(),
-    )
-
-    dataset.save()
 
 
 def get_metadata_similarities():
@@ -418,7 +510,8 @@ def update_user_recommendations():
 
     def clean_up_user_recommendations():
         time_threshold = timezone.now() - timedelta(days=7)
-        models.UserRecommendation.objects.filter(last_updated__lt=time_threshold).delete()
+        models.UserRecommendation.objects.filter(
+            last_updated__lt=time_threshold).delete()
 
     add_or_update_user_recommendations()
     clean_up_user_recommendations()
