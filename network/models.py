@@ -2,6 +2,7 @@ import requests
 import pyBigWig
 import numpy
 import math
+import json
 from collections import defaultdict
 
 from django.db import models
@@ -718,6 +719,15 @@ class GenomeAssembly(models.Model):
 
     def __str__(self):
         return self.name
+
+    def read_in_chrom_sizes(self, chrom_sizes_path):
+        chrom_sizes = dict()
+        with open(chrom_sizes_path) as f:
+            for line in f:
+                chromosome, size = line.strip().split()
+                chrom_sizes[chromosome] = int(size)
+        self.chromosome_sizes = json.dumps(chrom_sizes)
+        self.save()
 
 
 class GeneAnnotation(models.Model):
