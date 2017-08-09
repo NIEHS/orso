@@ -717,3 +717,64 @@ def pca_analysis(annotation):
                 ))
             models.PCATransformedValues.objects.bulk_create(
                 _pca_transformed_datasets)
+
+
+@task
+def get_tfidf_vectorizers():
+    '''
+    For each annotation/experiment type pair, create a TF/IDF vectorizer and
+    create the associated object.
+    '''
+    EXPERIMENT_DESCRIPTION_FIELDS = [
+        'assay_slims',
+        'assay_synonyms',
+        'assay_term_name',
+        'assay_title',
+        'biosample_summary',
+        'biosample_synonyms',
+        'biosample_term_name',
+        'biosample_type',
+        'category_slims',
+        'objective_slims',
+        'organ_slims',
+        'target',
+        'system_slims',
+    ]
+
+    for annotation in models.GeneAnnotation.objects.all():
+        for exp_type in models.ExperimentType.objects.all():
+
+            descriptions = []
+            experiments = models.Experiment.objects.filter(
+                dataset__assembly__default_annotation=annotation,
+                experiment_type=exp_type,
+            )
+
+            if experiments:
+                for exp in experiments:
+
+                    description = exp.description
+                    description = description.translate(
+                        str.maketrans('', '', string.punctuation))
+                    description = description.split()
+                    for field in EXPERIMENT_DESCRIPTION_FIELDS:
+                        description = [x for x in description if x != field]
+
+                    if exp.cell_type:
+                        description.append(exp.cell_type)
+                    if exp.target:
+                        description.append(exp.target)
+
+                    descriptions.append(' '.join(description))
+
+                tf = TfidfVectorizer(analyzer='word', ngram_range=(1, 1),
+                                     min_df=0, stop_words='english')
+                tf.fit(descriptions)
+
+                models.TfidfVectorizer.objects.update_or_create(
+                    annotation=annotation,
+                    experiment_type=exp_type,
+                    defaults={
+                        'tfidf_vectorizer': tf,
+                    },
+                )
