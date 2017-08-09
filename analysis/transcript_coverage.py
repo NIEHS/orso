@@ -1,7 +1,7 @@
-from subprocess import call
 from tempfile import NamedTemporaryFile
 
 from analysis.utils import call_bigwig_average_over_bed
+from network import models
 
 
 def get_transcript_values(transcripts, transcript_bed, ambiguous_bigwig=None,
@@ -44,10 +44,10 @@ def get_transcript_values(transcripts, transcript_bed, ambiguous_bigwig=None,
             transcript_bed,
             tab.name,
         )
-
         tab.flush()
 
-        return read_bigwig_average_over_bed_tab_file(tab.name)
+        out_values = read_bigwig_average_over_bed_tab_file(tab.name)
+        return out_values
 
     else:
         raise ValueError('Improper bigWig files specified.')
@@ -115,50 +115,44 @@ def read_bigwig_average_over_bed_tab_file(tab_file_name):
     '''
     Read values in bigWigAverageOverBed output file into dict.
     '''
-    transcript_values = dict()
+    def place_value(_dict, feature_name, value):
+        '''
+        Based on feature_name, place value in the appropriate location in
+        _dict.
+        '''
+        if 'exon' in feature_name or 'intron' in feature_name:
+            key = '{}s'.format(feature_name.split('_')[0])
+            index = int(feature_name.split('_')[1])
+            for _ in range((index + 1) - len(_dict[key])):
+                _dict[key].append(0.0)
+            _dict[key][index] = value
+        else:
+            _dict[feature_name] = value
 
+    transcript_values = dict()
     with open(tab_file_name) as f:
         for line in f:
-
             name, size, covered, value_sum, mean, mean0 = line.strip().split()
-            transcript_pk = int(name.split('_')[0])
-            feature_name = name.split('{}_'.format(str(transcript_pk)))[1]
+            pk = int(name.split('_')[0])
+            feature_name = name.split('{}_'.format(str(pk)))[1]
+            if pk not in transcript_values:
+                transcript_values[pk] = {
+                    'genebody': None,
+                    'promoter': None,
+                    'exons': [],
+                    'introns': [],
+                }
+            place_value(
+                transcript_values[pk], feature_name, float(value_sum))
 
-            if transcript_pk not in transcript_values:
-                transcript_values[transcript_pk] = {}
-            transcript_values[transcript_pk][feature_name] = float(value_sum)
+    pk_to_transcript = \
+        models.Transcript.objects.in_bulk(list(transcript_values.keys()))
 
-    for pk, value_dict in transcript_values.items():
+    out_dict = dict()
+    for pk, values in transcript_values.items():
+        out_dict[pk_to_transcript[pk]] = values
 
-        exon_count = 0
-        intron_count = 0
-        for feature_name in value_dict.keys():
-            if 'exon' in feature_name:
-                exon_count += 1
-            elif 'intron' in feature_name:
-                intron_count += 1
-
-        exons = [0] * exon_count
-        introns = [0] * intron_count
-
-        keys_to_remove = []
-        for feature_name, value in value_dict.items():
-            if 'exon' in feature_name:
-                exon_index = int(feature_name.split('exon_')[1])
-                exons[exon_index] = value
-                keys_to_remove.append(feature_name)
-            elif 'intron' in feature_name:
-                intron_index = int(feature_name.split('intron_')[1])
-                introns[intron_index] = value
-                keys_to_remove.append(feature_name)
-
-        transcript_values[pk]['exons'] = exons
-        transcript_values[pk]['introns'] = introns
-
-        for key in keys_to_remove:
-            del transcript_values[pk][key]
-
-    return transcript_values
+    return out_dict
 
 
 def reconcile_stranded_coverage(transcripts, plus_values, minus_values):
@@ -170,8 +164,8 @@ def reconcile_stranded_coverage(transcripts, plus_values, minus_values):
 
     for transcript in transcripts:
         if transcript.strand == '+':
-            transcript_values[transcript.pk] = plus_values[transcript.pk]
+            transcript_values[transcript] = plus_values[transcript]
         elif transcript.strand == '-':
-            transcript_values[transcript.pk] = minus_values[transcript.pk]
+            transcript_values[transcript] = minus_values[transcript]
 
     return transcript_values
