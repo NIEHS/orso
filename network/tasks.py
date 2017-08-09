@@ -41,6 +41,17 @@ def single_instance_task(cache_id, timeout=None):
 
 
 @task()
+def select_all_representative_transcripts(genes):
+    job = group(_select_representative_transcripts.s(g.pk) for g in genes)
+    job.apply_async()
+
+
+@task()
+def _select_representative_transcripts(gene_pk):
+    select_transcript_by_expression(models.Gene.objects.get(pk=gene_pk))
+
+
+@task()
 def process_datasets(datasets):
 
     download_list_file = NamedTemporaryFile(mode='w')
@@ -120,10 +131,8 @@ def process_datasets(datasets):
 
 @task()
 def process_dataset_intersection(dataset_pk, transcript_bed, bigwigs):
-
     dataset = models.Dataset.objects.get(pk=dataset_pk)
     transcripts = dataset.assembly.get_transcripts()
-
     transcript_values = transcript_coverage.get_transcript_values(
         transcripts,
         transcript_bed,
@@ -131,18 +140,24 @@ def process_dataset_intersection(dataset_pk, transcript_bed, bigwigs):
         plus_bigwig=bigwigs['plus'],
         minus_bigwig=bigwigs['minus'],
     )
-
-    for pk, value_dict in transcript_values.items():
-        models.TranscriptIntersection.objects.update_or_create(
-            transcript=models.Transcript.objects.get(pk=pk),
+    normalized_values = \
+        normalize_transcript_intersection_values(transcript_values)
+    models.TranscriptIntersection.objects.filter(dataset=dataset).delete()
+    entries = []
+    for transcript, value_dict in transcript_values.items():
+        norm = normalized_values[transcript]
+        entries.append(models.TranscriptIntersection(
             dataset=dataset,
-            defaults={
-                'promoter_value': value_dict['promoter'],
-                'genebody_value': value_dict['genebody'],
-                'exon_values': value_dict['exons'],
-                'intron_values': value_dict['introns'],
-            },
-        )
+            transcript=transcript,
+            promoter_value=value_dict['promoter'],
+            genebody_value=value_dict['genebody'],
+            exon_values=value_dict['exons'],
+            intron_values=value_dict['introns'],
+            normalized_promoter_value=norm['promoter'],
+            normalized_genebody_value=norm['genebody'],
+            normalized_coding_value=norm['coding'],
+        ))
+    models.TranscriptIntersection.objects.bulk_create(entries)
 
 
 @task()
