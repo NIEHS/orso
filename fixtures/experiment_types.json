@@ -1,0 +1,191 @@
+[
+    {
+        "model": "network.ExperimentType",
+        "pk": 0,
+        "fields": {
+            "name": "RAMPAGE",
+            "short_name": "RAMPAGE",
+            "relevant_regions": "promoter"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 1,
+        "fields": {
+            "name": "RNA-seq",
+            "short_name": "RNA-seq",
+            "relevant_regions": "coding"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 2,
+        "fields": {
+            "name": "HiC",
+            "short_name": "HiC",
+            "relevant_regions": "genebody"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 3,
+        "fields": {
+            "name": "RNA-PET",
+            "short_name": "RNA-PET",
+            "relevant_regions": "promoter"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 4,
+        "fields": {
+            "name": "DNase-seq",
+            "short_name": "DNase-seq",
+            "relevant_regions": "genebody"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 5,
+        "fields": {
+            "name": "siRNA knockdown followed by RNA-seq",
+            "short_name": "siRNA knockdown followed by RNA-seq",
+            "relevant_regions": "coding"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 6,
+        "fields": {
+            "name": "eCLIP",
+            "short_name": "eCLIP",
+            "relevant_regions": "coding"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 7,
+        "fields": {
+            "name": "ChIA-PET",
+            "short_name": "ChIA-PET",
+            "relevant_regions": "genebody"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 8,
+        "fields": {
+            "name": "shRNA knockdown followed by RNA-seq",
+            "short_name": "shRNA knockdown followed by RNA-seq",
+            "relevant_regions": "coding"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 9,
+        "fields": {
+            "name": "single cell isolation followed by RNA-seq",
+            "short_name": "single cell isolation followed by RNA-seq",
+            "relevant_regions": "coding"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 10,
+        "fields": {
+            "name": "Repli-chip",
+            "short_name": "Repli-chip",
+            "relevant_regions": "genebody"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 11,
+        "fields": {
+            "name": "CRISPR genome editing followed by RNA-seq",
+            "short_name": "CRISPR genome editing followed by RNA-seq",
+            "relevant_regions": "coding"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 12,
+        "fields": {
+            "name": "RIP-seq",
+            "short_name": "RIP-seq",
+            "relevant_regions": "coding"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 13,
+        "fields": {
+            "name": "whole-genome shotgun bisulfite sequencing",
+            "short_name": "whole-genome shotgun bisulfite sequencing",
+            "relevant_regions": "genebody"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 14,
+        "fields": {
+            "name": "ATAC-seq",
+            "short_name": "ATAC-seq",
+            "relevant_regions": "genebody"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 15,
+        "fields": {
+            "name": "CAGE",
+            "short_name": "CAGE",
+            "relevant_regions": "promoter"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 16,
+        "fields": {
+            "name": "MNase-seq",
+            "short_name": "MNase-seq",
+            "relevant_regions": "genebody"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 17,
+        "fields": {
+            "name": "FAIRE-seq",
+            "short_name": "FAIRE-seq",
+            "relevant_regions": "genebody"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 18,
+        "fields": {
+            "name": "ChIP-seq",
+            "short_name": "ChIP-seq",
+            "relevant_regions": "genebody"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 19,
+        "fields": {
+            "name": "Repli-seq",
+            "short_name": "Repli-seq",
+            "relevant_regions": "genebody"
+        }
+    },
+    {
+        "model": "network.ExperimentType",
+        "pk": 20,
+        "fields": {
+            "name": "microRNA-seq",
+            "short_name": "microRNA-seq",
+            "relevant_regions": "coding"
+        }
+    }
+]
