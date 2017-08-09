@@ -806,3 +806,7 @@ class TranscriptIntersection(models.Model):
     genebody_value = models.FloatField()
     exon_values = ArrayField(models.FloatField())
     intron_values = ArrayField(models.FloatField())
+
+    normalized_promoter_value = models.FloatField()
+    normalized_genebody_value = models.FloatField()
+    normalized_coding_value = models.FloatField()
