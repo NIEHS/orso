@@ -28,6 +28,9 @@ from analysis import metaplot
 from analysis.normalization import normalize_transcript_intersection_values
 from analysis.expression import select_transcript_by_expression
 
+from scipy.spatial.distance import mahalanobis
+from sklearn.ensemble import RandomForestClassifier
+
 
 def single_instance_task(cache_id, timeout=None):
     def decorator(func):
@@ -287,64 +290,6 @@ def get_region_variance(gr):
         gr.save()
 
 
-def pca_analysis(gr):
-
-    intersection_matrix = []
-    dataset_ids = []
-    dataset_names = []
-    experiment_ids = []
-    experiment_names = []
-    experiment_types = []
-    cell_types = []
-    targets = []
-
-    intersection_values = \
-        models.IntersectionValues.objects.filter(genomic_regions=gr)
-
-    if intersection_values:
-        for iv in models.IntersectionValues.objects.filter(genomic_regions=gr):
-            if gr.variance_mask:
-                values = []
-                for i, val in enumerate(iv.intersection_values):
-                    if gr.variance_mask[i]:
-                        values.append(val)
-                intersection_matrix.append(values)
-            else:
-                intersection_matrix.append(iv.intersection_values)
-            ds = models.Dataset.objects.get(intersectionvalues=iv)
-
-            dataset_ids.append(ds.id)
-            dataset_names.append(ds.name)
-            experiment_ids.append(ds.experiment.id)
-            experiment_names.append(ds.experiment.name)
-            experiment_types.append(ds.experiment.data_type)
-            cell_types.append(ds.experiment.cell_type)
-            targets.append(ds.experiment.target)
-
-        df = pd.DataFrame(intersection_matrix)
-        df = pd.DataFrame.transpose(df)
-
-        corrected_df = combat(df, experiment_types)
-        corrected_df = pd.DataFrame.transpose(corrected_df)
-
-        pca = PCA(n_components=3, whiten=True)
-        pca_out = pca.fit_transform(corrected_df)
-
-        gr.pca = {
-            'pca': pca_out.tolist(),
-            'attributes': {
-                'Experiment type': experiment_types,
-                'Cell/tissue type': cell_types,
-                'Target': targets,
-            },
-            'dataset_ids': dataset_ids,
-            'dataset_names': dataset_names,
-            'experiment_ids': experiment_ids,
-            'experiment_names': experiment_names,
-        }
-        gr.save()
-
-
 def get_user_similarites():
     experiments = models.Experiment.objects.all()
     users = models.MyUser.objects.all()
@@ -582,3 +527,193 @@ def update_metadata_correlation_values():
                 y_experiment=exp_2,
                 score=similarities[exp_1][exp_2],
             )
+
+
+@task
+def _get_associated_transcript(gene_pk):
+    gene = models.Gene.objects.get(pk=gene_pk)
+    return gene.get_transcript_with_highest_expression()
+
+
+@task
+def pca_analysis(annotation):
+
+    def run_in_parallel(obj_list, task):
+        res = group(task.s(obj.pk) for obj in obj_list)()
+        return res.get()
+
+    genes = models.Gene.objects.filter(annotation=annotation)[:100]
+    transcripts = run_in_parallel(genes, _get_associated_transcript)
+    transcripts = [t for t in transcripts if t is not None]
+
+    for exp_type in models.ExperimentType.objects.all():
+
+        datasets = models.Dataset.objects.filter(
+            assembly__default_annotation=annotation,
+            experiment__experiment_type=exp_type,
+        )
+
+        if datasets:
+            pca = PCA(n_components=3)
+            rf = RandomForestClassifier(n_estimators=1000)
+
+            intersection_values = dict()
+            experiment_pks = dict()
+            cell_types = dict()
+            targets = dict()
+
+            for ds in datasets:
+
+                exp = models.Experiment.objects.get(dataset=ds)
+                experiment_pks[ds] = exp.pk
+                cell_types[ds] = exp.cell_type
+                targets[ds] = exp.target
+
+                intersection_values[ds] = dict()
+
+                transcripts = sorted(transcripts, key=lambda x: x.pk)
+                intersections = (
+                    models.TranscriptIntersection
+                          .objects.filter(dataset=ds,
+                                          transcript__in=transcripts)
+                          .order_by('transcript__pk')
+                )
+
+                for transcript, intersection in zip(
+                        transcripts, intersections):
+                    if exp_type.relevant_regions == 'genebody':
+                        intersection_values[ds][transcript] = \
+                            intersection.normalized_genebody_value
+                    elif exp_type.relevant_regions == 'coding':
+                        intersection_values[ds][transcript] = \
+                            intersection.normalized_coding_value
+                    elif exp_type.relevant_regions == 'promoter':
+                        intersection_values[ds][transcript] = \
+                            intersection.normalized_promoter_value
+
+            # Filter transcripts by RF importance
+            _intersection_values = []
+            _cell_types = []
+            _targets = []
+
+            for ds in datasets:
+                _intersection_values.append([])
+                for ts in transcripts:
+                    _intersection_values[-1].append(
+                        intersection_values[ds][ts])
+                _cell_types.append(cell_types[ds])
+                _targets.append(targets[ds])
+
+            cell_type_importances = rf.fit(
+                _intersection_values, _cell_types).feature_importances_
+            target_importances = rf.fit(
+                _intersection_values, _cell_types).feature_importances_
+            totals = [x + y for x, y in zip(cell_type_importances,
+                                            target_importances)]
+            filtered_transcripts = \
+                [ts for ts, total in sorted(zip(transcripts, totals),
+                                            key=lambda x: -x[1])]
+
+            # Filter datasets by Mahalanobis distance after PCA
+            filtered_datasets = []
+            if len(datasets) >= 10:
+                _intersection_values = []
+                for ds in datasets:
+                    _intersection_values.append([])
+                    for ts in filtered_transcripts:
+                        _intersection_values[-1].append(
+                            intersection_values[ds][ts])
+
+                fitted = pca.fit_transform(_intersection_values)
+
+                mean = numpy.mean(fitted, axis=0)
+                cov = numpy.cov(fitted, rowvar=False)
+                inv = numpy.linalg.inv(cov)
+                m_dist = []
+                for vector in fitted:
+                    m_dist.append(mahalanobis(vector, mean, inv))
+
+                Q1 = numpy.percentile(m_dist, 25)
+                Q3 = numpy.percentile(m_dist, 75)
+                cutoff = Q3 + 1.5 * (Q3 - Q1)
+
+                filtered_datasets = []
+                for dist, ds in zip(m_dist, datasets):
+                    if dist < cutoff:
+                        filtered_datasets.append(ds)
+            if len(filtered_datasets) <= 1:
+                filtered_datasets = datasets
+
+            # Fit PCA with filtered transcripts and filtered datasets
+            _intersection_values = []
+            for ds in filtered_datasets:
+                _intersection_values.append([])
+                for ts in filtered_transcripts:
+                    _intersection_values[-1].append(
+                        intersection_values[ds][ts])
+            fitted = pca.fit_transform(_intersection_values)
+            if len(fitted) > 1:
+                cov = numpy.cov(fitted, rowvar=False)
+                if len(_intersection_values) > 3:
+                    inv = numpy.linalg.inv(cov)
+                else:
+                    inv = numpy.linalg.pinv(cov)
+            else:
+                cov = None
+                inv = None
+
+            # Fit values to PCA, create the associated PCA plot
+            fitted_values = []
+            pca_plot = []
+            for ds in datasets:
+                _intersection_values = []
+                for ts in filtered_transcripts:
+                    _intersection_values.append(
+                        intersection_values[ds][ts])
+                fitted_values.append(pca.transform([_intersection_values])[0])
+
+                pca_plot.append({
+                    'dataset_pk': ds.pk,
+                    'experiment_pk': experiment_pks[ds],
+                    'experiment_cell_type': cell_types[ds],
+                    'experiment_target': targets[ds],
+                    'transformed_values': fitted_values[-1].tolist(),
+                })
+
+            # Update or create the PCA object
+            pca, created = models.PCA.objects.update_or_create(
+                annotation=annotation,
+                experiment_type=exp_type,
+                defaults={
+                    'plot': pca_plot,
+                    'pca': pca,
+                    'covariation_matrix': cov,
+                    'inverse_covariation_matrix': inv,
+                },
+            )
+
+            # Set the PCA to transcripts relationship
+            if not created:
+                pca.selected_transcripts.clear()
+            _pca_transcript_orders = []
+            for i, transcript in enumerate(filtered_transcripts):
+                _pca_transcript_orders.append(models.PCATranscriptOrder(
+                    pca=pca,
+                    transcript=transcript,
+                    order=i,
+                ))
+            models.PCATranscriptOrder.objects.bulk_create(
+                _pca_transcript_orders)
+
+            # Set the PCA to datasets relationship
+            if not created:
+                pca.transformed_datasets.clear()
+            _pca_transformed_datasets = []
+            for ds, values in zip(datasets, fitted_values):
+                _pca_transformed_datasets.append(models.PCATransformedValues(
+                    pca=pca,
+                    dataset=ds,
+                    transformed_values=values.tolist(),
+                ))
+            models.PCATransformedValues.objects.bulk_create(
+                _pca_transformed_datasets)
