@@ -83,10 +83,10 @@ class MyUser(models.Model):
         experiment_type_counts = dict()
 
         for ds in datasets:
-            if ds.data_type in experiment_type_counts:
-                experiment_type_counts[ds.data_type] += 1
+            if ds.experiment_type.name in experiment_type_counts:
+                experiment_type_counts[ds.experiment_type.name] += 1
             else:
-                experiment_type_counts[ds.data_type] = 1
+                experiment_type_counts[ds.experiment_type.name] = 1
 
         return experiment_type_counts
 
@@ -175,39 +175,25 @@ class Project(models.Model):
     description = models.TextField(blank=True)
 
 
-class Experiment(models.Model):
-    DATA_TYPES = (
-        ('RAMPAGE', 'RAMPAGE'),
-        ('RNA-seq', 'RNA-seq'),
-        ('HiC', 'HiC'),
-        ('RNA-PET', 'RNA-PET'),
-        ('DNase-seq', 'DNase-seq'),
-        ('siRNA knockdown followed by RNA-seq',
-            'siRNA knockdown followed by RNA-seq'),
-        ('eCLIP', 'eCLIP'),
-        ('ChIA-PET', 'ChIA-PET'),
-        ('shRNA knockdown followed by RNA-seq',
-            'shRNA knockdown followed by RNA-seq'),
-        ('single cell isolation followed by RNA-seq',
-            'single cell isolation followed by RNA-seq'),
-        ('Repli-chip', 'Repli-chip'),
-        ('CRISPR genome editing followed by RNA-seq',
-            'CRISPR genome editing followed by RNA-seq'),
-        ('RIP-seq', 'RIP-seq'),
-        ('whole-genome shotgun bisulfite sequencing',
-            'whole-genome shotgun bisulfite sequencing'),
-        ('ATAC-seq', 'ATAC-seq'),
-        ('CAGE', 'CAGE'),
-        ('MNase-seq', 'MNase-seq'),
-        ('FAIRE-seq', 'FAIRE-seq'),
-        ('ChIP-seq', 'ChIP-seq'),
-        ('Repli-seq', 'Repli-seq'),
-        ('microRNA-seq', 'microRNA-seq'),
+class ExperimentType(models.Model):
+    '''
+    Experiment type, i.e. sequencing technology. Largely used organizationally
+    '''
+    RELEVANT_REGIONS = (
+        ('coding', 'coding'),
+        ('genebody', 'genebody'),
+        ('promoter', 'promoter'),
     )
 
-    data_type = models.CharField(
+    name = models.CharField(max_length=64)
+    short_name = models.CharField(max_length=64)
+    relevant_regions = models.CharField(
         max_length=64,
-        choices=DATA_TYPES)
+        choices=RELEVANT_REGIONS)
+
+
+class Experiment(models.Model):
+    experiment_type = models.ForeignKey('ExperimentType')
     cell_type = models.CharField(max_length=128)
     target = models.CharField(max_length=128, blank=True)
     owners = models.ManyToManyField('MyUser', blank=True)
@@ -401,7 +387,7 @@ class Experiment(models.Model):
 
         metadata['id'] = self.id
         metadata['name'] = self.name
-        metadata['data_type'] = self.data_type
+        metadata['data_type'] = self.experiment_type.name
         metadata['cell_type'] = self.cell_type
 
         if self.target:
