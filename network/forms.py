@@ -199,11 +199,11 @@ class SimilarExperimentFilterForm(ExperimentFilterForm):
 
 
 class ExperimentForm(forms.ModelForm):
-
+    #  TODO: fix for ExperimentType ForeignKey field
     class Meta:
         model = models.Experiment
         fields = (
-            'data_type', 'cell_type', 'target', 'description', 'name'
+            'cell_type', 'target', 'description', 'name'
         )
 
 
