@@ -2,18 +2,19 @@
 
 {% block content %}
 <div class="container">
-    <h3>{{object.name}}</h3>
+    <h3>{{object.annotation.name}}</h3>
+    <h3>{{object.experiment_type.name}}</h3>
     <div id="pca_plot"/>
 </div>
 {% endblock content %}
 
 {% block extra-js %}
 <script type='text/javascript'>
-console.log({{object.pca|safe}});
 $(document).ready(function(){
     window.apps.appendPCA(
         $('#pca_plot')[0],
-        {{object.pca|safe}}
+        {{object.plot|safe}},
+        {{exp_urls|safe}},
     );
 });
 </script>

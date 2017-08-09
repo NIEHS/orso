@@ -180,11 +180,11 @@ let appendSmallRecommendedDataView = function(el, meta_data, plot_data, urls, ar
         display_remove_favorite={Boolean(args.display_remove_favorite)}/>, element[0]);
 };
 
-let appendPCA = function(el, pca_data) {
+let appendPCA = function(el, pca_data, exp_urls) {
     var element = $('<div></div>').appendTo(el);
 
     ReactDOM.render(<PCA
-        data={pca_data}/>, element[0]);
+        data={pca_data} exp_urls={exp_urls}/>, element[0]);
 };
 
 export {

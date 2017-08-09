@@ -6,10 +6,7 @@ class PCA extends React.Component {
     constructor(props) {
         super(props);
 
-        let color_by_choices = ['None'];
-        for (let key in this.props.data['attributes']) {
-            color_by_choices.push(key);
-        }
+        let color_by_choices = ['None', 'Cell type', 'Target'];
 
         this.state = {
             color_by: 'None',
@@ -17,123 +14,155 @@ class PCA extends React.Component {
         };
     }
 
-    drawD3(svgElement, data){
-        var margins = {
-                left: 40,
-                bottom: 60,
-                top: 10,
-                right: 10,
-            },
-            h = $(svgElement).height() - margins.bottom - margins.top,
-            w = $(svgElement).width() - margins.left - margins.right;
-
-        var pca_1 = [], pca_2 = [];
-        for (var i in data['pca']) {
-            pca_1.push(data['pca'][i][0]);
-            pca_2.push(data['pca'][i][1]);
+    drawPlotly(divElement, data, experiment_urls) {
+        var pca = [], cell_types = [], targets = [], names = [], urls = [];
+        for (var i = 0; i < data.length; i++) {
+            pca[i] = {
+                x: data[i]['transformed_values'][0],
+                y: data[i]['transformed_values'][1],
+                z: data[i]['transformed_values'][2],
+            };
+            cell_types[i] = data[i]['experiment_cell_type'];
+            targets[i] = data[i]['experiment_target'];
+            urls[i] = experiment_urls[data[i]['experiment_pk']];
+            if (data[i]['experiment_target'] == '') {
+                names[i] = `Cell type: ${data[i]['experiment_cell_type']}`;
+            } else {
+                names[i] = `Cell type: ${data[i]['experiment_cell_type']}
+                            <br>Target: ${data[i]['experiment_target']}`;
+            }
         }
 
-        var palette = d3.scale.category20(),
-            palette_length = 20;
+        var color_scale = d3.scale.category20c();
         var colors = [];
         if (this.state.color_by == 'None') {
-            for (var i in data['pca']) {
-                colors.push(0);
+            for (var i = 0; i < pca.length; i++) {
+                colors.push(color_scale(0));
             }
         } else {
-            let list = data['attributes'][this.state.color_by];
+            if (this.state.color_by == 'Cell type') {
+                var list = cell_types;
+            } else if (this.state.color_by == 'Target') {
+                var list = targets;
+            }
             let used = [];
-            for (var i in list) {
+            for (var i = 0; i < list.length; i++) {
                 if ( $.inArray(list[i], used) == -1) {
                     used.push(list[i]);
                 }
-                // console.log($.inArray(list[i], used));
-                // console.log($.inArray(list[i], used) % palette.length);
-                colors.push($.inArray(list[i], used) % palette_length);
+                colors.push(color_scale($.inArray(list[i], used) % 20));
             }
         }
 
-        var x = d3.scale.linear()
-            .domain([Math.min.apply(Math,pca_1), Math.max.apply(Math,pca_1)])
-            .range([margins.left, w + margins.left]);
+        function unpack(rows, key) {
+            return rows.map(function(row)
+                { return row[key]; });
+        }
+        var trace1 = {
+            x: unpack(pca, 'x'),
+            y: unpack(pca, 'y'),
+            z: unpack(pca, 'z'),
+            mode: 'markers',
+            text: names,
+            url: urls,
+            hoverinfo: 'text',
+            marker: {
+                size: 12,
+                color: colors,
+                opacity: 0.8,
+            },
+            type: 'scatter3d',
+        };
 
-        var y = d3.scale.linear()
-            .domain([Math.min.apply(Math,pca_2), Math.max.apply(Math,pca_2)])
-            .range([h, margins.top]);
+        var data = [trace1];
+        var layout = {
+            margin: {
+                l: 0,
+                r: 0,
+                b: 0,
+                t: 0,
+            },
+            scene: {
+        		xaxis:{
+                    title: '',
+                    showticklabels: false,
+                },
+        		yaxis:{
+                    title: '',
+                    showticklabels: false,
+                },
+        		zaxis:{
+                    title: '',
+                    showticklabels: false,
+                },
+    		},
+        };
+        var options = {
+            displaylogo: false,
+            modeBarButtonsToRemove: [
+                'sendDataToCloud',
+                'resetCameraLastSave3d',
+                'hoverClosest3d',
+            ],
+        };
+        Plotly.newPlot('plot', data, layout, options);
 
-        var xAxis = d3.svg.axis()
-            .scale(x)
-            .ticks(3)
-            .orient('bottom');
-
-        var yAxis = d3.svg.axis()
-            .scale(y)
-            .ticks(4)
-            .orient('left');
-
-        d3.select(svgElement).append('svg:g')
-            .attr('class', 'x axis')
-            .attr('transform', `translate(0,${($(svgElement).height() - margins.top - margins.bottom)})`)
-            .call(xAxis);
-
-        d3.select(svgElement).append('svg:g')
-            .attr('class', 'y axis')
-            .attr('transform', `translate(${margins.left},0)`)
-            .call(yAxis);
-
-        d3.select(svgElement).append('svg:g')
-            .selectAll('circle')
-            .data(data['pca'])
-            .enter()
-            .append('circle')
-            .attr('r', 3)
-            .attr('cx', function(d) {return x(d[0]);})
-            .attr('cy', function(d) {return y(d[1]);})
-            .attr('fill', function(d, i) {return palette(colors[i]);});
+        var plot = document.getElementById('plot');
+        plot.on('plotly_click', function(data){
+            var url = '',
+                name = '';
+            for(var i = 0; i < data.points.length; i++){
+                var index = data.points[i].pointNumber;
+                url = data.points[i].data.url[index];
+                name = data.points[i].text;
+            }
+            window.open(window.location.href.replace(window.location.pathname, url), name)
+        });
     }
 
-    removeD3(svgElement){
-        $(svgElement).empty();
+    removePlotly(divElement){
+        $(divElement).empty();
     }
 
     componentDidMount(){
-        let svg = this.refs.svg;
-        this.drawD3(svg, this.props.data);
+        var $experiment_select = $(this.refs.select_experiment_type);
+        for (let i in this.state.experiment_type_choices) {
+            $experiment_select.append(
+                '<option val="' + i + '">' + this.state.experiment_type_choices[i] + '</option>');
+        }
 
         var $color_by_select = $(this.refs.color_by_select);
         for (let i in this.state.color_by_choices) {
             $color_by_select.append(
                 '<option val="' + i + '">' + this.state.color_by_choices[i] + '</option>');
         }
+        console.log(this.props.data);
+        this.drawPlotly(this.refs.plot, this.props.data, this.props.exp_urls);
     }
 
     componentDidUpdate(){
-        let svg = this.refs.svg;
-        this.removeD3(this.refs.svg);
-        this.drawD3(svg, this.props.data);
+        this.removePlotly(this.refs.plot);
+        this.drawPlotly(this.refs.plot, this.props.data, this.props.exp_urls);
     }
 
     componentWillUnmount(){
         this.removeD3(this.refs.svg);
     }
 
-    change(event){
+    change_color(event){
          this.setState({color_by: event.target.value});
-     }
+    }
 
     render(){
-        console.log(this.props.data);
-        console.log(this.state);
-
         return <div className='pca'>
             <div className='row'>
                 <div className='col-sm-8'>
-                    <svg style={{height:"100%", width:"100%"}} ref='svg'></svg>
+                    <div ref='plot' id='plot'></div>
                 </div>
                 <div className='col-sm-4'>
                     <div>Color by</div>
                     <select ref='color_by_select'
-                        onChange={this.change.bind(this)}
+                        onChange={this.change_color.bind(this)}
                         value={this.state.color_by}>
                     </select>
                 </div>
@@ -143,7 +172,8 @@ class PCA extends React.Component {
 }
 
 PCA.propTypes = {
-    data: React.PropTypes.object.isRequired,
+    data: React.PropTypes.array.isRequired,
+    exp_urls: React.PropTypes.object.isRequired,
 };
 
 export default PCA;
