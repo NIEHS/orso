@@ -707,7 +707,8 @@ class GenomeAssembly(models.Model):
         return self.name
 
     def get_transcripts(self):
-        return Transcript.objects.filter(gene__annotation__assembly=self)
+        return Transcript.objects.filter(
+            gene__annotation=self.default_annotation)
 
     def read_in_chrom_sizes(self, chrom_sizes_path):
         chrom_sizes = dict()
