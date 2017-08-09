@@ -761,6 +761,21 @@ class Gene(models.Model):
     genebody_var_rank = models.IntegerField(blank=True, null=True)
     coding_var_rank = models.IntegerField(blank=True, null=True)
 
+    def get_transcript_with_highest_expression(self):
+        expression_values = dict()
+        for transcript in Transcript.objects.filter(gene=self):
+            expression_values[transcript] = []
+            intersections = \
+                (TranscriptIntersection.objects.filter(transcript=transcript))
+            for intersection in intersections:
+                expression_values[transcript].append(
+                    intersection.normalized_genebody_value)
+        if expression_values:
+            return sorted(expression_values.items(),
+                          key=lambda x: (-numpy.median(x[1]), x[0].pk))[0][0]
+        else:
+            return None
+
 
 class Transcript(models.Model):
     name = models.CharField(
