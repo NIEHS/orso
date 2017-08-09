@@ -382,21 +382,15 @@ class SimilarMetadataExperiments(SimilarExperiments):
 
 class PCA(AddMyUserMixin, DetailView):
     template_name = 'network/pca.html'
-    model = models.GenomicRegions
+    model = models.PCA
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        #  GR list format [pk, name, assembly_id, assembly_name]
-        gr_list = []
-        for gr in models.GenomicRegions.objects.all():
-            gr_list.append((
-                gr.pk,
-                gr.name,
-                gr.assembly.id,
-                gr.assembly.name,
-            ))
-        context['genomic_regions'] = gr_list
+        exp_urls = dict()
+        for exp in models.Experiment.objects.all():
+            exp_urls[exp.pk] = exp.get_absolute_url()
+        context['exp_urls'] = exp_urls
 
         return context
 
