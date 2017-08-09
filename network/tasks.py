@@ -31,6 +31,8 @@ from analysis.expression import select_transcript_by_expression
 from scipy.spatial.distance import mahalanobis
 from sklearn.ensemble import RandomForestClassifier
 
+from analysis import score
+
 
 def single_instance_task(cache_id, timeout=None):
     def decorator(func):
@@ -778,3 +780,112 @@ def get_tfidf_vectorizers():
                         'tfidf_vectorizer': tf,
                     },
                 )
+
+
+@task
+def set_dataset_data_distance(pk_1, pk_2):
+    '''
+    For the datasets, calculate and set the DatasetDataDistance.
+    '''
+    dataset_1 = models.Dataset.objects.get(pk=pk_1)
+    dataset_2 = models.Dataset.objects.get(pk=pk_2)
+    distance = score.score_datasets_by_pca_distance(dataset_1, dataset_2)
+    models.DatasetDataDistance.objects.update_or_create(
+        dataset_1=dataset_1,
+        dataset_2=dataset_2,
+        defaults={
+            'distance': distance,
+        }
+    )
+
+
+@task
+def set_dataset_metadata_distance(pk_1, pk_2):
+    '''
+    For the datasets, calculate and set the DatasetMetadataDistance.
+    '''
+    dataset_1 = models.Dataset.objects.get(pk=pk_1)
+    dataset_2 = models.Dataset.objects.get(pk=pk_2)
+    distance = score.score_datasets_by_tfidf(dataset_1, dataset_2)
+    models.DatasetMetadataDistance.objects.update_or_create(
+        dataset_1=dataset_1,
+        dataset_2=dataset_2,
+        defaults={
+            'distance': distance,
+        }
+    )
+
+
+@task
+def set_experiment_data_distance(pk_1, pk_2):
+    '''
+    For the experiments, calculate and set the ExperimentDataDistance.
+    '''
+    experiment_1 = models.Experiment.objects.get(pk=pk_1)
+    experiment_2 = models.Experiment.objects.get(pk=pk_2)
+    distance = score.score_experiments_by_pca_distance(
+        experiment_1, experiment_2)
+    models.ExperimentDataDistance.objects.update_or_create(
+        experiment_1=experiment_1,
+        experiment_2=experiment_2,
+        defaults={
+            'distance': distance,
+        }
+    )
+
+
+@task
+def set_experiment_metadata_distance(pk_1, pk_2):
+    '''
+    For the experiments, calculate and set the ExperimentMetadataDistance.
+    '''
+    experiment_1 = models.Experiment.objects.get(pk=pk_1)
+    experiment_2 = models.Experiment.objects.get(pk=pk_2)
+    distance = score.score_experiments_by_tfidf(experiment_1, experiment_2)
+    models.ExperimentMetadataDistance.objects.update_or_create(
+        experiment_1=experiment_1,
+        experiment_2=experiment_2,
+        defaults={
+            'distance': distance,
+        }
+    )
+
+
+@task
+def set_dataset_distances():
+    '''
+    For all datasets, set DatasetDataDistance and DatasetMetadataDistance.
+    '''
+    datasets = models.Dataset.objects.all().order_by('pk')
+    for ds_1 in datasets:
+        for ds_2 in datasets:
+            if ds_1 != ds_2:
+                if all([
+                    ds_1.assembly == ds_2.assembly,
+                    ds_1.experiment.experiment_type ==
+                    ds_2.experiment.experiment_type,
+                ]):
+                    set_dataset_data_distance.delay(ds_1.pk, ds_2.pk)
+                    set_dataset_metadata_distance.delay(ds_1.pk, ds_2.pk)
+
+
+@task
+def set_experiment_distances():
+    '''
+    For all experiments, set ExperimentDataDistance and
+    ExperimentMetadataDistance.
+    '''
+    experiments = models.Experiment.objects.all().order_by('pk')
+    for exp_1 in experiments:
+        for exp_2 in experiments:
+            if exp_1 != exp_2:
+                assemblies_1 = models.GenomeAssembly.objects.filter(
+                    dataset__experiment=exp_1)
+                assemblies_2 = models.GenomeAssembly.objects.filter(
+                    dataset__experiment=exp_2)
+                if all([
+                    assemblies_1 & assemblies_2,
+                    exp_1.experiment_type == exp_2.experiment_type,
+                ]):
+                    set_experiment_data_distance.delay(exp_1.pk, exp_2.pk)
+                    set_experiment_metadata_distance.delay(exp_1.pk, exp_2.pk)
