@@ -763,6 +763,17 @@ class Gene(models.Model):
         max_length=32)
     annotation = models.ForeignKey('GeneAnnotation')
 
+    highest_exp_promoter_transcript = models.ForeignKey(
+        'Transcript', related_name='promoter', blank=True, null=True)
+    highest_exp_genebody_transcript = models.ForeignKey(
+        'Transcript', related_name='genebody', blank=True, null=True)
+    highest_exp_coding_transcript = models.ForeignKey(
+        'Transcript', related_name='coding', blank=True, null=True)
+
+    promoter_var_rank = models.IntegerField(blank=True, null=True)
+    genebody_var_rank = models.IntegerField(blank=True, null=True)
+    coding_var_rank = models.IntegerField(blank=True, null=True)
+
 
 class Transcript(models.Model):
     name = models.CharField(
