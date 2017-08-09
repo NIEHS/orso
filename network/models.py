@@ -10,6 +10,8 @@ from django.conf import settings
 from django.contrib.postgres.fields import JSONField, ArrayField
 from django.urls import reverse
 
+from analysis.variance import coeff_variance
+
 
 class MyUser(models.Model):
     user = models.ForeignKey(
@@ -798,6 +800,28 @@ class Transcript(models.Model):
             start__lte=end,
             end__gte=start,
         )
+
+    def get_intersection_variance(self):
+        '''
+        For the transcript, return variance (coefficient of variance) across
+        intersection values.
+        '''
+        values = []
+        for intersection in TranscriptIntersection.objects.filter(
+                transcript=self):
+            values.append(intersection.normalized_genebody_value)
+        return coeff_variance(values)
+
+    def get_median_expression(self):
+        '''
+        For the transcript, return the median expression values from
+        intersections.
+        '''
+        values = []
+        for intersection in TranscriptIntersection.objects.filter(
+                transcript=self):
+            values.append(intersection.normalized_genebody_value)
+        return numpy.median(values)
 
 
 class TranscriptIntersection(models.Model):
