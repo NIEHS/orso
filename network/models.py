@@ -773,6 +773,17 @@ class PCATranscriptOrder(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
 
+class TfidfVectorizer(models.Model):
+    '''
+    scikit-learn TfidfVectorizer object.
+    '''
+    annotation = models.ForeignKey('GeneAnnotation')
+    experiment_type = models.ForeignKey('ExperimentType')
+    tfidf_vectorizer = PickledObjectField()
+
+    last_updated = models.DateTimeField(auto_now=True)
+
+
 class GenomicRegions(models.Model):
     name = models.CharField(
         max_length=32)
