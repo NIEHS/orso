@@ -889,3 +889,63 @@ class TranscriptIntersection(models.Model):
     normalized_promoter_value = models.FloatField()
     normalized_genebody_value = models.FloatField()
     normalized_coding_value = models.FloatField()
+
+
+class DatasetDistance(models.Model):
+    '''
+    Base model for dataset distances.
+    '''
+    dataset_1 = models.ForeignKey(
+        'Dataset', related_name='%(app_label)s_%(class)s_first')
+    dataset_2 = models.ForeignKey(
+        'Dataset', related_name='%(app_label)s_%(class)s_second')
+
+    class Meta:
+        abstract = True
+        unique_together = (
+            ('dataset_1', 'dataset_2',),
+        )
+
+
+class DatasetDataDistance(DatasetDistance):
+    '''
+    Distance between datasets considering data values.
+    '''
+    distance = models.FloatField()
+
+
+class DatasetMetadataDistance(DatasetDistance):
+    '''
+    Distance between datasets considering metadata values.
+    '''
+    distance = models.FloatField()
+
+
+class ExperimentDistance(models.Model):
+    '''
+    Base model for experiment distances.
+    '''
+    experiment_1 = models.ForeignKey(
+        'Experiment', related_name='%(app_label)s_%(class)s_first')
+    experiment_2 = models.ForeignKey(
+        'Experiment', related_name='%(app_label)s_%(class)s_second')
+
+    class Meta:
+        abstract = True
+        unique_together = (
+            ('experiment_1', 'experiment_2',),
+        )
+
+
+class ExperimentDataDistance(ExperimentDistance):
+    '''
+    Distance between experiments considering data values.
+    '''
+    distance = models.FloatField()
+
+
+class ExperimentMetadataDistance(ExperimentDistance):
+    '''
+    Distance between experiments considering metadata values.
+    '''
+    distance = models.FloatField()
