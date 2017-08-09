@@ -25,6 +25,8 @@ import os
 from tempfile import NamedTemporaryFile
 import json
 from analysis import metaplot
+from analysis.normalization import normalize_transcript_intersection_values
+from analysis.expression import select_transcript_by_expression
 
 
 def single_instance_task(cache_id, timeout=None):
