@@ -9,6 +9,7 @@ from django.db import models
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField, ArrayField
 from django.urls import reverse
+from picklefield.fields import PickledObjectField
 
 from analysis.variance import coeff_variance
 
@@ -729,6 +730,47 @@ class GeneAnnotation(models.Model):
     gtf_file = models.FileField()
     last_updated = models.DateTimeField(
         auto_now=True)
+
+
+class PCA(models.Model):
+    '''
+    scikit-learn PCA object. Used to transform transcript intersections and
+    find pairwise distances between datasets.
+    '''
+    annotation = models.ForeignKey('GeneAnnotation')
+    selected_transcripts = models.ManyToManyField(
+        'Transcript', through='PCATranscriptOrder')
+    experiment_type = models.ForeignKey('ExperimentType')
+    transformed_datasets = models.ManyToManyField(
+        'Dataset', through='PCATransformedValues')
+
+    plot = JSONField()
+    pca = PickledObjectField()
+    covariation_matrix = PickledObjectField(null=True, blank=True)
+    inverse_covariation_matrix = PickledObjectField(null=True, blank=True)
+
+
+class PCATransformedValues(models.Model):
+    '''
+    Used to store PCA-transformed dataset values.
+    '''
+    pca = models.ForeignKey('PCA')
+    dataset = models.ForeignKey('Dataset')
+    transformed_values = ArrayField(models.FloatField(), size=3)
+
+    last_updated = models.DateTimeField(auto_now=True)
+
+
+class PCATranscriptOrder(models.Model):
+    '''
+    Used to store order for selected transcripts. Essential for
+    transformations.
+    '''
+    pca = models.ForeignKey('PCA')
+    transcript = models.ForeignKey('Transcript')
+    order = models.PositiveIntegerField()
+
+    last_updated = models.DateTimeField(auto_now=True)
 
 
 class GenomicRegions(models.Model):
