@@ -80,10 +80,10 @@ def process_datasets(datasets):
                 'minus': None,
             }
     download_list_file.flush()
-    # call([
-    #     'aria2c', '-x', '16', '-s', '16', '-i',
-    #     download_list_file.name,
-    # ])
+    call([
+        'aria2c', '-x', '16', '-s', '16', '-i',
+        download_list_file.name,
+    ])
     download_list_file.close()
 
     assembly_to_intersection_bed = dict()
