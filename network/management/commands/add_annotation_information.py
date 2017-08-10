@@ -38,7 +38,7 @@ class Command(BaseCommand):
                 #  Create GenomeAssembly
                 assembly_obj = models.GenomeAssembly.objects.create(
                     name=assembly,
-                    default_annotation_id=None,
+                    geneannotation_id=None,
                 )
 
                 #  Create GeneAnnotation
@@ -47,7 +47,7 @@ class Command(BaseCommand):
                     gtf_file=annotation_file,
                     assembly=assembly_obj,
                 )
-                assembly_obj.default_annotation = annotation_obj
+                assembly_obj.geneannotation = annotation_obj
                 assembly_obj.save()
 
                 #  Get transcripts from annotation file

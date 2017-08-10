@@ -551,7 +551,7 @@ def pca_analysis(annotation):
     for exp_type in models.ExperimentType.objects.all():
 
         datasets = models.Dataset.objects.filter(
-            assembly__default_annotation=annotation,
+            assembly__geneannotation=annotation,
             experiment__experiment_type=exp_type,
         )
 
@@ -748,7 +748,7 @@ def get_tfidf_vectorizers():
 
             descriptions = []
             experiments = models.Experiment.objects.filter(
-                dataset__assembly__default_annotation=annotation,
+                dataset__assembly__geneannotation=annotation,
                 experiment_type=exp_type,
             )
 

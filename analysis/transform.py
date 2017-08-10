@@ -28,7 +28,7 @@ def pca_transform_intersections(dataset):
     )
     pca = models.PCA.objects.get(
         experiment_type=exp_type,
-        annotation=dataset.assembly.default_annotation,
+        annotation=dataset.assembly.geneannotation,
     )
 
     order = models.PCATranscriptOrder.objects.filter(pca=pca).order_by('order')
@@ -86,7 +86,7 @@ def dataset_to_tfidf_vector(dataset):
     '''
     Given the dataset object, transform the metadata into a TF/IDF vector.
     '''
-    annotation = dataset.assembly.default_annotation
+    annotation = dataset.assembly.geneannotation
     experiment = dataset.experiment
 
     return experiment_to_tfidf_vector(experiment, annotation)

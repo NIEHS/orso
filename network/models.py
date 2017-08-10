@@ -698,10 +698,6 @@ class GenomeAssembly(models.Model):
     name = models.CharField(
         unique=True,
         max_length=32)
-    default_annotation = models.ForeignKey(
-        'GeneAnnotation',
-        blank=True,
-        null=True)
     chromosome_sizes = JSONField(blank=True, null=True)
     last_updated = models.DateTimeField(
         auto_now=True)
@@ -711,7 +707,7 @@ class GenomeAssembly(models.Model):
 
     def get_transcripts(self):
         return Transcript.objects.filter(
-            gene__annotation=self.default_annotation)
+            gene__annotation=self.geneannotation)
 
     def read_in_chrom_sizes(self, chrom_sizes_path):
         chrom_sizes = dict()
@@ -726,7 +722,10 @@ class GenomeAssembly(models.Model):
 class GeneAnnotation(models.Model):
     name = models.CharField(
         max_length=32)
-    assembly = models.ForeignKey('GenomeAssembly')
+    assembly = models.OneToOneField(
+        'GenomeAssembly',
+        on_delete=models.PROTECT,
+    )
     gtf_file = models.FileField()
     last_updated = models.DateTimeField(
         auto_now=True)
