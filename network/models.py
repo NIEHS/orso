@@ -429,7 +429,7 @@ class Dataset(models.Model):
         max_length=128)
     created = models.DateTimeField(
         auto_now_add=True)
-    assembly = models.ForeignKey('GenomeAssembly')
+    assembly = models.ForeignKey('Assembly')
 
     class Meta:
         get_latest_by = 'created'
@@ -694,7 +694,7 @@ class ExperimentCorrelation(models.Model):
         return max_z_scores
 
 
-class GenomeAssembly(models.Model):
+class Assembly(models.Model):
     name = models.CharField(
         unique=True,
         max_length=32)
@@ -707,7 +707,7 @@ class GenomeAssembly(models.Model):
 
     def get_transcripts(self):
         return Transcript.objects.filter(
-            gene__annotation=self.geneannotation)
+            gene__annotation=self.annotation)
 
     def read_in_chrom_sizes(self, chrom_sizes_path):
         chrom_sizes = dict()
@@ -719,11 +719,11 @@ class GenomeAssembly(models.Model):
         self.save()
 
 
-class GeneAnnotation(models.Model):
+class Annotation(models.Model):
     name = models.CharField(
         max_length=32)
     assembly = models.OneToOneField(
-        'GenomeAssembly',
+        'Assembly',
         on_delete=models.PROTECT,
     )
     gtf_file = models.FileField()
@@ -736,7 +736,7 @@ class PCA(models.Model):
     scikit-learn PCA object. Used to transform transcript intersections and
     find pairwise distances between datasets.
     '''
-    annotation = models.ForeignKey('GeneAnnotation')
+    annotation = models.ForeignKey('Annotation')
     selected_transcripts = models.ManyToManyField(
         'Transcript', through='PCATranscriptOrder')
     experiment_type = models.ForeignKey('ExperimentType')
@@ -776,7 +776,7 @@ class TfidfVectorizer(models.Model):
     '''
     scikit-learn TfidfVectorizer object.
     '''
-    annotation = models.ForeignKey('GeneAnnotation')
+    annotation = models.ForeignKey('Annotation')
     experiment_type = models.ForeignKey('ExperimentType')
     tfidf_vectorizer = PickledObjectField()
 
@@ -786,7 +786,7 @@ class TfidfVectorizer(models.Model):
 class GenomicRegions(models.Model):
     name = models.CharField(
         max_length=32)
-    assembly = models.ForeignKey('GenomeAssembly')
+    assembly = models.ForeignKey('Assembly')
     bed_file = models.FileField()
     short_label = models.CharField(max_length=32)
     last_updated = models.DateTimeField(
@@ -802,7 +802,7 @@ class GenomicRegions(models.Model):
 class Gene(models.Model):
     name = models.CharField(
         max_length=32)
-    annotation = models.ForeignKey('GeneAnnotation')
+    annotation = models.ForeignKey('Annotation')
 
     highest_exp_promoter_transcript = models.ForeignKey(
         'Transcript', related_name='promoter', blank=True, null=True)

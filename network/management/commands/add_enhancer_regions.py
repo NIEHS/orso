@@ -16,7 +16,7 @@ class Command(BaseCommand):
                 assembly, enhancer_bed = line.strip().split()
 
                 #  Retrieve assembly object
-                assembly_obj = models.GenomeAssembly.objects.get(name=assembly)
+                assembly_obj = models.Assembly.objects.get(name=assembly)
 
                 #  Create region object
                 models.GenomicRegions.objects.create(

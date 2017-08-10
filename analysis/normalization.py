@@ -59,7 +59,7 @@ def normalize_dataset(dataset):
     transcript_values = dict()
     for intersection in models.TranscriptIntersection.objects.filter(
             dataset=dataset,
-            transcript__gene__annotation=dataset.assembly.geneannotation):
+            transcript__gene__annotation=dataset.assembly.annotation):
         transcript_values[intersection.transcript] = {
             'genebody': intersection.genebody_value,
             'promoter': intersection.promoter_value,

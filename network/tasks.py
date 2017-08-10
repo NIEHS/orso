@@ -551,7 +551,7 @@ def pca_analysis(annotation):
     for exp_type in models.ExperimentType.objects.all():
 
         datasets = models.Dataset.objects.filter(
-            assembly__geneannotation=annotation,
+            assembly__annotation=annotation,
             experiment__experiment_type=exp_type,
         )
 
@@ -743,12 +743,12 @@ def get_tfidf_vectorizers():
         'system_slims',
     ]
 
-    for annotation in models.GeneAnnotation.objects.all():
+    for annotation in models.Annotation.objects.all():
         for exp_type in models.ExperimentType.objects.all():
 
             descriptions = []
             experiments = models.Experiment.objects.filter(
-                dataset__assembly__geneannotation=annotation,
+                dataset__assembly__annotation=annotation,
                 experiment_type=exp_type,
             )
 
@@ -879,9 +879,9 @@ def set_experiment_distances():
     for exp_1 in experiments:
         for exp_2 in experiments:
             if exp_1 != exp_2:
-                assemblies_1 = models.GenomeAssembly.objects.filter(
+                assemblies_1 = models.Assembly.objects.filter(
                     dataset__experiment=exp_1)
-                assemblies_2 = models.GenomeAssembly.objects.filter(
+                assemblies_2 = models.Assembly.objects.filter(
                     dataset__experiment=exp_2)
                 if all([
                     assemblies_1 & assemblies_2,

@@ -91,9 +91,9 @@ def score_experiments_by_tfidf(experiment_1, experiment_2):
     if experiment_1.experiment_type != experiment_2.experiment_type:
         raise ValueError('Experiments do not share experiment type.')
 
-    annotation_set_1 = models.GeneAnnotation.objects.filter(
+    annotation_set_1 = models.Annotation.objects.filter(
         assembly__dataset__experiment=experiment_1)
-    annotation_set_2 = models.GeneAnnotation.objects.filter(
+    annotation_set_2 = models.Annotation.objects.filter(
         assembly__dataset__experiment=experiment_2)
 
     distances = []

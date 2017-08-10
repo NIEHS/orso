@@ -35,19 +35,19 @@ class Command(BaseCommand):
                 assembly, annotation_file, annotation_table = \
                     line.strip().split()
 
-                #  Create GenomeAssembly
-                assembly_obj = models.GenomeAssembly.objects.create(
+                #  Create Assembly
+                assembly_obj = models.Assembly.objects.create(
                     name=assembly,
-                    geneannotation_id=None,
+                    annotation_id=None,
                 )
 
-                #  Create GeneAnnotation
-                annotation_obj = models.GeneAnnotation.objects.create(
+                #  Create Annotation
+                annotation_obj = models.Annotation.objects.create(
                     name=assembly + '_RefSeq',
                     gtf_file=annotation_file,
                     assembly=assembly_obj,
                 )
-                assembly_obj.geneannotation = annotation_obj
+                assembly_obj.annotation = annotation_obj
                 assembly_obj.save()
 
                 #  Get transcripts from annotation file

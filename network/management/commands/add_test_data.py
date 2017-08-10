@@ -11,7 +11,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         curr_dir = os.getcwd()
-        assembly = models.GenomeAssembly.objects.get(name='mm9')
+        assembly = models.Assembly.objects.get(name='mm9')
         with open(options['metadata_csv']) as metadata:
             reader = csv.DictReader(metadata, delimiter=',')
             for r in reader:

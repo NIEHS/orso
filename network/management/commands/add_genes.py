@@ -27,7 +27,7 @@ class Command(BaseCommand):
         parser.add_argument('annotation_table', type=str)
 
     def handle(self, *args, **options):
-        annotation_obj = models.GeneAnnotation.objects.get(
+        annotation_obj = models.Annotation.objects.get(
             pk=options['annotation_pk'])
 
         transcripts = dict()

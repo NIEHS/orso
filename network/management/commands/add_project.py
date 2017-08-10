@@ -214,7 +214,7 @@ class Command(BaseCommand):
                 )
 
                 assembly_obj = \
-                    models.GenomeAssembly.objects.get(name=assembly)
+                    models.Assembly.objects.get(name=assembly)
 
                 ds = models.Dataset.objects.create(
                     description=dataset_description,

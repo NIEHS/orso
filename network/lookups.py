@@ -127,7 +127,7 @@ class SimExpLookup(DistinctStringLookup):
     def get_query(self, request, term):
         exp = models.Experiment.objects.get(pk=request.GET['pk'])
         assemblies = \
-            models.GenomeAssembly.objects.filter(dataset__experiment=exp)
+            models.Assembly.objects.filter(dataset__experiment=exp)
         query = Q()
         for a in assemblies:
             query |= Q(dataset__assembly=a)
@@ -235,7 +235,7 @@ class ExperimentSearchLookup(ModelLookup):
         spacer = ' | '
 
         assemblies = set()
-        for a in models.GenomeAssembly.objects.filter(dataset__experiment=item):  # noqa
+        for a in models.Assembly.objects.filter(dataset__experiment=item):  # noqa
             assemblies.add(a.name)
 
         if item.name:
@@ -291,7 +291,7 @@ class SimExpSearchLookup(ExperimentSearchLookup):
     def get_query(self, request, term):
         exp = models.Experiment.objects.get(pk=request.GET['pk'])
         assemblies = \
-            models.GenomeAssembly.objects.filter(dataset__experiment=exp)
+            models.Assembly.objects.filter(dataset__experiment=exp)
         query = Q()
         for a in assemblies:
             query |= Q(dataset__assembly=a)

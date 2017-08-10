@@ -351,7 +351,7 @@ class SimilarExperiments(ExperimentList):
 
         exp = models.Experiment.objects.get(pk=self.kwargs['pk'])
         assemblies = \
-            models.GenomeAssembly.objects.filter(dataset__experiment=exp)
+            models.Assembly.objects.filter(dataset__experiment=exp)
 
         base_query = Q()
         for a in assemblies:
