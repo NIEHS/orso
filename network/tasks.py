@@ -852,13 +852,14 @@ def set_experiment_metadata_distance(pk_1, pk_2):
 
 
 @task
-def set_dataset_distances():
+def set_dataset_distances(datasets):
     '''
     For all datasets, set DatasetDataDistance and DatasetMetadataDistance.
     '''
-    datasets = models.Dataset.objects.all().order_by('pk')
+    other_datasets = models.Dataset.objects.exclude(
+        pcatransformedvalues__isnull=True)
     for ds_1 in datasets:
-        for ds_2 in datasets:
+        for ds_2 in other_datasets:
             if ds_1 != ds_2:
                 if all([
                     ds_1.assembly == ds_2.assembly,
