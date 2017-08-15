@@ -259,12 +259,13 @@ class Experiment(models.Model):
         for mp in MetaPlot.objects.filter(dataset__experiment=self):
             gr = mp.genomic_regions
             counts[gr] += 1
+            metaplot = json.loads(mp.metaplot)
             if gr in average_metaplots:
-                for i, entry in enumerate(mp.meta_plot['metaplot_values']):
+                for i, entry in enumerate(metaplot['metaplot_values']):
                     average_metaplots[gr]['metaplot_values'][i] += \
                         entry
             else:
-                average_metaplots[gr] = mp.meta_plot
+                average_metaplots[gr] = metaplot
 
         #  Divide by assembly counts
         for gr in average_metaplots.keys():
@@ -522,7 +523,7 @@ class Dataset(models.Model):
 class MetaPlot(models.Model):
     genomic_regions = models.ForeignKey('GenomicRegions')
     dataset = models.ForeignKey('Dataset')
-    meta_plot = JSONField()
+    metaplot = JSONField()
     last_updated = models.DateTimeField(
         auto_now=True)
 
