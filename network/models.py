@@ -725,6 +725,7 @@ class Annotation(models.Model):
     assembly = models.OneToOneField(
         'Assembly',
         on_delete=models.PROTECT,
+        primary_key=False,
     )
     gtf_file = models.FileField()
     last_updated = models.DateTimeField(
