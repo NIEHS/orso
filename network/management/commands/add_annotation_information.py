@@ -38,7 +38,6 @@ class Command(BaseCommand):
                 #  Create Assembly
                 assembly_obj = models.Assembly.objects.create(
                     name=assembly,
-                    annotation_id=None,
                 )
 
                 #  Create Annotation
