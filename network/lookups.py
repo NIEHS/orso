@@ -21,10 +21,14 @@ class DistinctStringLookup(ModelLookup):
 class RecExpLookup(DistinctStringLookup):
     def get_query(self, request, term):
         my_user = models.MyUser.objects.get(user=request.user)
-        return self.get_queryset()\
-            .filter(**{self.distinct_field + "__icontains": term,
-                    'experimentrecommendation__owner': my_user})\
-            .order_by(self.distinct_field)\
+        user_experiments = models.Experiment.objects.filter(
+            owners=my_user)
+        query = Q(network_experimentdatadistance_first__experiment_2__in=user_experiments)  # noqa
+        query &= ~Q(network_experimentdatadistance_second__experiment_1__in=user_experiments)  # noqa
+        return self.get_queryset() \
+            .filter(**{self.distinct_field + "__icontains": term}) \
+            .filter(query) \
+            .order_by(self.distinct_field) \
             .distinct(self.distinct_field)
 
 
@@ -36,11 +40,6 @@ class RecExpNameLookup(RecExpLookup):
 class RecExpDescriptionLookup(RecExpLookup):
     model = models.Experiment
     distinct_field = 'description'
-
-
-class RecExpDataTypeLookup(RecExpLookup):
-    model = models.Experiment
-    distinct_field = 'data_type'
 
 
 class RecExpCellTypeLookup(RecExpLookup):
@@ -73,11 +72,6 @@ class PerExpDescriptionLookup(PerExpLookup):
     distinct_field = 'description'
 
 
-class PerExpDataTypeLookup(PerExpLookup):
-    model = models.Experiment
-    distinct_field = 'data_type'
-
-
 class PerExpCellTypeLookup(PerExpLookup):
     model = models.Experiment
     distinct_field = 'cell_type'
@@ -106,11 +100,6 @@ class FavExpNameLookup(FavExpLookup):
 class FavExpDescriptionLookup(FavExpLookup):
     model = models.Experiment
     distinct_field = 'description'
-
-
-class FavExpDataTypeLookup(FavExpLookup):
-    model = models.Experiment
-    distinct_field = 'data_type'
 
 
 class FavExpCellTypeLookup(FavExpLookup):
@@ -164,12 +153,56 @@ class SimExpTargetLookup(SimExpLookup):
     distinct_field = 'target'
 
 
-class AssemblyLookup(ModelLookup):
-    #  TODO: double check when Experiments exist with multiple assemblies
+class ExperimentTypeLookup(ModelLookup):
     model = models.Experiment
 
     def get_item_value(self, item):
-        value = models.Dataset.objects.get(experiment=item).assembly.name
+        value = item.experiment_type.name
+        return value
+
+    def get_item_label(self, item):
+        return self.get_item_value(item)
+
+
+class RecExpTypeLookup(ExperimentTypeLookup):
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        user_experiments = models.Experiment.objects.filter(
+            owners=my_user)
+        query = Q(network_experimentdatadistance_first__experiment_2__in=user_experiments)  # noqa
+        query &= ~Q(network_experimentdatadistance_second__experiment_1__in=user_experiments)  # noqa
+        query &= Q(experiment_type__name__icontains=term)
+        return self.get_queryset() \
+            .filter(query) \
+            .order_by('experiment_type__name') \
+            .distinct('experiment_type__name')
+
+
+class PerExpTypeLookup(ExperimentTypeLookup):
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        return self.get_queryset()\
+            .filter(**{'experiment_type__name__icontains': term,
+                    'owners__in': [my_user]})\
+            .order_by('experiment_type__name')\
+            .distinct('experiment_type__name')
+
+
+class FavExpTypeLookup(ExperimentTypeLookup):
+    def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
+        return self.get_queryset()\
+            .filter(**{'experiment_type__name__icontains': term,
+                    'experimentfavorite__owner': my_user})\
+            .order_by('experiment_type__name')\
+            .distinct('experiment_type__name')
+
+
+class AssemblyLookup(ModelLookup):
+    model = models.Dataset
+
+    def get_item_value(self, item):
+        value = item.assembly.name
         return value
 
     def get_item_label(self, item):
@@ -179,31 +212,35 @@ class AssemblyLookup(ModelLookup):
 class RecExpAssemblyLookup(AssemblyLookup):
     def get_query(self, request, term):
         my_user = models.MyUser.objects.get(user=request.user)
-        return self.get_queryset()\
-            .filter(**{'dataset__assembly__name__icontains': term,
-                    'experimentrecommendation__owner': my_user})\
-            .order_by('dataset__assembly__name')\
-            .distinct('dataset__assembly__name')
+        user_experiments = models.Experiment.objects.filter(
+            owners=my_user)
+        query = Q(experiment__network_experimentdatadistance_first__experiment_2__in=user_experiments)  # noqa
+        query &= ~Q(experiment__network_experimentdatadistance_second__experiment_1__in=user_experiments)  # noqa
+        query &= Q(assembly__name__icontains=term)
+        return self.get_queryset() \
+            .filter(query) \
+            .order_by('assembly__name') \
+            .distinct('assembly__name')
 
 
 class PerExpAssemblyLookup(AssemblyLookup):
     def get_query(self, request, term):
         my_user = models.MyUser.objects.get(user=request.user)
         return self.get_queryset()\
-            .filter(**{'dataset__assembly__name__icontains': term,
-                    'owners__in': [my_user]})\
-            .order_by('dataset__assembly__name')\
-            .distinct('dataset__assembly__name')
+            .filter(**{'assembly__name__icontains': term,
+                    'experiment__owners__in': [my_user]})\
+            .order_by('assembly__name')\
+            .distinct('assembly__name')
 
 
 class FavExpAssemblyLookup(AssemblyLookup):
     def get_query(self, request, term):
         my_user = models.MyUser.objects.get(user=request.user)
         return self.get_queryset()\
-            .filter(**{'dataset__assembly__name__icontains': term,
-                    'experimentfavorite__owner': my_user})\
-            .order_by('dataset__assembly__name')\
-            .distinct('dataset__assembly__name')
+            .filter(**{'assembly__name__icontains': term,
+                    'experiment__experimentfavorite__owner': my_user})\
+            .order_by('assembly__name')\
+            .distinct('assembly__name')
 
 
 class SimExpAssemblyLookup(AssemblyLookup):
@@ -222,7 +259,7 @@ class ExperimentSearchLookup(ModelLookup):
     def get_base_query(self, request, term):
         query = Q()
         query |= Q(name__icontains=term)
-        query |= Q(data_type__icontains=term)
+        query |= Q(experiment_type__name__icontains=term)
         query |= Q(cell_type__icontains=term)
         query |= Q(description__icontains=term)
         query |= Q(target__icontains=term)
@@ -240,16 +277,16 @@ class ExperimentSearchLookup(ModelLookup):
 
         if item.name:
             values.append(item.name)
-        if item.data_type:
-            values.append(item.data_type)
+        if item.experiment_type:
+            values.append(item.experiment_type.name)
         if item.cell_type:
             values.append(item.cell_type)
         if item.target:
             values.append(item.target)
         if assemblies:
             values.append(spacer.join(list(assemblies)))
-        if item.description:
-            values.append(item.description)
+        # if item.description:
+        #     values.append(item.description)
 
         return spacer.join(values)
 
@@ -260,9 +297,13 @@ class ExperimentSearchLookup(ModelLookup):
 class RecExpSearchLookup(ExperimentSearchLookup):
     def get_query(self, request, term):
         my_user = models.MyUser.objects.get(user=request.user)
+        user_experiments = models.Experiment.objects.filter(
+            owners=my_user)
         query = self.get_base_query(request, term)
+        query &= Q(network_experimentdatadistance_first__experiment_2__in=user_experiments)  # noqa
+        query &= ~Q(network_experimentdatadistance_second__experiment_1__in=user_experiments)  # noqa
         return self.get_queryset()\
-            .filter(Q(experimentrecommendation__owner=my_user) & query)\
+            .filter(query)\
             .order_by('name')\
             .distinct()
 
@@ -304,7 +345,7 @@ class SimExpSearchLookup(ExperimentSearchLookup):
 
 registry.register(RecExpNameLookup)
 registry.register(RecExpDescriptionLookup)
-registry.register(RecExpDataTypeLookup)
+registry.register(RecExpTypeLookup)
 registry.register(RecExpCellTypeLookup)
 registry.register(RecExpTargetLookup)
 registry.register(RecExpAssemblyLookup)
@@ -312,7 +353,7 @@ registry.register(RecExpSearchLookup)
 
 registry.register(PerExpNameLookup)
 registry.register(PerExpDescriptionLookup)
-registry.register(PerExpDataTypeLookup)
+registry.register(PerExpTypeLookup)
 registry.register(PerExpCellTypeLookup)
 registry.register(PerExpTargetLookup)
 registry.register(PerExpAssemblyLookup)
@@ -320,7 +361,7 @@ registry.register(PerExpSearchLookup)
 
 registry.register(FavExpNameLookup)
 registry.register(FavExpDescriptionLookup)
-registry.register(FavExpDataTypeLookup)
+registry.register(FavExpTypeLookup)
 registry.register(FavExpCellTypeLookup)
 registry.register(FavExpTargetLookup)
 registry.register(FavExpAssemblyLookup)

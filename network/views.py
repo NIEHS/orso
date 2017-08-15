@@ -313,25 +313,32 @@ class RecommendedExperiments(ExperimentList):
 
     def get_queryset(self):
 
-        query = Q(experimentrecommendation__owner=self.my_user)
-        order_fields = [x[0] for x in self.form_class.order_choices]
+        user_experiments = models.Experiment.objects.filter(
+            owners=self.my_user)
+
+        order = self.form_class.order_choices[0][0]
+        if self.form.is_valid():
+            order = self.form.get_order()
+
+        if order == 'correlation_rank':
+            query = Q(network_experimentdatadistance_first__experiment_2__in=user_experiments)  # noqa
+            query &= ~Q(network_experimentdatadistance_second__experiment_1__in=user_experiments)  # noqa
+        elif order == 'metadata_rank':
+            query = Q(network_experimentmetadatadistance_first__experiment_2__in=user_experiments)  # noqa
+            query &= ~Q(network_experimentmetadatadistance_second__experiment_1__in=user_experiments)  # noqa
 
         if self.form.is_valid():
             query &= self.form.get_query()
-            order_fields = self.form.get_order()
 
-        rank_eval = '+'.join(
-            ['F(\'experimentrecommendation__{}\')'.format(x)
-             for x in order_fields])
-        if rank_eval:
-            qs = (
-                self.model.objects
-                .filter(query)
-                .annotate(rank=eval(rank_eval))
-                .order_by('rank')
-            )
-        else:
-            qs = self.model.objects.filter(query)
+        if order == 'correlation_rank':
+            agg = 'network_experimentdatadistance_first__distance'
+        elif order == 'metadata_rank':
+            agg = 'network_experimentmetadatadistance_first__distance'
+        qs = (self.model
+                  .objects
+                  .filter(query)
+                  .annotate(max_score=Max(agg))
+                  .order_by('-max_score'))
 
         for obj in qs:
             obj.plot_data = obj.get_average_metaplots()

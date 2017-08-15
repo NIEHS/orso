@@ -59,7 +59,7 @@ class ExperimentFilterForm(forms.Form):
         if search:
             search_query |= Q(name__icontains=search)
             search_query |= Q(description__icontains=search)
-            search_query |= Q(data_type__icontains=search)
+            search_query |= Q(experiment_type__name__icontains=search)
             search_query |= Q(cell_type__icontains=search)
             search_query |= Q(dataset__assembly__name__icontains=search)
             search_query |= Q(target__icontains=search)
@@ -77,7 +77,7 @@ class ExperimentFilterForm(forms.Form):
         if description:
             filter_query &= Q(description__icontains=description)
         if data_type:
-            filter_query &= Q(data_type__icontains=data_type)
+            filter_query &= Q(experiment_type__name__icontains=data_type)
         if cell_type:
             filter_query &= Q(cell_type__icontains=cell_type)
         if assembly:
@@ -92,15 +92,14 @@ class RecommendedExperimentFilterForm(ExperimentFilterForm):
     order_choices = [
         ('correlation_rank', 'correlation'),
         ('metadata_rank', 'metadata'),
-        ('collaborative_rank', 'collaboration'),
     ]
 
-    order = forms.MultipleChoiceField(
+    order = forms.ChoiceField(
         label='Recommendation criteria',
         choices=order_choices,
-        widget=forms.CheckboxSelectMultiple(),
         initial=[c[0] for c in order_choices],
-        required=False)
+        required=False,
+    )
 
     field_order = [
         'order'
@@ -116,7 +115,7 @@ class RecommendedExperimentFilterForm(ExperimentFilterForm):
         self.fields['description'].widget = \
             AutoCompleteWidget(lookups.RecExpDescriptionLookup)
         self.fields['data_type'].widget = \
-            AutoCompleteWidget(lookups.RecExpDataTypeLookup)
+            AutoCompleteWidget(lookups.RecExpTypeLookup)
         self.fields['cell_type'].widget = \
             AutoCompleteWidget(lookups.RecExpCellTypeLookup)
         self.fields['assembly'].widget = \
@@ -140,7 +139,7 @@ class PersonalExperimentFilterForm(ExperimentFilterForm):
         self.fields['description'].widget = \
             AutoCompleteWidget(lookups.PerExpDescriptionLookup)
         self.fields['data_type'].widget = \
-            AutoCompleteWidget(lookups.PerExpDataTypeLookup)
+            AutoCompleteWidget(lookups.PerExpTypeLookup)
         self.fields['cell_type'].widget = \
             AutoCompleteWidget(lookups.PerExpCellTypeLookup)
         self.fields['assembly'].widget = \
@@ -161,7 +160,7 @@ class FavoriteExperimentFilterForm(ExperimentFilterForm):
         self.fields['description'].widget = \
             AutoCompleteWidget(lookups.FavExpDescriptionLookup)
         self.fields['data_type'].widget = \
-            AutoCompleteWidget(lookups.FavExpDataTypeLookup)
+            AutoCompleteWidget(lookups.FavExpTypeLookup)
         self.fields['cell_type'].widget = \
             AutoCompleteWidget(lookups.FavExpCellTypeLookup)
         self.fields['assembly'].widget = \
@@ -199,11 +198,11 @@ class SimilarExperimentFilterForm(ExperimentFilterForm):
 
 
 class ExperimentForm(forms.ModelForm):
-    #  TODO: fix for ExperimentType ForeignKey field
+
     class Meta:
         model = models.Experiment
         fields = (
-            'cell_type', 'target', 'description', 'name'
+            'experiment_type', 'cell_type', 'target', 'description', 'name'
         )
 
 
