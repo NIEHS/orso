@@ -57,14 +57,6 @@ class Command(BaseCommand):
         parser.add_argument('project_name', type=str)
 
         parser.add_argument(
-            '--data_directory',
-            action='store',
-            dest='data_directory',
-            type=str,
-            help='Directory of metaplot and intersection JSON files',
-        )
-
-        parser.add_argument(
             '--owner',
             action='store',
             dest='owner',
