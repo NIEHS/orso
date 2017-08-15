@@ -194,6 +194,9 @@ class ExperimentType(models.Model):
         max_length=64,
         choices=RELEVANT_REGIONS)
 
+    def __str__(self):
+        return self.name
+
 
 class Experiment(models.Model):
     experiment_type = models.ForeignKey('ExperimentType')
