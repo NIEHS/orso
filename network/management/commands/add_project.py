@@ -104,7 +104,8 @@ class Command(BaseCommand):
                 assay = experiment['detail']['assay_term_name']
             base_name = assay.replace('-seq', 'seq').replace(' ', '_')
 
-            data_type = experiment['detail']['assay_term_name']
+            experiment_type = models.ExperimentType.objects.get(
+                name=experiment['detail']['assay_term_name'])
 
             try:
                 target = '-'.join(
@@ -136,9 +137,10 @@ class Command(BaseCommand):
 
             e = models.Experiment.objects.create(
                 name=experiment_name,
+                slug=experiment['name'],
                 project=project,
                 description=experiment_description,
-                data_type=data_type,
+                experiment_type=experiment_type,
                 cell_type=biosample_term_name,
             )
 
