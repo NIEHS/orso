@@ -145,12 +145,15 @@ class Command(BaseCommand):
                         gene_set.add(gene_name)
                         transcript_to_gene[transcript_name] = gene_name
 
+                gene_objs = []
                 for gene in gene_set:
-                    models.Gene.objects.create(
+                    gene_objs.append(models.Gene(
                         name=gene,
                         annotation=annotation_obj,
-                    )
+                    ))
+                models.Gene.objects.bulk_create(gene_objs)
 
+                transcript_objs = []
                 for tr_id, transcript in transcripts.items():
                     tr_name = tr_id[0].split('_dup')[0]
                     associated_gene_name = transcript_to_gene[tr_name]
@@ -160,7 +163,7 @@ class Command(BaseCommand):
                             annotation=annotation_obj,
                         )
 
-                    models.Transcript.objects.create(
+                    transcript_objs.append(models.Transcript(
                         name=tr_name,
                         gene=associated_gene,
                         start=transcript['start'],
@@ -168,4 +171,5 @@ class Command(BaseCommand):
                         chromosome=transcript['chromosome'],
                         strand=transcript['strand'],
                         exons=transcript['exons'],
-                    )
+                    ))
+                models.Transcript.objects.bulk_create(transcript_objs)
