@@ -62,7 +62,7 @@ def _select_representative_transcripts(gene_pk):
 
 
 @task()
-def process_datasets(datasets):
+def process_datasets(datasets, pca_transform=True):
 
     download_list_file = NamedTemporaryFile(mode='w')
     bigwig_paths = dict()
@@ -135,6 +135,9 @@ def process_datasets(datasets):
     job = group(tasks)
     results = job.apply_async()
     results.join()
+
+    if pca_transform:
+        transform_dataset_values_by_pca(datasets)
 
     for temp_bed in assembly_to_intersection_bed.values():
         temp_bed.close()
