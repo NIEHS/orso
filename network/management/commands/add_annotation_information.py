@@ -156,8 +156,10 @@ class Command(BaseCommand):
                     tr_name = tr_id[0].split('_dup')[0]
                     associated_gene_name = transcript_to_gene[tr_name]
                     associated_gene = \
-                        models.Gene.objects.filter(
-                            name__startswith=associated_gene_name)[0]
+                        models.Gene.objects.get(
+                            name=associated_gene_name,
+                            annotation=annotation_obj,
+                        )
 
                     models.Transcript.objects.create(
                         name=tr_name,
