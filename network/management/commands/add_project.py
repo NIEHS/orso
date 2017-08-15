@@ -1,8 +1,6 @@
 from django.core.management.base import BaseCommand
 from network import models
 import json
-import math
-import os
 
 ASSEMBLY_TO_SPECIES = {
     'hg19': 'Human',
@@ -85,15 +83,6 @@ class Command(BaseCommand):
         if options['owner']:
             project.owner = options['owner']
             project.save()
-
-        #  Get number of entries in GenomicRegions
-        gr_lengths = dict()
-        for gr in models.GenomicRegions.objects.all():
-            count = 0
-            for line in gr.bed_file:
-                if not line.decode("utf-8").startswith('track'):
-                    count += 1
-            gr_lengths[gr] = count
 
         for experiment in experiments:
             experiment_description = ''
@@ -229,72 +218,3 @@ class Command(BaseCommand):
                     ds.plus_url = plus_url
                     ds.minus_url = minus_url
                 ds.save()
-
-                regions = models.GenomicRegions.objects.filter(
-                    assembly=assembly_obj)
-
-                for gr in regions:
-                    meta_name = '{}.{}.metaplot.json'.format(
-                        slug.replace('-', '.'),
-                        gr.name
-                            .replace('_RefSeq', '')
-                            .replace('promoters', 'promoter'),
-                    )
-                    intersection_name = '{}.{}.intersection.json'.format(
-                        slug.replace('-', '.'),
-                        gr.name
-                            .replace('_RefSeq', '')
-                            .replace('promoters', 'promoter'),
-                    )
-
-                    meta_path = os.path.join(
-                        options['data_directory'],
-                        meta_name,
-                    )
-                    intersection_path = os.path.join(
-                        options['data_directory'],
-                        intersection_name,
-                    )
-
-                    if not (
-                        os.path.isfile(meta_path) and
-                        os.path.isfile(intersection_path)
-                    ):
-                        meta_check = False
-                        intersection_check = False
-                    else:
-                        try:
-                            with open(meta_path) as mfn, open(intersection_path) as ifn:  # noqa
-                                m = json.load(mfn)
-                                i = json.load(ifn)
-
-                                meta_check = len(m['bin_values']) == 50
-                                intersection_check = len(i) == gr_lengths[gr]
-
-                                for val in m['metaplot_values']:
-                                    if math.isnan(val):
-                                        meta_check = False
-
-                                for val in i:
-                                    if math.isnan(val):
-                                        intersection_check = False
-
-                        except:
-                            meta_check = False
-                            intersection_check = False
-
-                    if meta_check:
-                        with open(meta_path) as f:
-                            models.MetaPlot.objects.create(
-                                genomic_regions=gr,
-                                dataset=ds,
-                                meta_plot=json.load(f),
-                            )
-
-                    if intersection_check:
-                        with open(intersection_path) as f:
-                            models.IntersectionValues.objects.create(
-                                genomic_regions=gr,
-                                dataset=ds,
-                                intersection_values=json.load(f),
-                            )
