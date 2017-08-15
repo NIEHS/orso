@@ -81,8 +81,12 @@ def process_datasets(datasets):
             }
     download_list_file.flush()
     call([
-        'aria2c', '-x', '16', '-s', '16', '-i',
-        download_list_file.name,
+        'aria2c',
+        '--allow-overwrite=true',
+        '--conditional-get=true',
+        '-x', '16',
+        '-s', '16',
+        '-i', download_list_file.name,
     ])
     download_list_file.close()
 
