@@ -726,6 +726,24 @@ def pca_analysis(annotation):
 
 
 @task
+def transform_dataset_values_by_pca(datasets):
+    '''
+    For datasets, transform values and set PCATransformedValues.
+    '''
+    for ds in datasets:
+        pca = models.PCA.objects.get(
+            annotation__assembly=ds.assembly,
+            experiment_type=ds.experiment.experiment_type,
+        )
+        fitted_values = transform.pca_transform_intersections(ds)
+        models.PCATransformedValues.objects.update_or_create(
+            pca=pca,
+            dataset=ds,
+            transformed_values=fitted_values.tolist(),
+        )
+
+
+@task
 def get_tfidf_vectorizers():
     '''
     For each annotation/experiment type pair, create a TF/IDF vectorizer and
