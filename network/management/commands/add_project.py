@@ -90,7 +90,7 @@ class Command(BaseCommand):
                         value = experiment['detail'][field]
                     if field == 'target':
                         value = value.split('/')[2]
-                    experiment_description += '{}:{}\n\n'.format(
+                    experiment_description += '{}: {}\n'.format(
                         ' '.join(field.split('_')).title(),
                         value.capitalize(),
                     )
@@ -165,9 +165,10 @@ class Command(BaseCommand):
                                 values.update(dataset[detail][field])
                             else:
                                 values.add(dataset[detail][field])
-                            dataset_description += '{}:\n{}\n\n'.format(
-                                field,
-                                '\n'.join(str(val) for val in values)
+                            dataset_description += '{}: {}\n'.format(
+                                ' '.join(field.split('_')).title(),
+                                '\n'.join(
+                                    str(val) for val in values),
                             )
                 dataset_description = dataset_description.rstrip()
 
