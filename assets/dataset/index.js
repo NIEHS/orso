@@ -15,6 +15,7 @@ import SmallUserView from './SmallUserView';
 import SmallRecommendedDataView from './SmallRecommendedDataView';
 import PCA from './PCA';
 import Explore from './Explore';
+import Expression from './Expression';
 
 
 let createMetaPlot = function(el, metaplot) {
@@ -197,6 +198,13 @@ let appendExplore = function(el, pca_lookup, exp_types, assemblies) {
         available_assemblies={assemblies}/>, element[0]);
 };
 
+let appendExpression = function(el, data) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<Expression
+        data={data}/>, element[0]);
+}
+
 export {
     createMetaPlot,
     createBrowser,
@@ -216,4 +224,5 @@ export {
     appendSmallRecommendedDataView,
     appendPCA,
     appendExplore,
+    appendExpression,
 };

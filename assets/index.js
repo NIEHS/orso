@@ -19,6 +19,7 @@ import {
     appendSmallRecommendedDataView,
     appendPCA,
     appendExplore,
+    appendExpression,
 } from './dataset';
 
 
@@ -41,4 +42,5 @@ window.apps = {
     appendSmallRecommendedDataView,
     appendPCA,
     appendExplore,
+    appendExpression,
 };
