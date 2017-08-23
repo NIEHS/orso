@@ -816,6 +816,9 @@ class Gene(models.Model):
     highest_exp_coding_transcript = models.ForeignKey(
         'Transcript', related_name='coding', blank=True, null=True)
 
+    selected_transcript = models.ForeignKey(
+        'Transcript', related_name='selecting', blank=True, null=True)
+
     promoter_var_rank = models.IntegerField(blank=True, null=True)
     genebody_var_rank = models.IntegerField(blank=True, null=True)
     coding_var_rank = models.IntegerField(blank=True, null=True)
