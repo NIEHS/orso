@@ -183,6 +183,41 @@ class Home(TemplateView, AddMyUserMixin):
     template_name = 'network/home.html'
 
 
+class Explore(TemplateView, AddMyUserMixin):
+    template_name = 'network/explore.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        pca_lookup = dict()
+        available_exp_types = dict()
+        available_assemblies = dict()
+
+        for pca in models.PCA.objects.all():
+            exp_name = pca.experiment_type.name
+            assembly_name = pca.annotation.assembly.name
+
+            if assembly_name not in pca_lookup:
+                pca_lookup[assembly_name] = dict()
+            pca_lookup[assembly_name][exp_name] = pca.pk
+
+            if assembly_name not in available_exp_types:
+                available_exp_types[assembly_name] = []
+            if exp_name not in available_exp_types[assembly_name]:
+                available_exp_types[assembly_name].append(exp_name)
+
+            if exp_name not in available_assemblies:
+                available_assemblies[exp_name] = []
+            if assembly_name not in available_assemblies[exp_name]:
+                available_assemblies[exp_name].append(assembly_name)
+
+        context['pca_lookup'] = pca_lookup
+        context['available_experiment_types'] = available_exp_types
+        context['available_assemblies'] = available_assemblies
+
+        return context
+
+
 class Experiment(DetailView, AddMyUserMixin):
     template_name = 'network/experiment.html'
     model = models.Experiment

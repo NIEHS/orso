@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div id="explore"/>
+</div>
+{% endblock content %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+$(document).ready(function(){
+    window.apps.appendExplore(
+        $("#explore")[0],
+        {{pca_lookup|safe}},
+        {{available_experiment_types|safe}},
+        {{available_assemblies|safe}},
+    );
+});
+</script>
+{% endblock %}

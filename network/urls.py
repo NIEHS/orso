@@ -24,6 +24,8 @@ urlpatterns = [
     url(r'^experiment/(?P<pk>\d+)/$', views.Experiment.as_view(),
         name='experiment'),
 
+    url(r'^explore/$', views.Explore.as_view(), name='explore'),
+
     url(r'^experiment/(?P<pk>\d+)/similar_values/$',
         views.SimilarValuesExperiments.as_view(),
         name='similar_values'),

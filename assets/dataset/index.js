@@ -14,6 +14,7 @@ import PieChart from './PieChart';
 import SmallUserView from './SmallUserView';
 import SmallRecommendedDataView from './SmallRecommendedDataView';
 import PCA from './PCA';
+import Explore from './Explore';
 
 
 let createMetaPlot = function(el, metaplot) {
@@ -187,6 +188,15 @@ let appendPCA = function(el, pca_data, exp_urls) {
         data={pca_data} exp_urls={exp_urls}/>, element[0]);
 };
 
+let appendExplore = function(el, pca_lookup, exp_types, assemblies) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<Explore
+        pca_lookup={pca_lookup}
+        available_exp_types={exp_types}
+        available_assemblies={assemblies}/>, element[0]);
+};
+
 export {
     createMetaPlot,
     createBrowser,
@@ -205,4 +215,5 @@ export {
     appendSmallUserView,
     appendSmallRecommendedDataView,
     appendPCA,
+    appendExplore,
 };
