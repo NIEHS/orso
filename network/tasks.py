@@ -548,7 +548,7 @@ def _get_associated_transcript(gene_pk):
 
 
 @task
-def pca_analysis(annotation):
+def pca_analysis(annotation, size_threshold=200):
 
     def run_in_parallel(obj_list, task):
         res = group(task.s(obj.pk) for obj in obj_list)()
@@ -559,6 +559,13 @@ def pca_analysis(annotation):
     transcripts = [t for t in transcripts if t is not None]
 
     for exp_type in models.ExperimentType.objects.all():
+
+        # Filter transcripts by size if not microRNA-seq
+        if exp_type.name != 'microRNA-seq':
+            transcripts = [
+                t for t in transcripts
+                if t.end - t.start + 1 >= size_threshold
+            ]
 
         datasets = models.Dataset.objects.filter(
             assembly__annotation=annotation,
