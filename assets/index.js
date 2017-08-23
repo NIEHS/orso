@@ -44,4 +44,5 @@ window.apps = {
     appendPCA,
     appendExplore,
     appendExpression,
+    appendGeneScatter,
 };
