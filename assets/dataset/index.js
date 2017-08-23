@@ -16,6 +16,7 @@ import SmallRecommendedDataView from './SmallRecommendedDataView';
 import PCA from './PCA';
 import Explore from './Explore';
 import Expression from './Expression';
+import GeneScatter from './GeneScatter';
 
 
 let createMetaPlot = function(el, metaplot) {
@@ -205,6 +206,13 @@ let appendExpression = function(el, data) {
         data={data}/>, element[0]);
 }
 
+let appendGeneScatter = function(el, data) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<GeneScatter
+        data={data}/>, element[0]);
+}
+
 export {
     createMetaPlot,
     createBrowser,
@@ -225,4 +233,5 @@ export {
     appendPCA,
     appendExplore,
     appendExpression,
+    appendGeneScatter,
 };

@@ -20,6 +20,7 @@ import {
     appendPCA,
     appendExplore,
     appendExpression,
+    appendGeneScatter,
 } from './dataset';
 
 
