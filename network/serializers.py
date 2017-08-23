@@ -17,3 +17,54 @@ class DatasetSerializer(serializers.ModelSerializer):
         exclude = (
             'promoter_intersection', 'promoter_metaplot',
             'enhancer_intersection', 'enhancer_metaplot',)
+
+
+class PCAPlotSerializer(serializers.ModelSerializer):
+    pca_plot = serializers.SerializerMethodField('_pca_plot')
+    explained_variance = \
+        serializers.SerializerMethodField('_explained_variance')
+    components = serializers.SerializerMethodField('_components')
+
+    def _pca_plot(self, pca):
+
+        plot = []
+
+        datasets = models.Dataset.objects.filter(pcatransformedvalues__pca=pca)
+        for ds in datasets:
+            plot.append({
+                'experiment_name': ds.experiment.name,
+                'dataset_name': ds.name,
+                'experiment_pk': ds.experiment.pk,
+                'dataset_pk': ds.pk,
+                'experiment_cell_type': ds.experiment.cell_type,
+                'experiment_target': ds.experiment.target,
+                'transformed_values':
+                    ds.pcatransformedvalues_set
+                      .get(pca=pca).transformed_values,
+            })
+
+        return plot
+
+    def _explained_variance(self, pca):
+        return pca.pca.explained_variance_ratio_
+
+    def _components(self, pca):
+        components = []
+
+        genes = [
+            x.transcript.gene for x in
+            models.PCATranscriptOrder.objects.filter(pca=pca).order_by('order')
+        ]
+        for _component in pca.pca.components_:
+            components.append(
+                sorted(
+                    zip([x.name for x in genes], _component),
+                    key=lambda x: -abs(x[1]),
+                )[:20]
+            )
+
+        return components
+
+    class Meta:
+        model = models.PCA
+        fields = ('pca_plot', 'explained_variance', 'components')

@@ -13,6 +13,9 @@ router.register('user',
 router.register('browser',
                 api.BrowserViewset,
                 base_name='browser')
+router.register('pca-plot',
+                api.PCAPlotViewset,
+                base_name='pca-plot')
 
 urlpatterns = [
 

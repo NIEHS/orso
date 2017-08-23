@@ -153,3 +153,8 @@ class UserViewset(viewsets.ModelViewSet):
         recommendation.hidden = True
         recommendation.save()
         return HttpResponse(status=202)
+
+
+class PCAPlotViewset(viewsets.ModelViewSet):
+    queryset = models.PCA.objects.all()
+    serializer_class = serializers.PCAPlotSerializer
