@@ -834,7 +834,7 @@ class Gene(models.Model):
                     intersection.normalized_genebody_value)
         if expression_values:
             return sorted(expression_values.items(),
-                          key=lambda x: (-numpy.median(x[1]), x[0].pk))[0][0]
+                          key=lambda x: (-numpy.median(x[1]), x[0].name))[0][0]
         else:
             return None
 
