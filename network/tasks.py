@@ -554,7 +554,7 @@ def pca_analysis(annotation):
         res = group(task.s(obj.pk) for obj in obj_list)()
         return res.get()
 
-    genes = models.Gene.objects.filter(annotation=annotation)[:100]
+    genes = models.Gene.objects.filter(annotation=annotation)
     transcripts = run_in_parallel(genes, _get_associated_transcript)
     transcripts = [t for t in transcripts if t is not None]
 
@@ -624,7 +624,7 @@ def pca_analysis(annotation):
                                             target_importances)]
             filtered_transcripts = \
                 [ts for ts, total in sorted(zip(transcripts, totals),
-                                            key=lambda x: -x[1])]
+                                            key=lambda x: -x[1])][:1000]
 
             # Filter datasets by Mahalanobis distance after PCA
             filtered_datasets = []
