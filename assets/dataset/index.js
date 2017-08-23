@@ -17,6 +17,7 @@ import PCA from './PCA';
 import Explore from './Explore';
 import Expression from './Expression';
 import GeneScatter from './GeneScatter';
+import GeneFoldChange from './GeneFoldChange';
 
 
 let createMetaPlot = function(el, metaplot) {
@@ -213,6 +214,13 @@ let appendGeneScatter = function(el, data) {
         data={data}/>, element[0]);
 }
 
+let appendGeneFoldChange = function(el, data) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<GeneFoldChange
+        data={data}/>, element[0]);
+}
+
 export {
     createMetaPlot,
     createBrowser,
@@ -234,4 +242,5 @@ export {
     appendExplore,
     appendExpression,
     appendGeneScatter,
+    appendGeneFoldChange,
 };

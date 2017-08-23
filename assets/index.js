@@ -21,6 +21,7 @@ import {
     appendExplore,
     appendExpression,
     appendGeneScatter,
+    appendGeneFoldChange,
 } from './dataset';
 
 
@@ -45,4 +46,5 @@ window.apps = {
     appendExplore,
     appendExpression,
     appendGeneScatter,
+    appendGeneFoldChange,
 };
