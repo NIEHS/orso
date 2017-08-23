@@ -900,6 +900,15 @@ class TranscriptIntersection(models.Model):
     normalized_coding_value = models.FloatField()
 
 
+class ExperimentIntersection(models.Model):
+    transcript = models.ForeignKey('Transcript')
+    experiment = models.ForeignKey('Experiment')
+
+    average_promoter_value = models.FloatField()
+    average_genebody_value = models.FloatField()
+    average_coding_value = models.FloatField()
+
+
 class DatasetDistance(models.Model):
     '''
     Base model for dataset distances.
