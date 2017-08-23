@@ -36,6 +36,8 @@ from analysis import transform
 
 from subprocess import call
 
+from django.db.models import Avg
+
 
 def single_instance_task(cache_id, timeout=None):
     def decorator(func):
