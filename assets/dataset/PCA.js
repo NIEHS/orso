@@ -14,17 +14,29 @@ class PCA extends React.Component {
         };
     }
 
-    drawPlotly(divElement, data, experiment_urls) {
-        var pca = [], cell_types = [], targets = [], names = [], urls = [];
+    datasetUrl(dataset_pk) {
+        return `/network/dataset/${dataset_pk}/`;
+    }
+
+    experimentUrl(experiment_pk) {
+        return `/network/experiment/${experiment_pk}/`;
+    }
+
+    colorScale(index) {
+        var color_scale = d3.scale.category20().domain(d3.range(0,20));
+        return color_scale(index % 20);
+    }
+
+    drawPlotlyPCA() {
+        var data = this.props.plot;
+
+        var pca = [], cell_types = [], targets = [], names = [];
         for (var i = 0; i < data.length; i++) {
             pca[i] = {
                 x: data[i]['transformed_values'][0],
                 y: data[i]['transformed_values'][1],
                 z: data[i]['transformed_values'][2],
             };
-            cell_types[i] = data[i]['experiment_cell_type'];
-            targets[i] = data[i]['experiment_target'];
-            urls[i] = experiment_urls[data[i]['experiment_pk']];
             if (data[i]['experiment_target'] == '') {
                 names[i] = `Cell type: ${data[i]['experiment_cell_type']}`;
             } else {
@@ -35,23 +47,8 @@ class PCA extends React.Component {
 
         var color_scale = d3.scale.category20c();
         var colors = [];
-        if (this.state.color_by == 'None') {
-            for (var i = 0; i < pca.length; i++) {
-                colors.push(color_scale(0));
-            }
-        } else {
-            if (this.state.color_by == 'Cell type') {
-                var list = cell_types;
-            } else if (this.state.color_by == 'Target') {
-                var list = targets;
-            }
-            let used = [];
-            for (var i = 0; i < list.length; i++) {
-                if ( $.inArray(list[i], used) == -1) {
-                    used.push(list[i]);
-                }
-                colors.push(color_scale($.inArray(list[i], used) % 20));
-            }
+        for (var i = 0; i < pca.length; i++) {
+            colors.push(this.colorScale(0));
         }
 
         function unpack(rows, key) {
@@ -64,7 +61,7 @@ class PCA extends React.Component {
             z: unpack(pca, 'z'),
             mode: 'markers',
             text: names,
-            url: urls,
+            point_data: data,
             hoverinfo: 'text',
             marker: {
                 size: 12,
@@ -109,19 +106,98 @@ class PCA extends React.Component {
 
         var plot = document.getElementById('plot');
         plot.on('plotly_click', function(data){
-            var url = '',
-                name = '';
             for(var i = 0; i < data.points.length; i++){
                 var index = data.points[i].pointNumber;
-                url = data.points[i].data.url[index];
-                name = data.points[i].text;
+                var selected_object = data.points[i].data.point_data[index];
+                this.setState({'selected_object': selected_object}, this.setSelection);
             }
-            window.open(window.location.href.replace(window.location.pathname, url), name)
-        });
+        }.bind(this));
+    }
+
+    drawPlotlyVariance(){
+
+        var data = [{
+            y: ['PC 1', 'PC 2', 'PC 3'].reverse(),
+            x: this.props.explained_variance.reverse(),
+            type: 'bar',
+            orientation: 'h',
+        }];
+
+        Plotly.newPlot('variance_plot', data);
+    }
+
+    drawPlotlyComponent(component, div){
+        var labels = [],
+            values = [];
+        for(var i = 0; i < component.length; i++){
+            labels.push(component[i][0]);
+            values.push(component[i][1]);
+        }
+
+        var data = [{
+            y: labels.reverse(),
+            x: values.reverse(),
+            type: 'bar',
+            orientation: 'h',
+        }];
+
+        var layout = {
+            yaxis: {
+                tickfont: {
+                    size: 10,
+                },
+            },
+        };
+
+        Plotly.newPlot(div, data, layout);
     }
 
     removePlotly(divElement){
         $(divElement).empty();
+    }
+
+    setSelection(){
+        $(this.refs.selection_exp_name).text(this.state.selected_object.experiment_name);
+        $(this.refs.selection_ds_name).text(this.state.selected_object.dataset_name);
+        $(this.refs.selection_cell_type).text(this.state.selected_object.experiment_cell_type);
+
+        if (this.state.selected_object.experiment_target == '') {
+            $(this.refs.selection_target).text('--');
+        } else {
+            $(this.refs.selection_target).text(this.state.selected_object.experiment_target);
+        }
+
+        $(this.refs.experiment_link).attr('href', this.experimentUrl(this.state.selected_object.experiment_pk));
+        $(this.refs.dataset_link).attr('href', this.datasetUrl(this.state.selected_object.dataset_pk));
+        $(this.refs.experiment_link).attr('target', '_blank');
+        $(this.refs.dataset_link).attr('target', '_blank');
+    }
+
+    updateColor() {
+        var colors = [];
+        var used = [];
+
+        for (var i = 0; i < this.props.plot.length; i++) {
+            var value = '';
+            if (this.state.color_by == 'Cell type') {
+                value = this.props.plot[i]['experiment_cell_type'];
+            } else if (this.state.color_by == 'Target') {
+                value = this.props.plot[i]['experiment_target'];
+            }
+            if ($.inArray(value, used) == -1) {
+                used.push(value);
+            }
+            colors.push(this.colorScale($.inArray(value, used)));
+        }
+
+        var update = {
+            marker: {
+                size: 12,
+                color: colors,
+                opacity: 0.8,
+            }
+        };
+        Plotly.update('plot', update);
     }
 
     componentDidMount(){
@@ -136,21 +212,27 @@ class PCA extends React.Component {
             $color_by_select.append(
                 '<option val="' + i + '">' + this.state.color_by_choices[i] + '</option>');
         }
-        console.log(this.props.data);
-        this.drawPlotly(this.refs.plot, this.props.data, this.props.exp_urls);
+        this.drawPlotlyPCA();
+        this.drawPlotlyVariance();
+        this.drawPlotlyComponent(this.props.components[0], 'pc_1');
+        this.drawPlotlyComponent(this.props.components[1], 'pc_2');
+        this.drawPlotlyComponent(this.props.components[2], 'pc_3');
     }
 
-    componentDidUpdate(){
-        this.removePlotly(this.refs.plot);
-        this.drawPlotly(this.refs.plot, this.props.data, this.props.exp_urls);
+    cleanDiv(div_id){
+        $('#' + div_id).empty();
     }
 
     componentWillUnmount(){
-        this.removeD3(this.refs.svg);
+        this.cleanDiv('plot');
+        this.cleanDiv('variance_plot');
+        this.cleanDiv('pc_1');
+        this.cleanDiv('pc_2');
+        this.cleanDiv('pc_3');
     }
 
     change_color(event){
-         this.setState({color_by: event.target.value});
+         this.setState({color_by: event.target.value}, this.updateColor);
     }
 
     render(){
@@ -165,6 +247,39 @@ class PCA extends React.Component {
                         onChange={this.change_color.bind(this)}
                         value={this.state.color_by}>
                     </select>
+                    <div ref='selection_container'>
+                        <div><h4>Selection</h4></div>
+                        <div><b>Experiment name: </b><span ref='selection_exp_name'>--</span></div>
+                        <div><b>Dataset name: </b><span ref='selection_ds_name'>--</span></div>
+                        <div><b>Cell/tissue type: </b><span ref='selection_cell_type'>--</span></div>
+                        <div><b>Target: </b><span ref='selection_target'>--</span></div>
+                        <div><a ref='experiment_link' href='#' className='btn btn-default'>Go to Experiment</a></div>
+                        <div><a ref='dataset_link' href='#' className='btn btn-default'>Go to Dataset</a></div>
+                    </div>
+                    <ul className='nav nav-tabs'>
+                        <li className='active'><a data-toggle='tab' href='#variance_plot_tab'>PCA</a></li>
+                        <li><a data-toggle='tab' href='#pc_1_tab'>PC 1</a></li>
+                        <li><a data-toggle='tab' href='#pc_2_tab'>PC 2</a></li>
+                        <li><a data-toggle='tab' href='#pc_3_tab'>PC 3</a></li>
+                    </ul>
+                    <div className='tab-content'>
+                        <div id='variance_plot_tab' className='tab-pane fade in active'>
+                            <h4>Variance ratios</h4>
+                            <div id='variance_plot'></div>
+                        </div>
+                        <div id='pc_1_tab' className='tab-pane fade'>
+                            <h4>Principle component 1</h4>
+                            <div id='pc_1'></div>
+                        </div>
+                        <div id='pc_2_tab' className='tab-pane fade'>
+                            <h4>Principle component 2</h4>
+                            <div id='pc_2'></div>
+                        </div>
+                        <div id='pc_3_tab' className='tab-pane fade'>
+                            <h4>Principle component 3</h4>
+                            <div id='pc_3'></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>;
@@ -172,8 +287,9 @@ class PCA extends React.Component {
 }
 
 PCA.propTypes = {
-    data: React.PropTypes.array.isRequired,
-    exp_urls: React.PropTypes.object.isRequired,
+    plot: React.PropTypes.array.isRequired,
+    explained_variance: React.PropTypes.array.isRequired,
+    components: React.PropTypes.array.isRequired,
 };
 
 export default PCA;
