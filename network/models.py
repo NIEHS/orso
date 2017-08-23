@@ -879,8 +879,10 @@ class Transcript(models.Model):
         '''
         values = []
         for intersection in TranscriptIntersection.objects.filter(
-                transcript=self):
-            values.append(intersection.normalized_genebody_value)
+            transcript=self,
+            dataset__experiment__experiment_type__name='RNA-seq',
+        ):
+            values.append(intersection.normalized_coding_value)
         return numpy.median(values)
 
 
