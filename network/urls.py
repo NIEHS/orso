@@ -50,8 +50,8 @@ urlpatterns = [
         name='favorite_users'),
     url(r'^recommended_users/$', views.RecommendedUsers.as_view(),
         name='recommended_users'),
-    url(r'^dataset_comparison/(?P<x>\d+)-(?P<y>\d+)/$',
-        views.dataset_comparison, name='dataset_comparison'),
+    url(r'^dataset-comparison/(?P<x>\d+)-(?P<y>\d+)/$',
+        views.DatasetComparison.as_view(), name='dataset-comparison'),
 
     url(r'^create_experiment/$', views.ExperimentCreate.as_view(),
         name='create_experiment'),

@@ -585,12 +585,66 @@ class RecommendedUsers(TemplateView, AddMyUserMixin):
         return context
 
 
-def dataset_comparison(request, x, y):
-    dataset_x = get_object_or_404(models.Dataset, pk=x)
-    dataset_y = get_object_or_404(models.Dataset, pk=y)
-    return render(
-        request, 'network/dataset_comparison.html',
-        {'dataset_x': dataset_x, 'dataset_y': dataset_y})
+class DatasetComparison(TemplateView, AddMyUserMixin):
+    template_name = 'network/dataset_comparison.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        ds_x = models.Dataset.objects.get(pk=kwargs['x'])
+        ds_y = models.Dataset.objects.get(pk=kwargs['y'])
+
+        if (ds_x.assembly == ds_y.assembly) and \
+                (ds_x.experiment.experiment_type ==
+                 ds_y.experiment.experiment_type):
+
+            genes = models.Gene.objects.filter(
+                annotation__assembly=ds_x.assembly,
+                selected_transcript__isnull=False,
+            ).order_by('pk').values_list('name', flat=True)
+
+            intersections_x = (
+                models.TranscriptIntersection
+                      .objects
+                      .annotate(
+                          size=F('transcript__end') - F('transcript__start'))
+                      .filter(
+                          dataset=ds_x,
+                          transcript__selecting__isnull=False,
+                          size__gte=200)
+                      .order_by('transcript__selecting__pk')
+                      .values_list('normalized_coding_value', flat=True))
+            intersections_y = (
+                models.TranscriptIntersection
+                      .objects
+                      .annotate(
+                          size=F('transcript__end') - F('transcript__start'))
+                      .filter(
+                          dataset=ds_y,
+                          transcript__selecting__isnull=False,
+                          size__gte=200)
+                      .order_by('transcript__selecting__pk')
+                      .values_list('normalized_coding_value', flat=True))
+
+            context['scatter'] = \
+                [[gene, x, y] for gene, x, y in
+                 zip(genes, intersections_x, intersections_y)
+                 if (x, y) != (0, 0)]
+
+            log_change = dict()
+            for gene, int_x, int_y in zip(
+                    genes, intersections_x, intersections_y):
+                log_change[gene] = math.log2((int_x + 1) / (int_y + 1))
+            log_change = \
+                sorted(log_change.items(), key=lambda x: -abs(x[1]))[:100]
+
+            context['log_change'] = [list(x) for x in sorted(
+                log_change, key=lambda x: -x[1])]
+
+        context['dataset_x'] = ds_x
+        context['dataset_y'] = ds_y
+
+        return context
 
 
 class TestSmallDataView(TemplateView, AddMyUserMixin):
