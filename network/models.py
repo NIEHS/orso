@@ -419,8 +419,6 @@ class Experiment(models.Model):
 
 
 class Dataset(models.Model):
-    #  TODO: change promoter/enhancer intersection to single intersection list
-    #  TODO: change promoter/enhancer metaplots to single metaplot list
     description = models.TextField(blank=True)
 
     ambiguous_url = models.URLField(null=True, blank=True)
