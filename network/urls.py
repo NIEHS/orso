@@ -23,6 +23,10 @@ urlpatterns = [
     url(r'^home/$', views.Home.as_view(), name='home'),
     url(r'^experiment/(?P<pk>\d+)/$', views.Experiment.as_view(),
         name='experiment'),
+    url(r'^gene/(?P<pk>\d+)/$', views.Gene.as_view(),
+        name='gene'),
+    url(r'^transcript/(?P<pk>\d+)/$', views.Transcript.as_view(),
+        name='transcript'),
 
     url(r'^explore/$', views.Explore.as_view(), name='explore'),
 
