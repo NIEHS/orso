@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container">
+    <h1>{{gene.name}} ({{gene.annotation.name}})</h1>
+    <h2>Transcripts</h2>
+    <table class='table'>
+        <tr>
+            <th></th>
+            <th>Name</th>
+            <th>Chromosome</th>
+            <th>Strand</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Median expression (TPM)</th>
+        </tr>
+        {% for t in transcripts %}
+        <tr>
+            <td>{% if t.selected %}&#9733;{% else %}{% endif %}</td>
+            <td><a href='/network/transcript/{{t.pk}}'>{{t.name}}</a></td>
+            <td>{{t.chromosome}}</td>
+            <td>{{t.strand}}</td>
+            <td>{{t.start}}</td>
+            <td>{{t.end}}</td>
+            <td>{{t.median_expression}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% if expression %}
+    <h2>RNA-seq expression</h2>
+    <div id='expression'></div>
+    {% endif %}
+</div>
+
+{% endblock content %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+$(document).ready(function(){
+    window.apps.appendExpression(
+        $("#expression")[0],
+        {{expression|safe}},
+    );
+});
+</script>
+{% endblock %}
