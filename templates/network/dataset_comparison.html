@@ -2,37 +2,43 @@
 
 {% block content %}
 <div class="container">
-    <h3>{{dataset_x.name}}</h3>
-    <h3>{{dataset_y.name}}</h3>
-    <div class="row">
-        <div class="col-sm-6">
-            <h4 align="center">Promoters</h4>
-            <div id="promoter_comp" style="height:200px;" ></div>
+    <h2>{{dataset_x.name}}</h2>
+    <p><b>Assembly:</b> {{dataset_x.assembly.name}}</p>
+    <p><b>Cell/tissue type:</b> {{dataset_x.experiment.cell_type}}</p>
+    {% if dataset_x.target %}
+        <p><b>Target: </b> {{dataset_x.target}}</p>
+    {% endif %}
+
+    <h2>{{dataset_y.name}}</h2>
+    <p><b>Assembly:</b> {{dataset_y.assembly.name}}</p>
+    <p><b>Cell/tissue type:</b> {{dataset_y.experiment.cell_type}}</p>
+    {% if dataset_y.target %}
+        <p><b>Target: </b> {{dataset_y.target}}</p>
+    {% endif %}
+
+    {% if dataset_x.experiment.experiment_type == dataset_y.experiment.experiment_type and dataset_x.assembly == dataset_y.assembly %}
+        <div id='gene_scatter'>
+            <h3>Gene scatter</h3>
         </div>
-        <div class="col-sm-6">
-            <h4 align="center">Enhancers</h4>
-            <div id="enhancer_comp" style="height:200px;" ></div>
+        <div id='gene_fold_change'>
+            <h3>Gene fold change</h3>
         </div>
-    </div>
+    {% else %}
+        <p>Datasets do not share assembly and experiment type.<p>
+    {% endif %}
 </div>
 {% endblock content %}
 
 {% block extra-js %}
 <script type='text/javascript'>
 $(document).ready(function(){
-    window.apps.createIntersectionComparison(
-        $('#promoter_comp')[0],
-        '{{dataset_x.name}}',
-        '{{dataset_y.name}}',
-        {{dataset_x.promoter_intersection.intersection_values|safe}},
-        {{dataset_y.promoter_intersection.intersection_values|safe}}
+    window.apps.appendGeneScatter(
+        $("#gene_scatter")[0],
+        {{scatter|safe}},
     );
-    window.apps.createIntersectionComparison(
-        $('#enhancer_comp')[0],
-        '{{dataset_x.name}}',
-        '{{dataset_y.name}}',
-        {{dataset_x.enhancer_intersection.intersection_values|safe}},
-        {{dataset_y.enhancer_intersection.intersection_values|safe}}
+    window.apps.appendGeneFoldChange(
+        $("#gene_fold_change")[0],
+        {{log_change|safe}},
     );
 });
 </script>
