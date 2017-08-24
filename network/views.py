@@ -647,6 +647,31 @@ class DatasetComparison(TemplateView, AddMyUserMixin):
         return context
 
 
+class ExperimentComparison(TemplateView, AddMyUserMixin):
+    template_name = 'network/experiment_comparison.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        exp_x = models.Experiment.objects.get(pk=kwargs['x'])
+        exp_y = models.Experiment.objects.get(pk=kwargs['y'])
+
+        exp_x_assemblies = models.Assembly.objects.filter(
+            dataset__experiment=exp_x)
+        exp_y_assemblies = models.Assembly.objects.filter(
+            dataset__experiment=exp_y)
+
+        context['experiment_x_assemblies'] = ', '.join(list(set(
+            exp_x_assemblies.values_list('name', flat=True))))
+        context['experiment_y_assemblies'] = ', '.join(list(set(
+            exp_y_assemblies.values_list('name', flat=True))))
+
+        context['experiment_x'] = exp_x
+        context['experiment_y'] = exp_y
+
+        return context
+
+
 class TestSmallDataView(TemplateView, AddMyUserMixin):
     template_name = 'network/test_small_data_view.html'
 
