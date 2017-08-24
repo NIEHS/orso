@@ -1,3 +1,6 @@
+from collections import defaultdict
+
+import numpy
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic \
@@ -214,6 +217,117 @@ class Explore(TemplateView, AddMyUserMixin):
         context['pca_lookup'] = pca_lookup
         context['available_experiment_types'] = available_exp_types
         context['available_assemblies'] = available_assemblies
+
+        return context
+
+
+class Gene(DetailView, AddMyUserMixin):
+    template_name = 'network/gene.html'
+    model = models.Gene
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        gene = self.get_object()
+
+        transcripts = models.Transcript.objects.filter(gene=gene)
+        median_expressions = [t.get_median_expression() for t in transcripts]
+        selected = gene.get_transcript_with_highest_expression()
+
+        # Get transcript information
+        context['transcripts'] = []
+        for t, exp in zip(transcripts, median_expressions):
+            context['transcripts'].append({
+                'pk': t.pk,
+                'name': t.name,
+                'chromosome': t.chromosome,
+                'strand': t.strand,
+                'start': t.start,
+                'end': t.end,
+                'median_expression': exp,
+                'selected': selected == t,
+            })
+        context['transcripts'].sort(key=lambda x: (
+            -x['selected'], -x['median_expression']))
+
+        # Get expression information
+        datasets = models.Dataset.objects.filter(
+            assembly__annotation=gene.annotation,
+            experiment__experiment_type__name='RNA-seq',
+        )
+        expression = defaultdict(list)
+        for dataset in datasets:
+            expression[dataset.experiment.cell_type].append(
+                models.TranscriptIntersection.objects.get(
+                    dataset=dataset,
+                    transcript=selected,
+                ).normalized_coding_value
+            )
+        context['expression'] = []
+        for cell_type, values in sorted(
+                expression.items(), key=lambda x: numpy.median(x[1])):
+            context['expression'].append({
+                'cell_type': cell_type,
+                'median': numpy.median(values),
+                'min': min(values),
+                'max': max(values),
+            })
+
+        return context
+
+
+class Transcript(DetailView, AddMyUserMixin):
+    template_name = 'network/transcript.html'
+    model = models.Transcript
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        transcript = self.get_object()
+        context['median_expression'] = transcript.get_median_expression()
+
+        other_transcripts = models.Transcript.objects.filter(
+            gene=transcript.gene).exclude(pk=transcript.pk)
+        median_expressions = [
+            t.get_median_expression() for t in other_transcripts]
+
+        # Get transcript information
+        context['other_transcripts'] = []
+        for t, exp in zip(other_transcripts, median_expressions):
+            context['other_transcripts'].append({
+                'pk': t.pk,
+                'name': t.name,
+                'chromosome': t.chromosome,
+                'strand': t.strand,
+                'start': t.start,
+                'end': t.end,
+                'median_expression': exp,
+            })
+        context['other_transcripts'].sort(
+            key=lambda x: -x['median_expression'])
+
+        # Get expression information
+        datasets = models.Dataset.objects.filter(
+            assembly__annotation=transcript.gene.annotation,
+            experiment__experiment_type__name='RNA-seq',
+        )
+        expression = defaultdict(list)
+        for dataset in datasets:
+            expression[dataset.experiment.cell_type].append(
+                models.TranscriptIntersection.objects.get(
+                    dataset=dataset,
+                    transcript=transcript,
+                ).normalized_coding_value
+            )
+        context['expression'] = []
+        for cell_type, values in sorted(
+                expression.items(), key=lambda x: numpy.median(x[1])):
+            context['expression'].append({
+                'cell_type': cell_type,
+                'median': numpy.median(values),
+                'min': min(values),
+                'max': max(values),
+            })
 
         return context
 
