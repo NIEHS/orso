@@ -6,12 +6,15 @@
 $(document).ready(function(){
     window.apps.appendSmallDataView(
         $('#experiment_container')[0],
+        {{experiment.pk}},
         {{experiment.meta_data|safe}},
         {{experiment.plot_data|safe}},
         {{experiment.urls|safe}},
         {
+            'score': {{experiment.min_distance}},
+            'score_dist': {{all_distances}},
             'display_favorite': true,
-            'display_remove_recommendation': true
+            'display_remove_recommendation': true,
         }
     );
 });

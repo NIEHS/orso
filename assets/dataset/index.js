@@ -45,12 +45,15 @@ let createSmallDataView = function(el, meta_data, plot_data, urls, args) {
         display_remove_favorite={Boolean(args.display_remove_favorite)}/>, el);
 };
 
-let appendSmallDataView = function(el, meta_data, plot_data, urls, args) {
+let appendSmallDataView = function(el, exp_id, meta_data, plot_data, urls, args) {
     var element = $('<div></div>').appendTo(el);
     ReactDOM.render(<SmallDataView
+        exp_id={exp_id}
         meta_data={meta_data}
         plot_data={plot_data}
         urls={urls}
+        score={args.score}
+        score_dist={args.score_dist}
         display_favorite={Boolean(args.display_favorite)}
         display_edit={Boolean(args.display_edit)}
         display_delete={Boolean(args.display_delete)}
