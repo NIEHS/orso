@@ -123,6 +123,7 @@ def process_datasets(datasets, pca_transform=True):
         for _dict in intersection_beds:
             tasks.append(process_dataset_intersection.s(
                 ds.pk,
+                _dict['locus_group'].pk,
                 _dict['bed'].name,
                 bigwig_paths[ds.pk],
             ))
@@ -153,25 +154,27 @@ def process_datasets(datasets, pca_transform=True):
 
 
 @task()
-def process_dataset_intersection(dataset_pk, bed_path, bigwigs):
+def process_dataset_intersection(dataset_pk, locusgroup_pk, bed_path, bigwigs):
     dataset = models.Dataset.objects.get(pk=dataset_pk)
+    loci = models.Locus.objects.filter(group__pk=locusgroup_pk)
     locus_values = transcript_coverage.get_locus_values(
+        loci,
         bed_path,
         ambiguous_bigwig=bigwigs['ambiguous'],
         plus_bigwig=bigwigs['plus'],
         minus_bigwig=bigwigs['minus'],
     )
     normalized_values = \
-        normalize_locus_intersection_values(locus_values, bed_path)
-    models.DatasetIntersection.objects.filter(dataset=dataset).delete()
+        normalize_locus_intersection_values(loci, locus_values)
+    models.DatasetIntersection.objects.filter(
+        dataset=dataset, locus__in=loci).delete()
     intersections = []
-    for locus_pk, value in locus_values.items():
-        norm = normalized_values[locus_pk]
+    for locus in loci:
         intersections.append(models.DatasetIntersection(
             dataset=dataset,
-            locus=models.Locus.objects.get(pk=locus_pk),
-            raw_value=value,
-            normalized_value=norm,
+            locus=locus,
+            raw_value=locus_values[locus.pk],
+            normalized_value=normalized_values[locus.pk],
         ))
     models.DatasetIntersection.objects.bulk_create(intersections)
 

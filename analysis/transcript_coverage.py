@@ -7,16 +7,14 @@ from analysis.utils import call_bigwig_average_over_bed
 from network import models
 
 
-def get_locus_values(locus_bed_path, ambiguous_bigwig=None, plus_bigwig=None,
-                     minus_bigwig=None):
+def get_locus_values(loci, locus_bed_path, ambiguous_bigwig=None,
+                     plus_bigwig=None, minus_bigwig=None):
     '''
     Finds coverage values for each transcript.
 
-    transcripts - List of transcript objects.
-    transcript_bed - Path to BED file with transcript intervals.
+    loci - Dict of locus objects from models.LocusGroup.get_loci_dict()
+    locus_bed_bed - Path to BED file with loci intervals.
     '''
-    locus_strands = read_locus_strand_from_bed(locus_bed_path)
-
     if plus_bigwig and minus_bigwig:
         plus_tab = NamedTemporaryFile(mode='w')
         minus_tab = NamedTemporaryFile(mode='w')
@@ -36,7 +34,7 @@ def get_locus_values(locus_bed_path, ambiguous_bigwig=None, plus_bigwig=None,
         minus_tab.flush()
 
         return reconcile_stranded_coverage(
-            locus_strands,
+            loci,
             read_bigwig_average_over_bed_tab_file(plus_tab.name),
             read_bigwig_average_over_bed_tab_file(minus_tab.name),
         )
@@ -58,23 +56,6 @@ def get_locus_values(locus_bed_path, ambiguous_bigwig=None, plus_bigwig=None,
         raise ValueError('Improper bigWig files specified.')
 
 
-def read_locus_strand_from_bed(locus_bed_path):
-    '''
-    Read strand information from BED file.
-    '''
-    strand_dict = dict()
-    with open(locus_bed_path) as f:
-        for line in f:
-            line_split = line.strip().split()
-            locus_pk = int(line_split[3].split('_')[0])
-            if len(line_split) >= 6:
-                strand = line_split[5]
-            else:
-                strand = None
-            strand_dict[locus_pk] = strand
-    return strand_dict
-
-
 def read_bigwig_average_over_bed_tab_file(tab_file_path):
     '''
     Read values in bigWigAverageOverBed output file into dict.
@@ -83,25 +64,25 @@ def read_bigwig_average_over_bed_tab_file(tab_file_path):
     with open(tab_file_path) as f:
         for line in f:
             name, size, covered, value_sum, mean, mean0 = line.strip().split()
-            locus_pk = name.split('_')[0]
+            locus_pk = int(name.split('_')[0])
             locus_values[locus_pk] += float(value_sum)
     return locus_values
 
 
-def reconcile_stranded_coverage(strand_dict, plus_values, minus_values):
+def reconcile_stranded_coverage(loci, plus_values, minus_values):
     '''
     Considering plus and minus strand coverage values, return only coverage
     values of the appropriate strand.
     '''
     reconciled = dict()
-    for locus_pk, strand in strand_dict:
-        if strand is None:
-            reconciled[locus_pk] = plus_values[locus_pk] + \
-                minus_values[locus_pk]
-        elif strand == '+':
-            reconciled[locus_pk] = plus_values[locus_pk]
-        elif strand == '-':
-            reconciled[locus_pk] = minus_values[locus_pk]
+    for locus in loci:
+        if locus.strand is None:
+            reconciled[locus.pk] = plus_values[locus.pk] + \
+                minus_values[locus.pk]
+        elif locus.strand == '+':
+            reconciled[locus.pk] = plus_values[locus.pk]
+        elif locus.strand == '-':
+            reconciled[locus.pk] = minus_values[locus.pk]
     return reconciled
 
 

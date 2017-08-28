@@ -1,7 +1,4 @@
-from collections import defaultdict
-
-
-def normalize_locus_intersection_values(locus_values, locus_bed_path):
+def normalize_locus_intersection_values(loci, locus_values):
     '''
     Take transcription intersection counts and normalize to pseudoTPM for
     genebody, coding regions, and promoter. Add normalized values to dict.
@@ -11,11 +8,12 @@ def normalize_locus_intersection_values(locus_values, locus_bed_path):
     '''
     normalized_values = dict()
     locus_cpk = dict()  # cpk = counts per kb
-    lengths = get_feature_lengths_from_locus_bed(locus_bed_path)
 
-    for locus_pk, value in locus_values.items():
-        length = lengths[locus_pk]
-        locus_cpk[locus_pk] = value * (1000.0 / length)
+    for locus in loci:
+        length = 0
+        for region in locus.regions:
+            length += region[1] - region[0] + 1
+        locus_cpk[locus.pk] = locus_values[locus.pk] * (1000.0 / length)
 
     cpk_sum = sum(locus_cpk.values())
 
@@ -23,16 +21,3 @@ def normalize_locus_intersection_values(locus_values, locus_bed_path):
         normalized_values[locus_pk] = value / (cpk_sum / 1E6)
 
     return normalized_values
-
-
-def get_feature_lengths_from_locus_bed(bed_path):
-    '''
-    From a locus BED file, get the length of locus features.
-    '''
-    lengths = defaultdict(int)
-    with open(bed_path) as f:
-        for line in f:
-            chromosome, start, end, name = line.strip().split()[:4]
-            pk = name.split('_')[0]
-            lengths[pk] += (int(start) - int(end))
-    return lengths
