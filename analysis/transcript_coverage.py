@@ -35,8 +35,8 @@ def get_locus_values(loci, locus_bed_path, ambiguous_bigwig=None,
 
         return reconcile_stranded_coverage(
             loci,
-            read_bigwig_average_over_bed_tab_file(plus_tab.name),
-            read_bigwig_average_over_bed_tab_file(minus_tab.name),
+            read_bigwig_average_over_bed_tab_file(loci, plus_tab.name),
+            read_bigwig_average_over_bed_tab_file(loci, minus_tab.name),
         )
 
     elif ambiguous_bigwig:
@@ -49,23 +49,28 @@ def get_locus_values(loci, locus_bed_path, ambiguous_bigwig=None,
         )
         tab.flush()
 
-        out_values = read_bigwig_average_over_bed_tab_file(tab.name)
+        out_values = read_bigwig_average_over_bed_tab_file(loci, tab.name)
         return out_values
 
     else:
         raise ValueError('Improper bigWig files specified.')
 
 
-def read_bigwig_average_over_bed_tab_file(tab_file_path):
+def read_bigwig_average_over_bed_tab_file(loci, tab_file_path):
     '''
     Read values in bigWigAverageOverBed output file into dict.
     '''
-    locus_values = defaultdict(float)
+    pk_to_value = defaultdict(float)
     with open(tab_file_path) as f:
         for line in f:
             name, size, covered, value_sum, mean, mean0 = line.strip().split()
             locus_pk = int(name.split('_')[0])
-            locus_values[locus_pk] += float(value_sum)
+            pk_to_value[locus_pk] += float(value_sum)
+
+    locus_values = dict()
+    for locus in loci:
+        locus_values[locus] = pk_to_value[locus.pk]
+
     return locus_values
 
 
@@ -77,12 +82,12 @@ def reconcile_stranded_coverage(loci, plus_values, minus_values):
     reconciled = dict()
     for locus in loci:
         if locus.strand is None:
-            reconciled[locus.pk] = plus_values[locus.pk] + \
-                minus_values[locus.pk]
+            reconciled[locus] = plus_values[locus] + \
+                minus_values[locus]
         elif locus.strand == '+':
-            reconciled[locus.pk] = plus_values[locus.pk]
+            reconciled[locus] = plus_values[locus]
         elif locus.strand == '-':
-            reconciled[locus.pk] = minus_values[locus.pk]
+            reconciled[locus] = minus_values[locus]
     return reconciled
 
 

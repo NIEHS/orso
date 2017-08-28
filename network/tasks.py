@@ -166,8 +166,8 @@ def process_dataset_intersection(dataset_pk, locusgroup_pk, bed_path, bigwigs):
         intersections.append(models.DatasetIntersection(
             dataset=dataset,
             locus=locus,
-            raw_value=locus_values[locus.pk],
-            normalized_value=normalized_values[locus.pk],
+            raw_value=locus_values[locus],
+            normalized_value=normalized_values[locus],
         ))
     models.DatasetIntersection.objects.bulk_create(intersections)
 

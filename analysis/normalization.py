@@ -13,11 +13,11 @@ def normalize_locus_intersection_values(loci, locus_values):
         length = 0
         for region in locus.regions:
             length += region[1] - region[0] + 1
-        locus_cpk[locus.pk] = locus_values[locus.pk] * (1000.0 / length)
+        locus_cpk[locus] = locus_values[locus] * (1000.0 / length)
 
     cpk_sum = sum(locus_cpk.values())
 
-    for locus_pk, value in locus_cpk.items():
-        normalized_values[locus_pk] = value / (cpk_sum / 1E6)
+    for locus, value in locus_cpk.items():
+        normalized_values[locus] = value / (cpk_sum / 1E6)
 
     return normalized_values
