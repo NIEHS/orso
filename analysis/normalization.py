@@ -1,8 +1,7 @@
-from network import models
+from collections import defaultdict
 
 
-def normalize_transcript_intersection_values(transcript_values,
-                                             promoter_size=5000):
+def normalize_locus_intersection_values(locus_values, locus_bed_path):
     '''
     Take transcription intersection counts and normalize to pseudoTPM for
     genebody, coding regions, and promoter. Add normalized values to dict.
@@ -11,58 +10,29 @@ def normalize_transcript_intersection_values(transcript_values,
     TPM = value / (1K / length) / (1M / total sum)
     '''
     normalized_values = dict()
+    locus_cpk = dict()  # cpk = counts per kb
+    lengths = get_feature_lengths_from_locus_bed(locus_bed_path)
 
-    ts_genebody_cpk = dict()
-    ts_coding_cpk = dict()
-    ts_promoter_cpk = dict()
+    for locus_pk, value in locus_values.items():
+        length = lengths[locus_pk]
+        locus_cpk[locus_pk] = value * (1000.0 / length)
 
-    for transcript, value_dict in transcript_values.items():
-        length = transcript.end - transcript.start
-        ts_genebody_cpk[transcript] = \
-            value_dict['genebody'] * (1000.0 / length)
+    cpk_sum = sum(locus_cpk.values())
 
-        ts_promoter_cpk[transcript] = \
-            value_dict['promoter'] * (1000.0 / promoter_size)
-
-        coding_sum = 0
-        coding_length = 0
-        for i, exon in enumerate(transcript.exons):
-            coding_length += (exon[1] - exon[0])
-            coding_sum += value_dict['exons'][i]
-        ts_coding_cpk[transcript] = \
-            coding_sum * (1000.0 / coding_length)
-
-    genebody_cpk_sum = sum(ts_genebody_cpk.values())
-    promoter_cpk_sum = sum(ts_promoter_cpk.values())
-    coding_cpk_sum = sum(ts_coding_cpk.values())
-
-    for transcript in transcript_values.keys():
-
-        normalized_values[transcript] = dict()
-        norm = normalized_values[transcript]
-
-        norm['genebody'] = ts_genebody_cpk[transcript] \
-            / (genebody_cpk_sum / 1E6)
-        norm['promoter'] = ts_promoter_cpk[transcript] \
-            / (promoter_cpk_sum / 1E6)
-        norm['coding'] = ts_coding_cpk[transcript] \
-            / (coding_cpk_sum / 1E6)
+    for locus_pk, value in locus_cpk.items():
+        normalized_values[locus_pk] = value / (cpk_sum / 1E6)
 
     return normalized_values
 
 
-def normalize_dataset(dataset):
+def get_feature_lengths_from_locus_bed(bed_path):
     '''
-    Apply normalize_transcript_intersection_values to TranscriptIntersection
-    objects associated with a Dataset object.
+    From a locus BED file, get the length of locus features.
     '''
-    transcript_values = dict()
-    for intersection in models.TranscriptIntersection.objects.filter(
-            dataset=dataset,
-            transcript__gene__annotation=dataset.assembly.annotation):
-        transcript_values[intersection.transcript] = {
-            'genebody': intersection.genebody_value,
-            'promoter': intersection.promoter_value,
-            'exons': intersection.exon_values,
-        }
-    return normalize_transcript_intersection_values(transcript_values)
+    lengths = defaultdict(int)
+    with open(bed_path) as f:
+        for line in f:
+            chromosome, start, end, name = line.strip().split()[:4]
+            pk = name.split('_')[0]
+            lengths[pk] += (int(start) - int(end))
+    return lengths

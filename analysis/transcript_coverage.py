@@ -1,29 +1,34 @@
+import json
+import math
+from collections import defaultdict
 from tempfile import NamedTemporaryFile
 
 from analysis.utils import call_bigwig_average_over_bed
 from network import models
 
 
-def get_transcript_values(transcripts, transcript_bed, ambiguous_bigwig=None,
-                          plus_bigwig=None, minus_bigwig=None):
+def get_locus_values(locus_bed_path, ambiguous_bigwig=None, plus_bigwig=None,
+                     minus_bigwig=None):
     '''
     Finds coverage values for each transcript.
 
     transcripts - List of transcript objects.
     transcript_bed - Path to BED file with transcript intervals.
     '''
+    locus_strands = read_locus_strand_from_bed(locus_bed_path)
+
     if plus_bigwig and minus_bigwig:
         plus_tab = NamedTemporaryFile(mode='w')
         minus_tab = NamedTemporaryFile(mode='w')
 
         call_bigwig_average_over_bed(
             plus_bigwig,
-            transcript_bed,
+            locus_bed_path,
             plus_tab.name,
         )
         call_bigwig_average_over_bed(
             minus_bigwig,
-            transcript_bed,
+            locus_bed_path,
             minus_tab.name,
         )
 
@@ -31,7 +36,7 @@ def get_transcript_values(transcripts, transcript_bed, ambiguous_bigwig=None,
         minus_tab.flush()
 
         return reconcile_stranded_coverage(
-            transcripts,
+            locus_strands,
             read_bigwig_average_over_bed_tab_file(plus_tab.name),
             read_bigwig_average_over_bed_tab_file(minus_tab.name),
         )
@@ -41,7 +46,7 @@ def get_transcript_values(transcripts, transcript_bed, ambiguous_bigwig=None,
 
         call_bigwig_average_over_bed(
             ambiguous_bigwig,
-            transcript_bed,
+            locus_bed_path,
             tab.name,
         )
         tab.flush()
@@ -53,119 +58,100 @@ def get_transcript_values(transcripts, transcript_bed, ambiguous_bigwig=None,
         raise ValueError('Improper bigWig files specified.')
 
 
-def exons_to_introns(exon_list):
+def read_locus_strand_from_bed(locus_bed_path):
     '''
-    Take a list of exons ([start, end]) and return a list of introns
-    ([start, end]).
+    Read strand information from BED file.
     '''
-    introns = []
-    for i in range(len(exon_list) - 1):
-        introns.append([exon_list[i][1] + 1, exon_list[i + 1][0] - 1])
-    return introns
+    strand_dict = dict()
+    with open(locus_bed_path) as f:
+        for line in f:
+            line_split = line.strip().split()
+            locus_pk = int(line_split[3].split('_')[0])
+            if len(line_split) >= 6:
+                strand = line_split[5]
+            else:
+                strand = None
+            strand_dict[locus_pk] = strand
+    return strand_dict
 
 
-def generate_transcript_bed(transcripts, chrom_sizes_dict, output_file_obj):
-    '''
-    Write a BED file to output_file_obj containing entries for each transcript
-    model in transcripts.
-    '''
-    OUT = output_file_obj
-
-    def write_to_out(transcript, interval, name):
-        '''
-        Write interval to OUT in BED6 format
-        '''
-        OUT.write('\t'.join([
-            transcript.chromosome,
-            str(interval[0] - 1),
-            str(interval[1]),
-            '{}_{}'.format(str(transcript.pk), name),
-            '0',
-            transcript.strand,
-        ]) + '\n')
-
-    for transcript in transcripts:
-
-        chrom = transcript.chromosome
-
-        genebody = [transcript.start, transcript.end]
-        introns = exons_to_introns(transcript.exons)
-        if transcript.strand == '+':
-            promoter = [
-                max(transcript.start - 2500, 1),
-                min(transcript.start + 2499, chrom_sizes_dict[chrom]),
-            ]
-        elif transcript.strand == '-':
-            promoter = [
-                max(transcript.end - 2499, 1),
-                min(transcript.end + 2500, chrom_sizes_dict[chrom]),
-            ]
-
-        write_to_out(transcript, genebody, 'genebody')
-        write_to_out(transcript, promoter, 'promoter')
-        for i, exon in enumerate(transcript.exons):
-            write_to_out(transcript, exon, 'exon_{}'.format(str(i)))
-        for i, intron in enumerate(introns):
-            write_to_out(transcript, intron, 'intron_{}'.format(str(i)))
-
-    OUT.flush()
-
-
-def read_bigwig_average_over_bed_tab_file(tab_file_name):
+def read_bigwig_average_over_bed_tab_file(tab_file_path):
     '''
     Read values in bigWigAverageOverBed output file into dict.
     '''
-    def place_value(_dict, feature_name, value):
-        '''
-        Based on feature_name, place value in the appropriate location in
-        _dict.
-        '''
-        if 'exon' in feature_name or 'intron' in feature_name:
-            key = '{}s'.format(feature_name.split('_')[0])
-            index = int(feature_name.split('_')[1])
-            for _ in range((index + 1) - len(_dict[key])):
-                _dict[key].append(0.0)
-            _dict[key][index] = value
-        else:
-            _dict[feature_name] = value
-
-    transcript_values = dict()
-    with open(tab_file_name) as f:
+    locus_values = defaultdict(float)
+    with open(tab_file_path) as f:
         for line in f:
             name, size, covered, value_sum, mean, mean0 = line.strip().split()
-            pk = int(name.split('_')[0])
-            feature_name = name.split('{}_'.format(str(pk)))[1]
-            if pk not in transcript_values:
-                transcript_values[pk] = {
-                    'genebody': None,
-                    'promoter': None,
-                    'exons': [],
-                    'introns': [],
-                }
-            place_value(
-                transcript_values[pk], feature_name, float(value_sum))
-
-    pk_to_transcript = \
-        models.Transcript.objects.in_bulk(list(transcript_values.keys()))
-
-    out_dict = dict()
-    for pk, values in transcript_values.items():
-        out_dict[pk_to_transcript[pk]] = values
-
-    return out_dict
+            locus_pk = name.split('_')[0]
+            locus_values[locus_pk] += float(value_sum)
+    return locus_values
 
 
-def reconcile_stranded_coverage(transcripts, plus_values, minus_values):
+def reconcile_stranded_coverage(strand_dict, plus_values, minus_values):
     '''
     Considering plus and minus strand coverage values, return only coverage
     values of the appropriate strand.
     '''
-    transcript_values = {}
+    reconciled = dict()
+    for locus_pk, strand in strand_dict:
+        if strand is None:
+            reconciled[locus_pk] = plus_values[locus_pk] + \
+                minus_values[locus_pk]
+        elif strand == '+':
+            reconciled[locus_pk] = plus_values[locus_pk]
+        elif strand == '-':
+            reconciled[locus_pk] = minus_values[locus_pk]
+    return reconciled
 
-    for transcript in transcripts:
-        if transcript.strand == '+':
-            transcript_values[transcript] = plus_values[transcript]
-        elif transcript.strand == '-':
-            transcript_values[transcript] = minus_values[transcript]
 
-    return transcript_values
+def generate_locusgroup_bed(locus_group, output_file_obj):
+    '''
+    Write a BED file to output_file_obj containing entries for each locus in a
+    locus group.
+    '''
+    OUT = output_file_obj
+
+    def write_to_out(locus, interval, index):
+        '''
+        Write interval to OUT in BED6 format
+        '''
+        if locus.strand:
+            strand = locus.strand
+        else:
+            strand = '.'
+        OUT.write('\t'.join([
+            locus.chromosome,
+            str(interval[0] - 1),
+            str(interval[1]),
+            '{}_{}'.format(str(locus.pk), str(index)),
+            '0',
+            strand,
+        ]) + '\n')
+
+    chrom_sizes = json.loads(locus_group.assembly.chromosome_sizes)
+
+    for locus in models.Locus.objects.filter(group=locus_group):
+        for i, region in enumerate(locus.regions):
+
+            if locus_group.group_type in ['promoter', 'enhancer']:
+
+                center = math.floor((region[0] + region[1]) / 2)
+                if locus.strand == '+' or locus.strand is None:
+                    interval = [
+                        max(center - 2500, 1),
+                        min(center + 2499, chrom_sizes[locus.chromosome]),
+                    ]
+
+                elif locus.strand == '-':
+                    interval = [
+                        max(center - 2499, 1),
+                        min(center + 2500, chrom_sizes[locus.chromosome]),
+                    ]
+
+                write_to_out(locus, interval, i)
+
+            elif locus_group.group_type in ['genebody', 'mRNA']:
+                write_to_out(locus, region, i)
+
+    OUT.flush()

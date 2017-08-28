@@ -25,7 +25,7 @@ import os
 from tempfile import NamedTemporaryFile
 import json
 from analysis import metaplot
-from analysis.normalization import normalize_transcript_intersection_values
+from analysis.normalization import normalize_locus_intersection_values
 from analysis.expression import select_transcript_by_expression
 
 from scipy.spatial.distance import mahalanobis
@@ -96,39 +96,43 @@ def process_datasets(datasets, pca_transform=True):
     assembly_to_intersection_bed = dict()
     for ds in datasets:
         if ds.assembly not in assembly_to_intersection_bed:
-            assembly_to_intersection_bed[ds.assembly] = \
-                NamedTemporaryFile(mode='w', delete=False)
-            transcript_coverage.generate_transcript_bed(
-                ds.assembly.get_transcripts(),
-                json.loads(ds.assembly.chromosome_sizes),
-                assembly_to_intersection_bed[ds.assembly],
-            )
+            assembly_to_intersection_bed[ds.assembly] = []
+            for lg in models.LocusGroup.objects.filter(assembly=ds.assembly):
+                bed = NamedTemporaryFile(mode='w', delete=False)
+                transcript_coverage.generate_locusgroup_bed(lg, bed)
+                assembly_to_intersection_bed[ds.assembly].append({
+                    'locus_group': lg,
+                    'bed': bed,
+                })
 
-    gr_to_metaplot_bed = dict()
+    assembly_to_metaplot_bed = dict()
     for ds in datasets:
-        for gr in models.GenomicRegions.objects.filter(assembly=ds.assembly):
-            if gr not in gr_to_metaplot_bed:
-                gr_to_metaplot_bed[gr] = \
-                    NamedTemporaryFile(mode='w', delete=False)
-                metaplot.generate_metaplot_bed(
-                    gr,
-                    json.loads(gr.assembly.chromosome_sizes),
-                    gr_to_metaplot_bed[gr],
-                )
+        if ds.assembly not in assembly_to_metaplot_bed:
+            assembly_to_metaplot_bed[ds.assembly] = []
+            for lg in models.LocusGroup.objects.filter(assembly=ds.assembly):
+                bed = NamedTemporaryFile(mode='w', delete=False)
+                metaplot.generate_metaplot_bed(lg, bed)
+                assembly_to_metaplot_bed[ds.assembly].append({
+                    'locus_group': lg,
+                    'bed': bed,
+                })
 
     tasks = []
     for ds in datasets:
-        tasks.append(process_dataset_intersection.s(
-            ds.pk,
-            assembly_to_intersection_bed[ds.assembly].name,
-            bigwig_paths[ds.pk],
-        ))
+        intersection_beds = assembly_to_intersection_bed[ds.assembly]
+        for _dict in intersection_beds:
+            tasks.append(process_dataset_intersection.s(
+                ds.pk,
+                _dict['bed'].name,
+                bigwig_paths[ds.pk],
+            ))
 
-        for gr in models.GenomicRegions.objects.filter(assembly=ds.assembly):
+        metaplot_beds = assembly_to_metaplot_bed[ds.assembly]
+        for _dict in metaplot_beds:
             tasks.append(process_dataset_metaplot.s(
                 ds.pk,
-                gr.pk,
-                gr_to_metaplot_bed[gr].name,
+                _dict['locus_group'].pk,
+                _dict['bed'].name,
                 bigwig_paths[ds.pk],
             ))
 
@@ -139,70 +143,55 @@ def process_datasets(datasets, pca_transform=True):
     if pca_transform:
         transform_dataset_values_by_pca(datasets)
 
-    for temp_bed in assembly_to_intersection_bed.values():
-        temp_bed.close()
+    for _list in assembly_to_intersection_bed.values():
+        for _dict in _list:
+            _dict['bed'].close()
 
-    for temp_bed in gr_to_metaplot_bed.values():
-        temp_bed.close()
+    for _list in assembly_to_metaplot_bed.values():
+        for _dict in _list:
+            _dict['bed'].close()
 
 
 @task()
-def process_dataset_intersection(dataset_pk, transcript_bed, bigwigs):
+def process_dataset_intersection(dataset_pk, bed_path, bigwigs):
     dataset = models.Dataset.objects.get(pk=dataset_pk)
-    transcripts = dataset.assembly.get_transcripts()
-    transcript_values = transcript_coverage.get_transcript_values(
-        transcripts,
-        transcript_bed,
+    locus_values = transcript_coverage.get_locus_values(
+        bed_path,
         ambiguous_bigwig=bigwigs['ambiguous'],
         plus_bigwig=bigwigs['plus'],
         minus_bigwig=bigwigs['minus'],
     )
     normalized_values = \
-        normalize_transcript_intersection_values(transcript_values)
-    models.TranscriptIntersection.objects.filter(dataset=dataset).delete()
-    entries = []
-    for transcript, value_dict in transcript_values.items():
-        norm = normalized_values[transcript]
-        entries.append(models.TranscriptIntersection(
+        normalize_locus_intersection_values(locus_values, bed_path)
+    models.DatasetIntersection.objects.filter(dataset=dataset).delete()
+    intersections = []
+    for locus_pk, value in locus_values.items():
+        norm = normalized_values[locus_pk]
+        intersections.append(models.DatasetIntersection(
             dataset=dataset,
-            transcript=transcript,
-            promoter_value=value_dict['promoter'],
-            genebody_value=value_dict['genebody'],
-            exon_values=value_dict['exons'],
-            intron_values=value_dict['introns'],
-            normalized_promoter_value=norm['promoter'],
-            normalized_genebody_value=norm['genebody'],
-            normalized_coding_value=norm['coding'],
+            locus=models.Locus.objects.get(pk=locus_pk),
+            raw_value=value,
+            normalized_value=norm,
         ))
-    models.TranscriptIntersection.objects.bulk_create(entries)
+    models.DatasetIntersection.objects.bulk_create(intersections)
 
 
 @task()
-def process_dataset_metaplot(dataset_pk, gr_pk, bed_path, bigwigs):
-
+def process_dataset_metaplot(dataset_pk, locusgroup_pk, bed_path, bigwigs):
     dataset = models.Dataset.objects.get(pk=dataset_pk)
-    genomic_regions = models.GenomicRegions.objects.get(pk=gr_pk)
-
-    metaplot_values, intersection_values = metaplot.get_metaplot_values(
-        genomic_regions,
+    locus_group = models.LocusGroup.objects.get(pk=locusgroup_pk)
+    metaplot_out = metaplot.get_metaplot_values(
+        locus_group,
         bed_path=bed_path,
         ambiguous_bigwig=bigwigs['ambiguous'],
         plus_bigwig=bigwigs['plus'],
         minus_bigwig=bigwigs['minus'],
     )
-
     models.MetaPlot.objects.update_or_create(
         dataset=dataset,
-        genomic_regions=genomic_regions,
+        locus_group=locus_group,
         defaults={
-            'metaplot': json.dumps(metaplot_values),
-        }
-    )
-    models.IntersectionValues.objects.update_or_create(
-        dataset=dataset,
-        genomic_regions=genomic_regions,
-        defaults={
-            'intersection_values': json.dumps(intersection_values),
+            'metaplot': json.dumps(metaplot_out),
         }
     )
 
