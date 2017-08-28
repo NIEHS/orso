@@ -96,44 +96,38 @@ def process_datasets(datasets, pca_transform=True):
     assembly_to_intersection_bed = dict()
     for ds in datasets:
         if ds.assembly not in assembly_to_intersection_bed:
-            assembly_to_intersection_bed[ds.assembly] = []
+            assembly_to_intersection_bed[ds.assembly] = dict()
             for lg in models.LocusGroup.objects.filter(assembly=ds.assembly):
                 bed = NamedTemporaryFile(mode='w', delete=False)
                 transcript_coverage.generate_locusgroup_bed(lg, bed)
-                assembly_to_intersection_bed[ds.assembly].append({
-                    'locus_group': lg,
-                    'bed': bed,
-                })
+                assembly_to_intersection_bed[ds.assembly][lg] = bed
 
     assembly_to_metaplot_bed = dict()
     for ds in datasets:
         if ds.assembly not in assembly_to_metaplot_bed:
-            assembly_to_metaplot_bed[ds.assembly] = []
+            assembly_to_metaplot_bed[ds.assembly] = dict()
             for lg in models.LocusGroup.objects.filter(assembly=ds.assembly):
                 bed = NamedTemporaryFile(mode='w', delete=False)
                 metaplot.generate_metaplot_bed(lg, bed)
-                assembly_to_metaplot_bed[ds.assembly].append({
-                    'locus_group': lg,
-                    'bed': bed,
-                })
+                assembly_to_metaplot_bed[ds.assembly][lg] = bed
 
     tasks = []
     for ds in datasets:
         intersection_beds = assembly_to_intersection_bed[ds.assembly]
-        for _dict in intersection_beds:
+        for lg, bed in intersection_beds.items():
             tasks.append(process_dataset_intersection.s(
                 ds.pk,
-                _dict['locus_group'].pk,
-                _dict['bed'].name,
+                lg.pk,
+                bed.name,
                 bigwig_paths[ds.pk],
             ))
 
         metaplot_beds = assembly_to_metaplot_bed[ds.assembly]
-        for _dict in metaplot_beds:
+        for lg, bed in metaplot_beds.items():
             tasks.append(process_dataset_metaplot.s(
                 ds.pk,
-                _dict['locus_group'].pk,
-                _dict['bed'].name,
+                lg.pk,
+                bed.name,
                 bigwig_paths[ds.pk],
             ))
 
@@ -144,13 +138,10 @@ def process_datasets(datasets, pca_transform=True):
     if pca_transform:
         transform_dataset_values_by_pca(datasets)
 
-    for _list in assembly_to_intersection_bed.values():
-        for _dict in _list:
-            _dict['bed'].close()
-
-    for _list in assembly_to_metaplot_bed.values():
-        for _dict in _list:
-            _dict['bed'].close()
+    for bed in [x.values() for x in assembly_to_intersection_bed.values()]:
+        bed.close()
+    for bed in [x.values() for x in assembly_to_metaplot_bed.values()]:
+        bed.close()
 
 
 @task()
