@@ -1,44 +1,43 @@
 import requests
 import pyBigWig
-import numpy
+# import numpy
 import math
 import json
 from collections import defaultdict
 
 from django.db import models
 from django.conf import settings
+from django.contrib.contenttypes.fields import (GenericForeignKey,
+                                                GenericRelation)
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import JSONField, ArrayField
 from django.urls import reverse
 from picklefield.fields import PickledObjectField
 
-from analysis.variance import coeff_variance
+STRANDS = (('+', '+'), ('-', '-'))
+LOCUS_GROUP_TYPES = (
+    ('promoter', 'promoter'),
+    ('genebody', 'genebody'),
+    ('mRNA', 'mRNA'),
+    ('enhancer', 'enhancer'),
+)
 
 
 class MyUser(models.Model):
+    favorite_users = models.ManyToManyField(
+        'MyUser', symmetrical=False, blank=True)
+    favorite_data = models.ManyToManyField('Dataset', blank=True)
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL)
     slug = models.CharField(
         max_length=128)
-
-    favorite_users = models.ManyToManyField(
-        'MyUser', symmetrical=False, blank=True)
-    favorite_data = models.ManyToManyField(
-        'Dataset', blank=True)
 
     def get_user_favorites_count(self):
         pass
 
     def get_data_favorites_count(self):
         pass
-
-    def get_user_counts(self):
-        counts = dict()
-
-        counts['favorites'] = len(UserFavorite.objects.filter(owner=self))
-        counts['recommendations'] = \
-            len(UserRecommendation.objects.filter(owner=self))
-
-        return counts
 
     def get_user_details(self, my_user=None):
         detail = dict()
@@ -174,6 +173,7 @@ class MyUser(models.Model):
 
 class Project(models.Model):
     owners = models.ManyToManyField('MyUser', blank=True)
+
     name = models.CharField(max_length=128)
     description = models.TextField(blank=True)
 
@@ -182,17 +182,10 @@ class ExperimentType(models.Model):
     '''
     Experiment type, i.e. sequencing technology. Largely used organizationally
     '''
-    RELEVANT_REGIONS = (
-        ('coding', 'coding'),
-        ('genebody', 'genebody'),
-        ('promoter', 'promoter'),
-    )
-
     name = models.CharField(max_length=64)
     short_name = models.CharField(max_length=64)
     relevant_regions = models.CharField(
-        max_length=64,
-        choices=RELEVANT_REGIONS)
+        choices=LOCUS_GROUP_TYPES, max_length=64)
 
     def __str__(self):
         return self.name
@@ -200,10 +193,11 @@ class ExperimentType(models.Model):
 
 class Experiment(models.Model):
     experiment_type = models.ForeignKey('ExperimentType')
-    cell_type = models.CharField(max_length=128)
-    target = models.CharField(max_length=128, blank=True)
     owners = models.ManyToManyField('MyUser', blank=True)
     project = models.ForeignKey('Project', blank=True, null=True)
+
+    cell_type = models.CharField(max_length=128)
+    target = models.CharField(max_length=128, blank=True)
     name = models.CharField(max_length=128)
     slug = models.CharField(max_length=128)
     description = models.TextField(blank=True)
@@ -216,12 +210,12 @@ class Experiment(models.Model):
         return reverse('experiment', kwargs={'pk': self.pk})
 
     def get_urls(self):
-        add_favorite = \
-            reverse('api:experiment-add-favorite', kwargs={'pk': self.pk})
-        remove_favorite = \
-            reverse('api:experiment-remove-favorite', kwargs={'pk': self.pk})
-        hide_recommendation = \
-            reverse('api:experiment-hide-recommendation', kwargs={'pk': self.pk})
+        add_favorite = reverse(
+            'api:experiment-add-favorite', kwargs={'pk': self.pk})
+        remove_favorite = reverse(
+            'api:experiment-remove-favorite', kwargs={'pk': self.pk})
+        hide_recommendation = reverse(
+            'api:experiment-hide-recommendation', kwargs={'pk': self.pk})
 
         edit = reverse('update_experiment', kwargs={'pk': self.pk})
         delete = reverse('delete_experiment', kwargs={'pk': self.pk})
@@ -286,38 +280,6 @@ class Experiment(models.Model):
                 'regions_pk': gr.pk,
                 'assembly': gr.assembly.name,
                 'metaplot': metaplot,
-            })
-
-        return out
-
-    def get_average_intersections(self):
-        average_intersections = dict()
-        counts = defaultdict(int)
-
-        #  Add similar intersections together
-        for iv in IntersectionValues.objects.filter(dataset__experiment=self):
-            gr = iv.genomic_regions
-            counts[gr] += 1
-            if gr in average_intersections:
-                for i, entry in enumerate(iv.intersection_values):
-                    average_intersections[gr][i] += entry
-            else:
-                average_intersections[gr] = iv.intersection_values
-
-        #  Divide by assembly counts
-        for gr in average_intersections.keys():
-            count = counts[gr]
-            for i, entry in enumerate(average_intersections[gr]):
-                average_intersections[gr][i] = entry / count
-
-        #  Put into output format
-        out = []
-        for gr, intersection_values in average_intersections.items():
-            out.append({
-                'regions': gr.short_label,
-                'regions_pk': gr.pk,
-                'assembly': gr.assembly.name,
-                'intersection_values': intersection_values,
             })
 
         return out
@@ -419,19 +381,17 @@ class Experiment(models.Model):
 
 
 class Dataset(models.Model):
+    assembly = models.ForeignKey('Assembly')
+    experiment = models.ForeignKey('Experiment', blank=True, null=True)
+
+    name = models.CharField(max_length=128)
+    slug = models.CharField(max_length=128)
+    created = models.DateTimeField(auto_now_add=True)
     description = models.TextField(blank=True)
 
     ambiguous_url = models.URLField(null=True, blank=True)
     plus_url = models.URLField(null=True, blank=True)
     minus_url = models.URLField(null=True, blank=True)
-
-    experiment = models.ForeignKey('Experiment', blank=True, null=True)
-    name = models.CharField(max_length=128)
-    slug = models.CharField(
-        max_length=128)
-    created = models.DateTimeField(
-        auto_now_add=True)
-    assembly = models.ForeignKey('Assembly')
 
     class Meta:
         get_latest_by = 'created'
@@ -521,26 +481,10 @@ class Dataset(models.Model):
         return bool(self.plus_url) and bool(self.minus_url)
 
 
-class MetaPlot(models.Model):
-    genomic_regions = models.ForeignKey('GenomicRegions')
-    dataset = models.ForeignKey('Dataset')
-    metaplot = JSONField()
-    last_updated = models.DateTimeField(
-        auto_now=True)
-
-
-class IntersectionValues(models.Model):
-    genomic_regions = models.ForeignKey('GenomicRegions')
-    dataset = models.ForeignKey('Dataset')
-    intersection_values = JSONField()
-    last_updated = models.DateTimeField(
-        auto_now=True)
-
-
 class Favorite(models.Model):
     owner = models.ForeignKey('MyUser')
-    last_updated = models.DateTimeField(
-        auto_now=True)
+
+    last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
@@ -554,155 +498,10 @@ class ExperimentFavorite(Favorite):
     favorite = models.ForeignKey('Experiment')
 
 
-class Recommendation(models.Model):
-    owner = models.ForeignKey('MyUser')
-    last_updated = models.DateTimeField(
-        auto_now=True)
-    hidden = models.BooleanField(default=False)
-
-    class Meta:
-        abstract = True
-
-
-class UserRecommendation(Recommendation):
-    recommended = models.ForeignKey('MyUser', related_name='recommended')
-
-
-class ExperimentRecommendation(Recommendation):
-    recommended = models.ForeignKey('Experiment')
-
-    correlation_rank = models.IntegerField()
-    correlation_experiment = \
-        models.ForeignKey('Experiment', related_name='correlation')
-
-    metadata_rank = models.IntegerField()
-    metadata_experiment = \
-        models.ForeignKey('Experiment', related_name='metadata')
-
-    collaborative_rank = models.IntegerField()
-
-    class Meta:
-        unique_together = (
-            ('owner', 'recommended',),
-        )
-
-    def get_recommendation_data(self, my_user):
-        plot_data = dict()
-
-        rec_assemblies = set()
-        ref_assemblies = set()
-        for ds in Dataset.objects.filter(experiment=self.recommended):
-            rec_assemblies.add(ds.assembly.id)
-        for ds in Dataset.objects.filter(experiment=self.reference_experiment):
-            ref_assemblies.add(ds.assembly.id)
-        shared_assemblies = rec_assemblies & ref_assemblies
-
-        plot_data = dict()
-        plot_data['rec'] = self.recommended.get_average_intersections(
-            assemblies=shared_assemblies)
-        plot_data['ref'] = self.reference_experiment.get_average_intersections(
-            assemblies=shared_assemblies)
-
-        meta_data = self.recommended.get_metadata(my_user)
-        meta_data['reference_name'] = self.reference_experiment.name
-        urls = self.recommended.get_urls()
-        urls['reference_detail'] = \
-            reverse('experiment', kwargs={'pk': self.reference_experiment.pk})
-
-        return {
-            'plot_data': plot_data,
-            'meta_data': meta_data,
-            'urls': urls,
-        }
-
-
-class MetadataCorrelation(models.Model):
-    x_experiment = models.ForeignKey('Experiment', related_name='x_meta')
-    y_experiment = models.ForeignKey('Experiment', related_name='y_meta')
-
-    score = models.FloatField()
-    last_updated = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = (
-            ('x_experiment', 'y_experiment',),
-        )
-
-    @staticmethod
-    def get_score(exp_1, exp_2):
-        if exp_1.id < exp_2.id:
-            return MetadataCorrelation.objects.get(
-                x_experiment=exp_1, y_experiment=exp_2).score
-        else:
-            return MetadataCorrelation.objects.get(
-                x_experiment=exp_2, y_experiment=exp_1).score
-
-
-class ExperimentCorrelation(models.Model):
-    x_experiment = models.ForeignKey('Experiment', related_name='x_value')
-    y_experiment = models.ForeignKey('Experiment', related_name='y_value')
-    genomic_regions = models.ForeignKey('GenomicRegions')
-
-    score = models.FloatField()
-    last_updated = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = (
-            ('x_experiment', 'y_experiment', 'genomic_regions',),
-        )
-
-    @staticmethod
-    def get_score(exp_1, exp_2):
-        scores = []
-        if exp_1.id < exp_2.id:
-            corrs = ExperimentCorrelation.objects.filter(
-                x_experiment=exp_1, y_experiment=exp_2)
-        else:
-            corrs = ExperimentCorrelation.objects.filter(
-                x_experiment=exp_2, y_experiment=exp_1)
-        for c in corrs:
-            scores.append(c.score)
-        return max(scores)
-
-    @staticmethod
-    def get_correlation_stats(regions):
-        corr_values = []
-        for corr in ExperimentCorrelation.objects.filter(
-                genomic_regions=regions):
-            corr_values.append(corr.score)
-        if corr_values:
-            return (
-                numpy.mean(corr_values),
-                numpy.std(corr_values),
-            )
-        else:
-            return (None, None)
-
-    @staticmethod
-    def get_max_z_scores():
-        max_z_scores = defaultdict(float)
-        z_scores = defaultdict(list)
-
-        for gr in GenomicRegions.objects.all():
-            mean, std_dev = ExperimentCorrelation.get_correlation_stats(gr)
-            for corr in ExperimentCorrelation.objects.filter(
-                    genomic_regions=gr):
-                z_scores[(corr.x_experiment, corr.y_experiment)].append(
-                    (corr.score - mean) / std_dev)
-
-        for exps, scores in z_scores.items():
-            max_z_scores[exps] = max(scores)
-
-        return max_z_scores
-
-
 class Assembly(models.Model):
-    name = models.CharField(
-        unique=True,
-        max_length=32)
+    name = models.CharField(unique=True, max_length=32)
     chromosome_sizes = JSONField(blank=True, null=True)
-    last_updated = models.DateTimeField(
-        auto_now=True)
+    last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -722,26 +521,20 @@ class Assembly(models.Model):
 
 
 class Annotation(models.Model):
-    name = models.CharField(
-        max_length=32)
-    assembly = models.OneToOneField(
-        'Assembly',
-        on_delete=models.PROTECT,
-        primary_key=False,
-    )
-    gtf_file = models.FileField()
-    last_updated = models.DateTimeField(
-        auto_now=True)
+    assembly = models.ForeignKey('Assembly')
+
+    name = models.CharField(max_length=32)
+    last_updated = models.DateTimeField(auto_now=True)
 
 
 class PCA(models.Model):
     '''
-    scikit-learn PCA object. Used to transform transcript intersections and
+    scikit-learn PCA object. Used to transform locus intersections and
     find pairwise distances between datasets.
     '''
-    annotation = models.ForeignKey('Annotation')
-    selected_transcripts = models.ManyToManyField(
-        'Transcript', through='PCATranscriptOrder')
+    locus_group = models.ForeignKey('LocusGroup')
+    selected_loci = models.ManyToManyField(
+        'Locus', through='PCALocusOrder')
     experiment_type = models.ForeignKey('ExperimentType')
     transformed_datasets = models.ManyToManyField(
         'Dataset', through='PCATransformedValues')
@@ -758,20 +551,19 @@ class PCATransformedValues(models.Model):
     '''
     pca = models.ForeignKey('PCA')
     dataset = models.ForeignKey('Dataset')
-    transformed_values = ArrayField(models.FloatField(), size=3)
 
+    transformed_values = ArrayField(models.FloatField(), size=3)
     last_updated = models.DateTimeField(auto_now=True)
 
 
-class PCATranscriptOrder(models.Model):
+class PCALocusOrder(models.Model):
     '''
-    Used to store order for selected transcripts. Essential for
-    transformations.
+    Used to store order for selected loci. Essential for transformations.
     '''
     pca = models.ForeignKey('PCA')
-    transcript = models.ForeignKey('Transcript')
-    order = models.PositiveIntegerField()
+    locus = models.ForeignKey('Locus')
 
+    order = models.PositiveIntegerField()
     last_updated = models.DateTimeField(auto_now=True)
 
 
@@ -781,69 +573,61 @@ class TfidfVectorizer(models.Model):
     '''
     annotation = models.ForeignKey('Annotation')
     experiment_type = models.ForeignKey('ExperimentType')
-    tfidf_vectorizer = PickledObjectField()
 
+    tfidf_vectorizer = PickledObjectField()
     last_updated = models.DateTimeField(auto_now=True)
 
 
-class GenomicRegions(models.Model):
-    name = models.CharField(
-        max_length=32)
+class Locus(models.Model):
+    group = models.ForeignKey('LocusGroup')
+    content_type = models.ForeignKey(ContentType)
+    object_id = models.PositiveIntegerField()
+    reference = GenericForeignKey()
+
+    strand = models.CharField(choices=STRANDS, max_length=1, null=True)
+    chromosome = models.CharField(max_length=32)
+    regions = ArrayField(ArrayField(models.IntegerField(), size=2))
+
+
+class LocusGroup(models.Model):
     assembly = models.ForeignKey('Assembly')
-    bed_file = models.FileField()
-    short_label = models.CharField(max_length=32)
-    last_updated = models.DateTimeField(
-        auto_now=True)
-
-    variance = JSONField(blank=True, null=True)
-    # Use to only display/consider regions with high variance across datasets
-    variance_mask = JSONField(blank=True, null=True)
-
-    pca = JSONField(blank=True, null=True)
+    group_type = models.CharField(choices=LOCUS_GROUP_TYPES, max_length=32)
 
 
 class Gene(models.Model):
-    name = models.CharField(
-        max_length=32)
     annotation = models.ForeignKey('Annotation')
-
-    highest_exp_promoter_transcript = models.ForeignKey(
-        'Transcript', related_name='promoter', blank=True, null=True)
-    highest_exp_genebody_transcript = models.ForeignKey(
-        'Transcript', related_name='genebody', blank=True, null=True)
-    highest_exp_coding_transcript = models.ForeignKey(
-        'Transcript', related_name='coding', blank=True, null=True)
-
     selected_transcript = models.ForeignKey(
         'Transcript', related_name='selecting', blank=True, null=True)
 
-    promoter_var_rank = models.IntegerField(blank=True, null=True)
-    genebody_var_rank = models.IntegerField(blank=True, null=True)
-    coding_var_rank = models.IntegerField(blank=True, null=True)
+    name = models.CharField(
+        max_length=32)
 
-    def get_transcript_with_highest_expression(self):
-        expression_values = dict()
-        for transcript in Transcript.objects.filter(gene=self):
-            expression_values[transcript] = []
-            intersections = \
-                (TranscriptIntersection.objects.filter(transcript=transcript))
-            for intersection in intersections:
-                expression_values[transcript].append(
-                    intersection.normalized_genebody_value)
-        if expression_values:
-            return sorted(expression_values.items(),
-                          key=lambda x: (-numpy.median(x[1]), x[0].name))[0][0]
-        else:
-            return None
+    # TODO: fix for loci
+    # def get_transcript_with_highest_expression(self):
+    #     expression_values = dict()
+    #     for transcript in Transcript.objects.filter(gene=self):
+    #         expression_values[transcript] = []
+    #         intersections = \
+    #             (TranscriptIntersection.objects.filter(transcript=transcript))
+    #         for intersection in intersections:
+    #             expression_values[transcript].append(
+    #                 intersection.normalized_genebody_value)
+    #     if expression_values:
+    #         return sorted(
+    #             expression_values.items(),
+    #             key=lambda x: (-numpy.median(x[1]), x[0].name),
+    #         )[0][0]
+    #     else:
+    #         return None
 
 
 class Transcript(models.Model):
-    name = models.CharField(
-        max_length=32)
     gene = models.ForeignKey('Gene')
+    promoter_locus = GenericRelation(Locus, related_query_name='transcript')
+    genebody_locus = GenericRelation(Locus, related_query_name='transcript')
+    mRNA_locus = GenericRelation(Locus, related_query_name='transcript')
 
-    STRANDS = (('+', '+'), ('-', '-'))
-
+    name = models.CharField(max_length=32)
     chromosome = models.CharField(max_length=32)
     strand = models.CharField(choices=STRANDS, max_length=1)
     start = models.IntegerField()
@@ -859,52 +643,56 @@ class Transcript(models.Model):
             end__gte=start,
         )
 
-    def get_intersection_variance(self):
-        '''
-        For the transcript, return variance (coefficient of variance) across
-        intersection values.
-        '''
-        values = []
-        for intersection in TranscriptIntersection.objects.filter(
-                transcript=self):
-            values.append(intersection.normalized_genebody_value)
-        return coeff_variance(values)
+    # TODO: Fix for loci or cut
+    # def get_intersection_variance(self):
+    #     '''
+    #     For the transcript, return variance (coefficient of variance) across
+    #     intersection values.
+    #     '''
+    #     values = []
+    #     for intersection in TranscriptIntersection.objects.filter(
+    #             transcript=self):
+    #         values.append(intersection.normalized_genebody_value)
+    #     return coeff_variance(values)
 
-    def get_median_expression(self):
-        '''
-        For the transcript, return the median expression values from
-        intersections.
-        '''
-        values = []
-        for intersection in TranscriptIntersection.objects.filter(
-            transcript=self,
-            dataset__experiment__experiment_type__name='RNA-seq',
-        ):
-            values.append(intersection.normalized_coding_value)
-        return numpy.median(values)
+    # TODO: Fix for loci
+    # def get_median_expression(self):
+    #     '''
+    #     For the transcript, return the median expression values from
+    #     intersections.
+    #     '''
+    #     values = []
+    #     for intersection in TranscriptIntersection.objects.filter(
+    #         transcript=self,
+    #         dataset__experiment__experiment_type__name='RNA-seq',
+    #     ):
+    #         values.append(intersection.normalized_coding_value)
+    #     return numpy.median(values)
 
 
-class TranscriptIntersection(models.Model):
-    transcript = models.ForeignKey('Transcript')
+class Enhancer(models.Model):
+    annotation = models.ForeignKey('Annotation')
+    locus = GenericRelation(Locus, related_query_name='enhancer')
+
+    name = models.CharField(max_length=32)
+    chromosome = models.CharField(max_length=32)
+    start = models.IntegerField()
+    end = models.IntegerField()
+
+
+class DatasetIntersection(models.Model):
+    locus = models.ForeignKey('Locus')
     dataset = models.ForeignKey('Dataset')
 
-    promoter_value = models.FloatField()
-    genebody_value = models.FloatField()
-    exon_values = ArrayField(models.FloatField())
-    intron_values = ArrayField(models.FloatField())
-
-    normalized_promoter_value = models.FloatField()
-    normalized_genebody_value = models.FloatField()
-    normalized_coding_value = models.FloatField()
+    raw_value = models.FloatField()
+    normalized_value = models.FloatField()
 
 
 class ExperimentIntersection(models.Model):
-    transcript = models.ForeignKey('Transcript')
+    locus = models.ForeignKey('Locus')
     experiment = models.ForeignKey('Experiment')
 
-    average_promoter_value = models.FloatField()
-    average_genebody_value = models.FloatField()
-    average_coding_value = models.FloatField()
+    average_value = models.FloatField()
 
 
 class DatasetDistance(models.Model):
@@ -965,3 +753,11 @@ class ExperimentMetadataDistance(ExperimentDistance):
     Distance between experiments considering metadata values.
     '''
     distance = models.FloatField()
+
+
+class MetaPlot(models.Model):
+    locus_group = models.ForeignKey('LocusGroup')
+    dataset = models.ForeignKey('Dataset')
+
+    metaplot = JSONField()
+    last_updated = models.DateTimeField(auto_now=True)
