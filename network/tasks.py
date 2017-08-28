@@ -138,10 +138,12 @@ def process_datasets(datasets, pca_transform=True):
     if pca_transform:
         transform_dataset_values_by_pca(datasets)
 
-    for bed in [x.values() for x in assembly_to_intersection_bed.values()]:
-        bed.close()
-    for bed in [x.values() for x in assembly_to_metaplot_bed.values()]:
-        bed.close()
+    for bed_dict in assembly_to_intersection_bed.values():
+        for bed in bed_dict.values():
+            bed.close()
+    for bed_dict in assembly_to_metaplot_bed.values():
+        for bed in bed_dict.values():
+            bed.close()
 
 
 @task()
