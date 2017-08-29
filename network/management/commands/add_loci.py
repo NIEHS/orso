@@ -111,16 +111,6 @@ def add_gene_loci(assembly_name, annotation_gtf, annotation_table):
             annotation=annotation_obj,
         )
 
-        transcript_obj = models.Transcript.objects.create(
-            name=tr_name,
-            gene=associated_gene,
-            start=transcript['start'],
-            end=transcript['end'],
-            chromosome=transcript['chromosome'],
-            strand=transcript['strand'],
-            exons=transcript['exons'],
-        )
-
         #  Add promoter locus
         if transcript['strand'] == '+':
             _region = [transcript['start'], transcript['start']]
@@ -128,37 +118,41 @@ def add_gene_loci(assembly_name, annotation_gtf, annotation_table):
             _region = [transcript['end'], transcript['end']]
         else:
             raise ValueError('Transcript is without strand value.')
-        transcript_obj.promoter_locus.create(
+        promoter_locus = models.Locus.objects.create(
             group=promoter_group,
-            reference=transcript_obj,
             strand=transcript['strand'],
             chromosome=transcript['chromosome'],
             regions=[_region],
         )
-        # transcript_obj.promoter_locus = promoter_locus
-        # transcript_obj.save()
 
         # Add genebody locus
-        transcript_obj.genebody_locus.create(
+        genebody_locus = models.Locus.objects.create(
             group=genebody_group,
-            reference=transcript_obj,
             strand=transcript['strand'],
             chromosome=transcript['chromosome'],
             regions=[[transcript['start'], transcript['end']]],
         )
-        # transcript_obj.genebody_locus = genebody_locus
-        # transcript_obj.save()
 
         # Add mRNA locus
-        transcript_obj.mRNA_locus.create(
+        mRNA_locus = models.Locus.objects.create(
             group=mRNA_group,
-            reference=transcript_obj,
             strand=transcript['strand'],
             chromosome=transcript['chromosome'],
             regions=transcript['exons'],
         )
-        # transcript_obj.mRNA_locus = mRNA_locus
-        # transcript_obj.save()
+
+        models.Transcript.objects.create(
+            name=tr_name,
+            gene=associated_gene,
+            start=transcript['start'],
+            end=transcript['end'],
+            chromosome=transcript['chromosome'],
+            strand=transcript['strand'],
+            exons=transcript['exons'],
+            promoter_locus=promoter_locus,
+            genebody_locus=genebody_locus,
+            mRNA_locus=mRNA_locus,
+        )
 
 
 def add_enhancer_loci(assembly_name, enhancer_bed_file):
@@ -187,22 +181,20 @@ def add_enhancer_loci(assembly_name, enhancer_bed_file):
             start = int(start) + 1
             end = int(end)
 
-            enhancer_obj = models.Enhancer.objects.create(
+            locus = models.Locus.objects.create(
+                group=enhancer_group,
+                chromosome=chromosome,
+                regions=[[start, end]],
+            )
+
+            models.Enhancer.objects.create(
                 annotation=annotation_obj,
                 name=name,
                 chromosome=chromosome,
                 start=start,
                 end=end,
+                locus=locus,
             )
-
-            enhancer_obj.locus.create(
-                group=enhancer_group,
-                reference=enhancer_obj,
-                chromosome=chromosome,
-                regions=[[start, end]],
-            )
-            # enhancer_obj.locus = locus_obj
-            # enhancer_obj.save()
 
 
 class Command(BaseCommand):

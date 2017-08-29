@@ -7,9 +7,9 @@ from collections import defaultdict
 
 from django.db import models
 from django.conf import settings
-from django.contrib.contenttypes.fields import (GenericForeignKey,
-                                                GenericRelation)
-from django.contrib.contenttypes.models import ContentType
+# from django.contrib.contenttypes.fields import (GenericForeignKey,
+#                                                 GenericRelation)
+# from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import JSONField, ArrayField
 from django.urls import reverse
 from picklefield.fields import PickledObjectField
@@ -580,9 +580,6 @@ class TfidfVectorizer(models.Model):
 
 class Locus(models.Model):
     group = models.ForeignKey('LocusGroup')
-    content_type = models.ForeignKey(ContentType)
-    object_id = models.PositiveIntegerField()
-    reference = GenericForeignKey()
 
     strand = models.CharField(choices=STRANDS, max_length=1, null=True)
     chromosome = models.CharField(max_length=32)
@@ -623,9 +620,9 @@ class Gene(models.Model):
 
 class Transcript(models.Model):
     gene = models.ForeignKey('Gene')
-    promoter_locus = GenericRelation(Locus, related_query_name='transcript')
-    genebody_locus = GenericRelation(Locus, related_query_name='transcript')
-    mRNA_locus = GenericRelation(Locus, related_query_name='transcript')
+    promoter_locus = models.ForeignKey('Locus', related_name='from_promoter')
+    genebody_locus = models.ForeignKey('Locus', related_name='from_genebody')
+    mRNA_locus = models.ForeignKey('Locus', related_name='from_mRNA')
 
     name = models.CharField(max_length=32)
     chromosome = models.CharField(max_length=32)
@@ -672,7 +669,7 @@ class Transcript(models.Model):
 
 class Enhancer(models.Model):
     annotation = models.ForeignKey('Annotation')
-    locus = GenericRelation(Locus, related_query_name='enhancer')
+    locus = models.ForeignKey('Locus')
 
     name = models.CharField(max_length=32)
     chromosome = models.CharField(max_length=32)
