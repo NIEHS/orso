@@ -1,6 +1,6 @@
 import requests
 import pyBigWig
-# import numpy
+import numpy
 import math
 import json
 from collections import defaultdict
@@ -599,23 +599,25 @@ class Gene(models.Model):
     name = models.CharField(
         max_length=32)
 
-    # TODO: fix for loci
-    # def get_transcript_with_highest_expression(self):
-    #     expression_values = dict()
-    #     for transcript in Transcript.objects.filter(gene=self):
-    #         expression_values[transcript] = []
-    #         intersections = \
-    #             (TranscriptIntersection.objects.filter(transcript=transcript))
-    #         for intersection in intersections:
-    #             expression_values[transcript].append(
-    #                 intersection.normalized_genebody_value)
-    #     if expression_values:
-    #         return sorted(
-    #             expression_values.items(),
-    #             key=lambda x: (-numpy.median(x[1]), x[0].name),
-    #         )[0][0]
-    #     else:
-    #         return None
+    def get_transcript_with_highest_expression(self):
+        expression_values = dict()
+        for transcript in Transcript.objects.filter(gene=self):
+            expression_values[transcript] = []
+            intersections = \
+                DatasetIntersection.objects.filter(
+                    locus=transcript.mRNA_locus,
+                    dataset__experiment__experiment_type__name='RNA-seq',
+                )
+            for intersection in intersections:
+                expression_values[transcript].append(
+                    intersection.normalized_value)
+        if expression_values:
+            return sorted(
+                expression_values.items(),
+                key=lambda x: (-numpy.median(x[1]), x[0].name),
+            )[0][0]
+        else:
+            return None
 
 
 class Transcript(models.Model):
