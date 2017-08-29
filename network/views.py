@@ -199,21 +199,24 @@ class Explore(TemplateView, AddMyUserMixin):
 
         for pca in models.PCA.objects.all():
             exp_name = pca.experiment_type.name
-            assembly_name = pca.annotation.assembly.name
 
-            if assembly_name not in pca_lookup:
-                pca_lookup[assembly_name] = dict()
-            pca_lookup[assembly_name][exp_name] = pca.pk
+            assembly_name = pca.locus_group.assembly.name
+            group_name = pca.locus_group.group_type
+            pair = (assembly_name, group_name)
 
-            if assembly_name not in available_exp_types:
-                available_exp_types[assembly_name] = []
-            if exp_name not in available_exp_types[assembly_name]:
-                available_exp_types[assembly_name].append(exp_name)
+            if pair not in pca_lookup:
+                pca_lookup[pair] = dict()
+            pca_lookup[pair][exp_name] = pca.pk
+
+            if pair not in available_exp_types:
+                available_exp_types[pair] = []
+            if exp_name not in available_exp_types[pair]:
+                available_exp_types[pair].append(exp_name)
 
             if exp_name not in available_assemblies:
                 available_assemblies[exp_name] = []
-            if assembly_name not in available_assemblies[exp_name]:
-                available_assemblies[exp_name].append(assembly_name)
+            if pair not in available_assemblies[exp_name]:
+                available_assemblies[exp_name].append(pair)
 
         context['pca_lookup'] = pca_lookup
         context['available_experiment_types'] = available_exp_types
