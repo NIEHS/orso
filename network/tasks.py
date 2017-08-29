@@ -2,6 +2,7 @@ from celery.decorators import task, periodic_task
 from celery import group
 from django.utils import timezone
 from django.core.cache import cache
+from django.db.models import Q
 
 from analysis.correlation import Correlation
 from analysis import transcript_coverage
@@ -533,194 +534,213 @@ def _get_associated_transcript(gene_pk):
 
 
 @task
-def pca_analysis(annotation, size_threshold=200):
+def pca_analysis():
+    '''
+    Perform PCA analysis for each locus group.
+    '''
+    tasks = []
 
-    def run_in_parallel(obj_list, task):
-        res = group(task.s(obj.pk) for obj in obj_list)()
-        return res.get()
+    for lg in models.LocusGroup.objects.all():
+        for exp_type in models.ExperimentType.objects.all():
+            tasks.append(_pca_analysis.s(lg.pk, exp_type.pk))
 
-    genes = models.Gene.objects.filter(annotation=annotation)
-    transcripts = run_in_parallel(genes, _get_associated_transcript)
-    transcripts = [t for t in transcripts if t is not None]
+    job = group(tasks)
+    results = job.apply_async()
+    results.join()
 
-    for exp_type in models.ExperimentType.objects.all():
+
+@task
+def _pca_analysis(locusgroup_pk, experimenttype_pk, size_threshold=200):
+    locus_group = models.LocusGroup.objects.get(pk=locusgroup_pk)
+    experiment_type = models.ExperimentType.objects.get(pk=experimenttype_pk)
+
+    if locus_group.group_type in ['promoter', 'genebody', 'mRNA']:
+
+        # Get all transcripts associated with the locus group and that are the
+        # selected transcript for a gene
+        transcripts = models.Transcript.objects.filter(
+            gene__annotation__assembly=locus_group.assembly,
+            selecting__isnull=False,
+        )
 
         # Filter transcripts by size if not microRNA-seq
-        if exp_type.name != 'microRNA-seq':
+        if experiment_type.name != 'microRNA-seq':
             transcripts = [
                 t for t in transcripts
                 if t.end - t.start + 1 >= size_threshold
             ]
 
-        datasets = models.Dataset.objects.filter(
-            assembly__annotation=annotation,
-            experiment__experiment_type=exp_type,
+        # Get loci associated with the transcripts and locus group
+        query = Q(group=locus_group) & (
+            Q(from_promoter__in=transcripts) |
+            Q(from_genebody__in=transcripts) |
+            Q(from_mRNA__in=transcripts)
         )
+        loci = models.Locus.objects.filter(query)
 
-        if datasets:
-            pca = PCA(n_components=3)
-            rf = RandomForestClassifier(n_estimators=1000)
+    elif locus_group.group_type in ['enhancer']:
+        loci = models.Locus.objects.filter(group=locus_group)
 
-            intersection_values = dict()
-            experiment_pks = dict()
-            cell_types = dict()
-            targets = dict()
+    datasets = models.Dataset.objects.filter(
+        assembly=locus_group.assembly,
+        experiment__experiment_type=experiment_type,
+    )
 
-            for ds in datasets:
+    if datasets:
+        pca = PCA(n_components=3)
+        rf = RandomForestClassifier(n_estimators=1000)
 
-                exp = models.Experiment.objects.get(dataset=ds)
-                experiment_pks[ds] = exp.pk
-                cell_types[ds] = exp.cell_type
-                targets[ds] = exp.target
+        intersection_values = dict()
+        experiment_pks = dict()
+        cell_types = dict()
+        targets = dict()
 
-                intersection_values[ds] = dict()
+        # Get associated data
+        for ds in datasets:
+            exp = models.Experiment.objects.get(dataset=ds)
+            experiment_pks[ds] = exp.pk
+            cell_types[ds] = exp.cell_type
+            targets[ds] = exp.target
 
-                transcripts = sorted(transcripts, key=lambda x: x.pk)
-                intersections = (
-                    models.TranscriptIntersection
-                          .objects.filter(dataset=ds,
-                                          transcript__in=transcripts)
-                          .order_by('transcript__pk')
-                )
+            intersection_values[ds] = dict()
 
-                for transcript, intersection in zip(
-                        transcripts, intersections):
-                    if exp_type.relevant_regions == 'genebody':
-                        intersection_values[ds][transcript] = \
-                            intersection.normalized_genebody_value
-                    elif exp_type.relevant_regions == 'coding':
-                        intersection_values[ds][transcript] = \
-                            intersection.normalized_coding_value
-                    elif exp_type.relevant_regions == 'promoter':
-                        intersection_values[ds][transcript] = \
-                            intersection.normalized_promoter_value
-
-            # Filter transcripts by RF importance
-            _intersection_values = []
-            _cell_types = []
-            _targets = []
-
-            for ds in datasets:
-                _intersection_values.append([])
-                for ts in transcripts:
-                    _intersection_values[-1].append(
-                        intersection_values[ds][ts])
-                _cell_types.append(cell_types[ds])
-                _targets.append(targets[ds])
-
-            cell_type_importances = rf.fit(
-                _intersection_values, _cell_types).feature_importances_
-            target_importances = rf.fit(
-                _intersection_values, _cell_types).feature_importances_
-            totals = [x + y for x, y in zip(cell_type_importances,
-                                            target_importances)]
-            filtered_transcripts = \
-                [ts for ts, total in sorted(zip(transcripts, totals),
-                                            key=lambda x: -x[1])][:1000]
-
-            # Filter datasets by Mahalanobis distance after PCA
-            filtered_datasets = []
-            if len(datasets) >= 10:
-                _intersection_values = []
-                for ds in datasets:
-                    _intersection_values.append([])
-                    for ts in filtered_transcripts:
-                        _intersection_values[-1].append(
-                            intersection_values[ds][ts])
-
-                fitted = pca.fit_transform(_intersection_values)
-
-                mean = numpy.mean(fitted, axis=0)
-                cov = numpy.cov(fitted, rowvar=False)
-                inv = numpy.linalg.inv(cov)
-                m_dist = []
-                for vector in fitted:
-                    m_dist.append(mahalanobis(vector, mean, inv))
-
-                Q1 = numpy.percentile(m_dist, 25)
-                Q3 = numpy.percentile(m_dist, 75)
-                cutoff = Q3 + 1.5 * (Q3 - Q1)
-
-                filtered_datasets = []
-                for dist, ds in zip(m_dist, datasets):
-                    if dist < cutoff:
-                        filtered_datasets.append(ds)
-            if len(filtered_datasets) <= 1:
-                filtered_datasets = datasets
-
-            # Fit PCA with filtered transcripts and filtered datasets
-            _intersection_values = []
-            for ds in filtered_datasets:
-                _intersection_values.append([])
-                for ts in filtered_transcripts:
-                    _intersection_values[-1].append(
-                        intersection_values[ds][ts])
-            fitted = pca.fit_transform(_intersection_values)
-            if len(fitted) > 1:
-                cov = numpy.cov(fitted, rowvar=False)
-                if len(_intersection_values) > 3:
-                    inv = numpy.linalg.inv(cov)
-                else:
-                    inv = numpy.linalg.pinv(cov)
-            else:
-                cov = None
-                inv = None
-
-            # Fit values to PCA, create the associated PCA plot
-            fitted_values = []
-            pca_plot = []
-            for ds in datasets:
-                _intersection_values = []
-                for ts in filtered_transcripts:
-                    _intersection_values.append(
-                        intersection_values[ds][ts])
-                fitted_values.append(pca.transform([_intersection_values])[0])
-
-                pca_plot.append({
-                    'dataset_pk': ds.pk,
-                    'experiment_pk': experiment_pks[ds],
-                    'experiment_cell_type': cell_types[ds],
-                    'experiment_target': targets[ds],
-                    'transformed_values': fitted_values[-1].tolist(),
-                })
-
-            # Update or create the PCA object
-            pca, created = models.PCA.objects.update_or_create(
-                annotation=annotation,
-                experiment_type=exp_type,
-                defaults={
-                    'plot': pca_plot,
-                    'pca': pca,
-                    'covariation_matrix': cov,
-                    'inverse_covariation_matrix': inv,
-                },
+            loci = sorted(loci, key=lambda x: x.pk)
+            intersections = (
+                models.DatasetIntersection
+                      .objects.filter(dataset=ds,
+                                      locus__in=loci)
+                      .order_by('locus__pk')
             )
 
-            # Set the PCA to transcripts relationship
-            if not created:
-                pca.selected_transcripts.clear()
-            _pca_transcript_orders = []
-            for i, transcript in enumerate(filtered_transcripts):
-                _pca_transcript_orders.append(models.PCATranscriptOrder(
-                    pca=pca,
-                    transcript=transcript,
-                    order=i,
-                ))
-            models.PCATranscriptOrder.objects.bulk_create(
-                _pca_transcript_orders)
+            for locus, intersection in zip(loci, intersections):
+                intersection_values[ds][locus] = intersection.normalized_value
 
-            # Set the PCA to datasets relationship
-            if not created:
-                pca.transformed_datasets.clear()
-            _pca_transformed_datasets = []
-            for ds, values in zip(datasets, fitted_values):
-                _pca_transformed_datasets.append(models.PCATransformedValues(
-                    pca=pca,
-                    dataset=ds,
-                    transformed_values=values.tolist(),
-                ))
-            models.PCATransformedValues.objects.bulk_create(
-                _pca_transformed_datasets)
+        # Filter loci by RF importance
+        _intersection_values = []
+        _cell_types = []
+        _targets = []
+
+        for ds in datasets:
+            _intersection_values.append([])
+            for locus in loci:
+                _intersection_values[-1].append(
+                    intersection_values[ds][locus])
+            _cell_types.append(cell_types[ds])
+            _targets.append(targets[ds])
+
+        cell_type_importances = rf.fit(
+            _intersection_values, _cell_types).feature_importances_
+        target_importances = rf.fit(
+            _intersection_values, _cell_types).feature_importances_
+        totals = [x + y for x, y in zip(cell_type_importances,
+                                        target_importances)]
+        filtered_loci = \
+            [locus for locus, total in sorted(zip(loci, totals),
+                                              key=lambda x: -x[1])][:1000]
+
+        # Filter datasets by Mahalanobis distance after PCA
+        filtered_datasets = []
+        if len(datasets) >= 10:
+            _intersection_values = []
+            for ds in datasets:
+                _intersection_values.append([])
+                for locus in filtered_loci:
+                    _intersection_values[-1].append(
+                        intersection_values[ds][locus])
+
+            fitted = pca.fit_transform(_intersection_values)
+
+            mean = numpy.mean(fitted, axis=0)
+            cov = numpy.cov(fitted, rowvar=False)
+            inv = numpy.linalg.inv(cov)
+            m_dist = []
+            for vector in fitted:
+                m_dist.append(mahalanobis(vector, mean, inv))
+
+            Q1 = numpy.percentile(m_dist, 25)
+            Q3 = numpy.percentile(m_dist, 75)
+            cutoff = Q3 + 1.5 * (Q3 - Q1)
+
+            filtered_datasets = []
+            for dist, ds in zip(m_dist, datasets):
+                if dist < cutoff:
+                    filtered_datasets.append(ds)
+        if len(filtered_datasets) <= 1:
+            filtered_datasets = datasets
+
+        # Fit PCA with filtered transcripts and filtered datasets
+        _intersection_values = []
+        for ds in filtered_datasets:
+            _intersection_values.append([])
+            for locus in filtered_loci:
+                _intersection_values[-1].append(
+                    intersection_values[ds][locus])
+        fitted = pca.fit_transform(_intersection_values)
+        if len(fitted) > 1:
+            cov = numpy.cov(fitted, rowvar=False)
+            if len(_intersection_values) > 3:
+                inv = numpy.linalg.inv(cov)
+            else:
+                inv = numpy.linalg.pinv(cov)
+        else:
+            cov = None
+            inv = None
+
+        # Fit values to PCA, create the associated PCA plot
+        fitted_values = []
+        pca_plot = []
+        for ds in datasets:
+            _intersection_values = []
+            for locus in filtered_loci:
+                _intersection_values.append(
+                    intersection_values[ds][locus])
+            fitted_values.append(pca.transform([_intersection_values])[0])
+
+            pca_plot.append({
+                'dataset_pk': ds.pk,
+                'experiment_pk': experiment_pks[ds],
+                'experiment_cell_type': cell_types[ds],
+                'experiment_target': targets[ds],
+                'transformed_values': fitted_values[-1].tolist(),
+            })
+
+        # Update or create the PCA object
+        pca, created = models.PCA.objects.update_or_create(
+            locus_group=locus_group,
+            experiment_type=experiment_type,
+            defaults={
+                'plot': pca_plot,
+                'pca': pca,
+                'covariation_matrix': cov,
+                'inverse_covariation_matrix': inv,
+            },
+        )
+
+        # Set the PCA to loci relationships
+        if not created:
+            pca.selected_loci.clear()
+        _pca_locus_orders = []
+        for i, transcript in enumerate(filtered_loci):
+            _pca_locus_orders.append(models.PCALocusOrder(
+                pca=pca,
+                locus=locus,
+                order=i,
+            ))
+        models.PCALocusOrder.objects.bulk_create(
+            _pca_locus_orders)
+
+        # Set the PCA to datasets relationship
+        if not created:
+            pca.transformed_datasets.clear()
+        _pca_transformed_datasets = []
+        for ds, values in zip(datasets, fitted_values):
+            _pca_transformed_datasets.append(models.PCATransformedValues(
+                pca=pca,
+                dataset=ds,
+                transformed_values=values.tolist(),
+            ))
+        models.PCATransformedValues.objects.bulk_create(
+            _pca_transformed_datasets)
 
 
 @task
@@ -911,3 +931,39 @@ def set_experiment_distances(experiments):
                 ]):
                     set_experiment_data_distance.delay(exp_1.pk, exp_2.pk)
                     set_experiment_metadata_distance.delay(exp_1.pk, exp_2.pk)
+
+
+@task
+def set_selected_transcripts_for_genes():
+    '''
+    For each gene set the selected transcript using expression values.
+    '''
+    job = group(_set_selected_transcript_for_gene.s(g.pk)
+                for g in models.Gene.objects.all())
+    job.apply_async()
+
+
+@task
+def _set_selected_transcript_for_gene(gene_pk):
+    '''
+    Set selected transcript for a single gene.
+    '''
+    gene = models.Gene.objects.get(pk=gene_pk)
+    transcripts = models.Transcript.objects.filter(gene=gene).order_by(
+        'name', 'pk')
+
+    if transcripts:
+        # If no DatasetIntersection object exists for transcripts, the
+        # following will return None
+        transcript_w_highest_expression = \
+            gene.get_transcript_with_highest_expression()
+
+        if transcript_w_highest_expression:
+            transcript = transcript_w_highest_expression
+        else:
+            transcript = transcripts[0]
+    else:
+        transcript = None
+
+    gene.selected_transcript = transcript
+    gene.save()
