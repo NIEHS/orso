@@ -7,9 +7,6 @@ from collections import defaultdict
 
 from django.db import models
 from django.conf import settings
-# from django.contrib.contenttypes.fields import (GenericForeignKey,
-#                                                 GenericRelation)
-# from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import JSONField, ArrayField
 from django.urls import reverse
 from picklefield.fields import PickledObjectField
