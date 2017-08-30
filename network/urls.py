@@ -30,12 +30,8 @@ urlpatterns = [
 
     url(r'^explore/$', views.Explore.as_view(), name='explore'),
 
-    url(r'^experiment/(?P<pk>\d+)/similar_values/$',
-        views.SimilarValuesExperiments.as_view(),
-        name='similar_values'),
-    url(r'^experiment/(?P<pk>\d+)/similar_metadata/$',
-        views.SimilarMetadataExperiments.as_view(),
-        name='similar_metadata'),
+    url(r'^experiment/(?P<pk>\d+)/similar_experiments/$',
+        views.SimilarExperiments.as_view(), name='similar_experiments'),
 
     url(r'^user/(?P<pk>\d+)/$', views.MyUser.as_view(), name='user'),
 

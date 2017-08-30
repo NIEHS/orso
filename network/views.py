@@ -464,6 +464,8 @@ class FavoriteExperiments(ExperimentList):
         return qs
 
 
+# TODO: Have RecommendedExperiments and SimilarExperiments inherit from the
+# same class
 class RecommendedExperiments(ExperimentList):
     model = models.Experiment
     template_name = 'network/recommended_experiments.html'
@@ -536,39 +538,65 @@ class SimilarExperiments(ExperimentList):
     model = models.Experiment
     template_name = 'network/similar_experiments.html'
     form_class = forms.SimilarExperimentFilterForm
-    correlation_model = None
 
     def get_queryset(self):
-
         exp = models.Experiment.objects.get(pk=self.kwargs['pk'])
-        assemblies = \
-            models.Assembly.objects.filter(dataset__experiment=exp)
 
-        base_query = Q()
-        for a in assemblies:
-            base_query |= Q(dataset__assembly=a)
-
-        form_query = Q()
+        order = self.form_class.order_choices[0][0]
         if self.form.is_valid():
-            form_query &= self.form.get_query()
-        qs = self.model.objects.filter(
-            base_query & form_query).exclude(pk=exp.pk).distinct().all()
+            order = self.form.get_order()
+
+        # Get recommended experiments
+        if order == 'correlation_rank':
+            _query = Q(network_experimentdatadistance_first__experiment_2=exp)  # noqa
+            _query &= ~Q(network_experimentdatadistance_second__experiment_1=exp)  # noqa
+        elif order == 'metadata_rank':
+            _query = Q(network_experimentmetadatadistance_first__experiment_2=exp)  # noqa
+            _query &= ~Q(network_experimentmetadatadistance_second__experiment_1__in=exp)  # noqa
+
+        if self.form.is_valid():
+            _query &= self.form.get_query()
+
+        if order == 'correlation_rank':
+            agg = 'network_experimentdatadistance_first__distance'
+        elif order == 'metadata_rank':
+            agg = 'network_experimentmetadatadistance_first__distance'
+        qs = (self.model
+                  .objects
+                  .filter(_query)
+                  .annotate(min_distance=Min(agg))
+                  .order_by('min_distance'))
 
         for obj in qs:
             obj.plot_data = obj.get_average_metaplots()
             obj.meta_data = obj.get_metadata(self.my_user)
             obj.urls = obj.get_urls()
-            obj.score = self.correlation_model.get_score(exp, obj)
 
-        return sorted(qs, key=lambda x: x.score)
+        return qs
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
 
-class SimilarValuesExperiments(SimilarExperiments):
-    correlation_model = models.ExperimentCorrelation
+        exp = models.Experiment.objects.get(pk=self.kwargs['pk'])
 
+        order = self.form_class.order_choices[0][0]
+        if self.form.is_valid():
+            order = self.form.get_order()
 
-class SimilarMetadataExperiments(SimilarExperiments):
-    correlation_model = models.MetadataCorrelation
+        # Get score distribution
+        _query = Q(experiment_2=exp)
+        _query &= ~Q(experiment_1=exp)
+
+        if order == 'correlation_rank':
+            all_distances = models.ExperimentDataDistance.objects.filter(
+                _query).values_list('distance', flat=True)
+        elif order == 'metadata_rank':
+            all_distances = models.ExperimentMetadataDistance.objects.filter(
+                _query).values_list('distance', flat=True)
+
+        context['all_distances'] = list(all_distances)
+
+        return context
 
 
 class PCA(AddMyUserMixin, DetailView):

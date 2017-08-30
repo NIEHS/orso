@@ -23,8 +23,7 @@
             {% endif %}
         </div>
         <div class="col-sm-4">
-            <a href="{% url 'similar_values' pk=experiment.pk %}" class="btn btn-primary btn-block">Experiments with similar values</a>
-            <a href="{% url 'similar_metadata' pk=experiment.pk %}" class="btn btn-primary btn-block">Experiments with similiar metadata</a>
+            <a href="{% url 'similar_experiments' pk=experiment.pk %}" class="btn btn-primary btn-block">Similar experiments</a>
         </div>
     </div>
 
