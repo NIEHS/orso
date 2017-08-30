@@ -96,13 +96,10 @@ class MyUser(models.Model):
             len(ExperimentFavorite.objects.filter(owner=self))
         personal_experiment_counts = \
             len(Experiment.objects.filter(owners__in=[self]))
-        recommended_experiment_counts = \
-            len(ExperimentRecommendation.objects.filter(owner=self, hidden=False))  # noqa
 
         return {
             'favorite_experiment_counts': favorite_experiment_counts,
             'personal_experiment_counts': personal_experiment_counts,
-            'recommended_experiment_counts': recommended_experiment_counts,
         }
 
     def get_urls(self):
@@ -231,12 +228,6 @@ class Experiment(models.Model):
 
     def is_favorite(self, my_user):
         if ExperimentFavorite.objects.filter(owner=my_user, favorite=self).exists():  # noqa
-            return 'true'
-        else:
-            return 'false'
-
-    def is_recommended(self, my_user):
-        if ExperimentRecommendation.objects.filter(owner=my_user, recommended=self).exists():  # noqa
             return 'true'
         else:
             return 'false'
@@ -374,7 +365,7 @@ class Experiment(models.Model):
 
         if my_user:
             metadata['is_favorite'] = self.is_favorite(my_user)
-            metadata['is_recommended'] = self.is_recommended(my_user)
+            # metadata['is_recommended'] = self.is_recommended(my_user)
 
         return metadata
 
