@@ -34,23 +34,7 @@
 
 {% block extra-js %}
 <script type='text/javascript'>
-var assembly_name = Object.keys({{display_data.plot_data|safe}})[0];
-var display_data = {{display_data|safe}};
-for (var i = 0; i < display_data['plot_data'].length; i++) {
-    if (display_data['plot_data'][i]['regions'] == 'Promoters') {
-        var promoter_metaplot = display_data['plot_data'][i]['metaplot'];
-    } else if (display_data['plot_data'][i]['regions'] == 'Enhancers') {
-        var enhancer_metaplot = display_data['plot_data'][i]['metaplot'];
-    }
-}
 $(document).ready(function(){
-    window.apps.createBrowser(
-        $('#browser')[0],
-        {{experiment.id}},
-        '{{dataset.assembly}}',
-        200,
-        $('#browser').width(),
-        {{selectable|safe}}
     window.apps.appendMetaPlotCarousel(
         $('#metaplot_carousel')[0],
         {{plot_data|safe}},
