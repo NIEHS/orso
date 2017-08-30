@@ -586,7 +586,7 @@ def _pca_analysis(locusgroup_pk, experimenttype_pk, size_threshold=200):
         experiment__experiment_type=experiment_type,
     )
 
-    if datasets:
+    if len(datasets) >= 3:
         pca = PCA(n_components=3)
         rf = RandomForestClassifier(n_estimators=1000)
 
