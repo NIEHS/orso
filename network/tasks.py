@@ -720,7 +720,7 @@ def _pca_analysis(locusgroup_pk, experimenttype_pk, size_threshold=200):
         if not created:
             pca.selected_loci.clear()
         _pca_locus_orders = []
-        for i, transcript in enumerate(filtered_loci):
+        for i, locus in enumerate(filtered_loci):
             _pca_locus_orders.append(models.PCALocusOrder(
                 pca=pca,
                 locus=locus,
