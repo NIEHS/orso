@@ -355,6 +355,7 @@ class Experiment(DetailView, AddMyUserMixin):
         context['selectable']['favorite'] = login_user.get_favorite_experiment_ids()
 
         context['display_data'] = exp.get_display_data(context['login_user'])
+        context['plot_data'] = exp.get_average_metaplots()
 
         return context
 

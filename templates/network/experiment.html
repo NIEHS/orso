@@ -26,17 +26,7 @@
             <a href="{% url 'similar_experiments' pk=experiment.pk %}" class="btn btn-primary btn-block">Similar experiments</a>
         </div>
     </div>
-
-    <div class="row">
-        <div class="col-sm-6">
-            <h4 align="center">Promoters</h4>
-            <div id="meta1"></div>
-        </div>
-        <div class="col-sm-6">
-            <h4 align="center">Enhancers</h4>
-            <div id="meta2"></div>
-        </div>
-    </div>
+    <div id='metaplot_carousel'/>
     <div id="browser"/>
 </div>
 
@@ -54,14 +44,6 @@ for (var i = 0; i < display_data['plot_data'].length; i++) {
     }
 }
 $(document).ready(function(){
-    window.apps.createMetaPlot(
-        $('#meta1')[0],
-        promoter_metaplot
-    );
-    window.apps.createMetaPlot(
-        $('#meta2')[0],
-        enhancer_metaplot
-    );
     window.apps.createBrowser(
         $('#browser')[0],
         {{experiment.id}},
@@ -69,6 +51,9 @@ $(document).ready(function(){
         200,
         $('#browser').width(),
         {{selectable|safe}}
+    window.apps.appendMetaPlotCarousel(
+        $('#metaplot_carousel')[0],
+        {{plot_data|safe}},
     );
 });
 </script>
