@@ -242,33 +242,43 @@ class Experiment(models.Model):
         average_metaplots = dict()
         counts = defaultdict(int)
 
+        target_group_types = [
+            'promoter',
+            'genebody',
+            'enhancer',
+        ]
+
         #  Add similar metaplots together
-        for mp in MetaPlot.objects.filter(dataset__experiment=self):
-            gr = mp.genomic_regions
-            counts[gr] += 1
+        for mp in MetaPlot.objects.filter(
+            dataset__experiment=self,
+            locus_group__group_type__in=target_group_types,
+        ):
+            locus_group = mp.locus_group
+            counts[locus_group] += 1
             metaplot = json.loads(mp.metaplot)
-            if gr in average_metaplots:
+            if locus_group in average_metaplots:
                 for i, entry in enumerate(metaplot['metaplot_values']):
-                    average_metaplots[gr]['metaplot_values'][i] += \
+                    average_metaplots[locus_group]['metaplot_values'][i] += \
                         entry
             else:
-                average_metaplots[gr] = metaplot
+                average_metaplots[locus_group] = metaplot
 
         #  Divide by assembly counts
-        for gr in average_metaplots.keys():
-            count = counts[gr]
+        for locus_group in average_metaplots.keys():
+            count = counts[locus_group]
             for i, entry in enumerate(
-                average_metaplots[gr]['metaplot_values']
+                average_metaplots[locus_group]['metaplot_values']
             ):
-                average_metaplots[gr]['metaplot_values'][i] = entry / count
+                average_metaplots[locus_group]['metaplot_values'][i] = \
+                    entry / count
 
         #  Put into output format
         out = []
-        for gr, metaplot in average_metaplots.items():
+        for locus_group, metaplot in average_metaplots.items():
             out.append({
-                'regions': gr.short_label,
-                'regions_pk': gr.pk,
-                'assembly': gr.assembly.name,
+                'regions': locus_group.group_type,
+                'regions_pk': locus_group.pk,
+                'assembly': locus_group.assembly.name,
                 'metaplot': metaplot,
             })
 

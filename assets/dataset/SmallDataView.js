@@ -91,7 +91,7 @@ class SmallDataView extends React.Component {
         var x = [], y = [];
 
         for (var i = 0; i < plot_data['metaplot']['bin_values'].length; i++) {
-            x.push((plot_data['metaplot']['bin_values'][i][0] + plot_data['metaplot']['bin_values'][i][0]) / 2);
+            x.push(plot_data['metaplot']['bin_values'][i]);
             y.push(plot_data['metaplot']['metaplot_values'][i]);
         }
 
@@ -105,6 +105,10 @@ class SmallDataView extends React.Component {
             autosize: false,
             height: $(this.refs.carousel_inner).height(),
             width: $(this.refs.carousel_inner).width(),
+            xaxis: {
+                tickvals: plot_data['metaplot']['ticks']['tickvals'],
+                ticktext: plot_data['metaplot']['ticks']['ticktext'],
+            },
         };
 
         Plotly.newPlot('' + this.props.exp_id + '.' + div_number, data, layout);
@@ -129,8 +133,6 @@ class SmallDataView extends React.Component {
             type: 'histogram',
         };
         var data = [trace];
-
-        console.log(this.props.score_dist);
 
         var layout = {
             autosize: false,
