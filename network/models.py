@@ -479,6 +479,27 @@ class Dataset(models.Model):
     def is_stranded(self):
         return bool(self.plus_url) and bool(self.minus_url)
 
+    def get_metaplots(self):
+        target_group_types = [
+            'promoter',
+            'genebody',
+            'enhancer',
+        ]
+
+        out = []
+        for mp in MetaPlot.objects.filter(
+            dataset=self,
+            locus_group__group_type__in=target_group_types,
+        ):
+            out.append({
+                'regions': mp.locus_group.group_type,
+                'regions_pk': mp.locus_group.pk,
+                'assembly': mp.locus_group.assembly.name,
+                'metaplot': json.loads(mp.metaplot),
+            })
+
+        return out
+
 
 class Favorite(models.Model):
     owner = models.ForeignKey('MyUser')

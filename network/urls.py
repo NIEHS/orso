@@ -21,6 +21,8 @@ urlpatterns = [
 
     url(r'^$', views.Index.as_view(), name='index'),
     url(r'^home/$', views.Home.as_view(), name='home'),
+    url(r'^dataset/(?P<pk>\d+)/$', views.Dataset.as_view(),
+        name='dataset'),
     url(r'^experiment/(?P<pk>\d+)/$', views.Experiment.as_view(),
         name='experiment'),
     url(r'^gene/(?P<pk>\d+)/$', views.Gene.as_view(),

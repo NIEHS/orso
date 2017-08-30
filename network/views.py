@@ -363,6 +363,16 @@ class Experiment(DetailView, AddMyUserMixin):
         return context
 
 
+class Dataset(DetailView, AddMyUserMixin):
+    template_name = 'network/dataset.html'
+    model = models.Dataset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['plot_data'] = self.get_object().get_metaplots()
+        return context
+
+
 class MyUser(DetailView, AddMyUserMixin):
     template_name = 'network/user.html'
     model = models.MyUser
