@@ -375,7 +375,6 @@ class Experiment(models.Model):
 
         if my_user:
             metadata['is_favorite'] = self.is_favorite(my_user)
-            # metadata['is_recommended'] = self.is_recommended(my_user)
 
         return metadata
 
