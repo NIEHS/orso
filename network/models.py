@@ -6,8 +6,10 @@ import json
 from collections import defaultdict
 
 from django.db import models
+from django.db.models import Q
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField, ArrayField
+from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 from picklefield.fields import PickledObjectField
 
@@ -581,6 +583,16 @@ class Locus(models.Model):
     strand = models.CharField(choices=STRANDS, max_length=1, null=True)
     chromosome = models.CharField(max_length=32)
     regions = ArrayField(ArrayField(models.IntegerField(), size=2))
+
+    def get_gene(self):
+        try:
+            return Gene.objects.get(
+                Q(transcript__promoter_locus=self) |
+                Q(transcript__genebody_locus=self) |
+                Q(transcript__mRNA_locus=self)
+            )
+        except ObjectDoesNotExist:
+            return None
 
 
 class LocusGroup(models.Model):

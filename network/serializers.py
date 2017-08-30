@@ -52,8 +52,8 @@ class PCAPlotSerializer(serializers.ModelSerializer):
         components = []
 
         genes = [
-            x.transcript.gene for x in
-            models.PCATranscriptOrder.objects.filter(pca=pca).order_by('order')
+            x.locus.get_gene() for x in
+            models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
         ]
         for _component in pca.pca.components_:
             components.append(

@@ -11,18 +11,27 @@ class Explore extends React.Component {
 
         var assembly_choices = (['--']).concat(Object.keys(this.props.available_exp_types));
         var exp_type_choices = (['--']).concat(Object.keys(this.props.available_assemblies));
+        var group_choices = (['--']).concat(this.props.available_groups);
 
         this.state = {
             assembly: '--',
             exp_type: '--',
+            group: '--',
             assembly_choices: assembly_choices,
             exp_type_choices: exp_type_choices,
+            group_choices: group_choices,
         };
     }
 
     componentDidMount(){
         this.update_assembly_select();
         this.update_exp_type_select();
+
+        var $group_select = $(this.refs.group_select);
+        for (let i in this.state.group_choices) {
+            $group_select.append(
+                '<option val="' + i + '">' + this.state.group_choices[i] + '</option>');
+        }
     }
 
     update_assembly_select(){
@@ -71,14 +80,27 @@ class Explore extends React.Component {
         }, this.update_assembly_select);
     }
 
+    change_group(event){
+        this.setState({
+            group: event.target.value,
+        });
+    }
+
     clear_pca() {
         $(this.refs.pca_container).empty();
     }
 
     get_pca(event){
-        if (this.state.assembly != '--' && this.state.exp_type != '--') {
+        if (this.state.assembly != '--' &&
+                this.state.exp_type != '--' &&
+                this.state.group != '--') {
             this.clear_pca()
-            var pca_pk = this.props.pca_lookup[this.state.assembly][this.state.exp_type];
+            var pca_pk =
+                this.props.pca_lookup[
+                    this.state.assembly + ':' +
+                    this.state.exp_type + ':' +
+                    this.state.group
+                ];
             var pca_url = `/network/api/pca-plot/${pca_pk}/`;
 
             var cb = function(data) {
@@ -107,6 +129,10 @@ class Explore extends React.Component {
                     onChange={this.change_exp_type.bind(this)}
                     value={this.state.exp_type}>
                 </select>
+                <select ref='group_select'
+                    onChange={this.change_group.bind(this)}
+                    value={this.state.group}>
+                </select>
                 <button onClick={this.get_pca.bind(this)}>
                     Go
                 </button>
@@ -121,6 +147,7 @@ Explore.propTypes = {
     pca_lookup: React.PropTypes.object.isRequired,
     available_exp_types: React.PropTypes.object.isRequired,
     available_assemblies: React.PropTypes.object.isRequired,
+    available_groups: React.PropTypes.array.isRequired,
 };
 
 export default Explore;

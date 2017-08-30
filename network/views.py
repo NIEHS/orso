@@ -196,31 +196,36 @@ class Explore(TemplateView, AddMyUserMixin):
         pca_lookup = dict()
         available_exp_types = dict()
         available_assemblies = dict()
+        available_groups = []
 
         for pca in models.PCA.objects.all():
             exp_name = pca.experiment_type.name
-
             assembly_name = pca.locus_group.assembly.name
             group_name = pca.locus_group.group_type
-            pair = (assembly_name, group_name)
 
-            if pair not in pca_lookup:
-                pca_lookup[pair] = dict()
-            pca_lookup[pair][exp_name] = pca.pk
+            pca_lookup['{}:{}:{}'.format(
+                assembly_name,
+                exp_name,
+                group_name,
+            )] = pca.pk
 
-            if pair not in available_exp_types:
-                available_exp_types[pair] = []
-            if exp_name not in available_exp_types[pair]:
-                available_exp_types[pair].append(exp_name)
+            if assembly_name not in available_exp_types:
+                available_exp_types[assembly_name] = []
+            if exp_name not in available_exp_types[assembly_name]:
+                available_exp_types[assembly_name].append(exp_name)
 
             if exp_name not in available_assemblies:
                 available_assemblies[exp_name] = []
-            if pair not in available_assemblies[exp_name]:
-                available_assemblies[exp_name].append(pair)
+            if assembly_name not in available_assemblies[exp_name]:
+                available_assemblies[exp_name].append(assembly_name)
+
+            if group_name not in available_groups:
+                available_groups.append(group_name)
 
         context['pca_lookup'] = pca_lookup
         context['available_experiment_types'] = available_exp_types
         context['available_assemblies'] = available_assemblies
+        context['available_groups'] = available_groups
 
         return context
 
