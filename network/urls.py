@@ -62,7 +62,6 @@ urlpatterns = [
     url(r'^delete_experiment/(?P<pk>\d+)/$', views.ExperimentDelete.as_view(),
         name='delete_experiment'),
 
-    #  For PCA, PK refers to the GenomicRegions object
     url(r'^pca/(?P<pk>\d+)/$', views.PCA.as_view(), name='pca'),
 
     # url(r'^test/$', views.TestSmallDataView.as_view(), name='test'),
