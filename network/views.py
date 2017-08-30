@@ -53,7 +53,8 @@ def browser(request):
     start = request.GET.get('start')
     end = request.GET.get('end')
     datasets = request.GET.get('datasets')
-    return Response(models.Dataset.get_browser_view(chromosome, start, end, datasets))
+    return Response(models.Dataset.get_browser_view(
+        chromosome, start, end, datasets))
 
 
 class NeverCacheFormMixin:
@@ -351,8 +352,10 @@ class Experiment(DetailView, AddMyUserMixin):
         exp = self.get_object()
 
         context['selectable'] = dict()
-        context['selectable']['personal'] = login_user.get_personal_experiment_ids()
-        context['selectable']['favorite'] = login_user.get_favorite_experiment_ids()
+        context['selectable']['personal'] = \
+            login_user.get_personal_experiment_ids()
+        context['selectable']['favorite'] = \
+            login_user.get_favorite_experiment_ids()
 
         context['display_data'] = exp.get_display_data(context['login_user'])
         context['plot_data'] = exp.get_average_metaplots()
