@@ -23,6 +23,7 @@ import {
     appendGeneScatter,
     appendGeneFoldChange,
     appendMetaPlotCarousel,
+    appendGeneValues,
 } from './dataset';
 
 
@@ -49,4 +50,5 @@ window.apps = {
     appendGeneScatter,
     appendGeneFoldChange,
     appendMetaPlotCarousel,
+    appendGeneValues,
 };

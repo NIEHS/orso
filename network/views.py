@@ -369,7 +369,32 @@ class Dataset(DetailView, AddMyUserMixin):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
         context['plot_data'] = self.get_object().get_metaplots()
+
+        gene_values = []
+        gene_set = set()
+
+        for intersection in models.DatasetIntersection.objects.filter(
+            dataset=self.get_object(),
+            locus__group__group_type='genebody'
+        ).order_by('-normalized_value'):
+
+            transcript = intersection.locus.from_genebody.get()
+            if all([
+                transcript.end - transcript.start >= 200,
+                transcript.gene.name not in gene_set,
+            ]):
+                gene_values.append([
+                    transcript.gene.name,
+                    intersection.normalized_value,
+                ])
+                gene_set.add(transcript.gene.name)
+            if len(gene_values) >= 20:
+                break
+
+        context['gene_values'] = gene_values
+
         return context
 
 

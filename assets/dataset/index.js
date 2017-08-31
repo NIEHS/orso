@@ -19,6 +19,7 @@ import Expression from './Expression';
 import GeneScatter from './GeneScatter';
 import GeneFoldChange from './GeneFoldChange';
 import MetaPlotCarousel from './MetaPlotCarousel';
+import GeneValues from './GeneValues';
 
 
 let createMetaPlot = function(el, metaplot) {
@@ -233,6 +234,13 @@ let appendMetaPlotCarousel = function(el, data) {
         data={data}/>, element[0]);
 }
 
+let appendGeneValues = function(el, data) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<GeneValues
+        data={data}/>, element[0]);
+}
+
 export {
     createMetaPlot,
     createBrowser,
@@ -256,4 +264,5 @@ export {
     appendGeneScatter,
     appendGeneFoldChange,
     appendMetaPlotCarousel,
+    appendGeneValues,
 };
