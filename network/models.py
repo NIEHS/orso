@@ -615,6 +615,12 @@ class Locus(models.Model):
         except ObjectDoesNotExist:
             return None
 
+    def get_enhancer(self):
+        try:
+            return Enhancer.objects.get(locus=self)
+        except ObjectDoesNotExist:
+            return None
+
 
 class LocusGroup(models.Model):
     assembly = models.ForeignKey('Assembly')
