@@ -4,7 +4,6 @@ import React from 'react';
 class Expression extends React.Component {
 
     drawPlotly(){
-
         var labels = [],
             medians = [],
             mins = [],
