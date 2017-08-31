@@ -51,14 +51,21 @@ class PCAPlotSerializer(serializers.ModelSerializer):
     def _components(self, pca):
         components = []
 
-        genes = [
-            x.locus.get_gene() for x in
-            models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
-        ]
+        if pca.locus_group.group_type in ['genebody', 'promoter', 'mRNA']:
+            locus_names = [
+                x.locus.get_gene().name for x in
+                models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
+            ]
+        elif pca.locus_group.group_type in ['enhancer']:
+            locus_names = [
+                x.locus.get_enhancer().name for x in
+                models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
+            ]
+
         for _component in pca.pca.components_:
             components.append(
                 sorted(
-                    zip([x.name for x in genes], _component),
+                    zip(locus_names, _component),
                     key=lambda x: -abs(x[1]),
                 )[:20]
             )
