@@ -16,8 +16,11 @@ def score_datasets_by_pca_distance(dataset_1, dataset_2):
             dataset_2.experiment.experiment_type):
         raise ValueError('Datasets do not share experiment type')
 
-    transformed_1 = models.PCATransformedValues.objects.get(dataset=dataset_1)
-    transformed_2 = models.PCATransformedValues.objects.get(dataset=dataset_2)
+    relevant_regions = dataset_1.experiment.experiment_type.relevant_regions
+    transformed_1 = models.PCATransformedValues.objects.get(
+        dataset=dataset_1, pca__locus_group__group_type=relevant_regions)
+    transformed_2 = models.PCATransformedValues.objects.get(
+        dataset=dataset_2, pca__locus_group__group_type=relevant_regions)
 
     if transformed_1.pca != transformed_2.pca:
         raise ValueError('Transformed values do not share PCA object.')

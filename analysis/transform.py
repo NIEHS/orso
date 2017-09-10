@@ -28,23 +28,19 @@ def pca_transform_intersections(dataset):
     )
     pca = models.PCA.objects.get(
         experiment_type=exp_type,
-        annotation=dataset.assembly.annotation,
+        locus_group__group_type=exp_type.relevant_regions,
+        locus_group__assembly=dataset.assembly,
     )
 
-    order = models.PCATranscriptOrder.objects.filter(pca=pca).order_by('order')
-    transcripts = [x.transcript for x in order]
+    order = models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
+    loci = [x.locus for x in order]
 
     intersection_values = []
-    for transcript in transcripts:
-        intersection = models.TranscriptIntersection.objects.get(
-            dataset=dataset, transcript=transcript)
-
-        if exp_type.relevant_regions == 'genebody':
-            intersection_values.append(intersection.normalized_genebody_value)
-        elif exp_type.relevant_regions == 'coding':
-            intersection_values.append(intersection.normalized_coding_value)
-        elif exp_type.relevant_regions == 'promoter':
-            intersection_values.append(intersection.normalized_promoter_value)
+    for locus in loci:
+        intersection_values.append(
+            models.DatasetIntersection.objects.get(
+                dataset=dataset, locus=locus).normalized_value
+        )
 
     return pca.pca.transform([intersection_values])[0]
 
