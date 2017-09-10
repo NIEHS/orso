@@ -26,8 +26,10 @@
             <a href="{% url 'similar_experiments' pk=experiment.pk %}" class="btn btn-primary btn-block">Similar experiments</a>
         </div>
     </div>
-    <div id='metaplot_carousel'/>
-    <div id="browser"/>
+    <h2>Metagene plots</h2>
+    <div id='metaplot_carousel'></div>
+    <h2>Top 20 genes</h2>
+    <div id='gene_values'></div>
 </div>
 
 {% endblock content %}
@@ -38,6 +40,10 @@ $(document).ready(function(){
     window.apps.appendMetaPlotCarousel(
         $('#metaplot_carousel')[0],
         {{plot_data|safe}},
+    );
+    window.apps.appendGeneValues(
+        $('#gene_values')[0],
+        {{gene_values|safe}},
     );
 });
 </script>
