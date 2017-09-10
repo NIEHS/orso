@@ -591,7 +591,7 @@ class TfidfVectorizer(models.Model):
     '''
     scikit-learn TfidfVectorizer object.
     '''
-    annotation = models.ForeignKey('Annotation')
+    assembly = models.ForeignKey('Assembly')
     experiment_type = models.ForeignKey('ExperimentType')
 
     tfidf_vectorizer = PickledObjectField()

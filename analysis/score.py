@@ -94,17 +94,17 @@ def score_experiments_by_tfidf(experiment_1, experiment_2):
     if experiment_1.experiment_type != experiment_2.experiment_type:
         raise ValueError('Experiments do not share experiment type.')
 
-    annotation_set_1 = models.Annotation.objects.filter(
-        assembly__dataset__experiment=experiment_1)
-    annotation_set_2 = models.Annotation.objects.filter(
-        assembly__dataset__experiment=experiment_2)
+    assembly_set_1 = models.Assembly.objects.filter(
+        dataset__experiment=experiment_1)
+    assembly_set_2 = models.Assembly.objects.filter(
+        dataset__experiment=experiment_2)
 
     distances = []
-    for annotation in annotation_set_1 & annotation_set_2:
+    for assembly in assembly_set_1 & assembly_set_2:
         vector_1 = transform.experiment_to_tfidf_vector(
-            experiment_1, annotation)
+            experiment_1, assembly)
         vector_2 = transform.experiment_to_tfidf_vector(
-            experiment_2, annotation)
+            experiment_2, assembly)
         distances.append(cosine_distances(vector_1, vector_2)[0][0])
 
     return min(distances)

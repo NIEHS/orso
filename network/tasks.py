@@ -783,12 +783,12 @@ def get_tfidf_vectorizers():
         'system_slims',
     ]
 
-    for annotation in models.Annotation.objects.all():
+    for assembly in models.Assembly.objects.all():
         for exp_type in models.ExperimentType.objects.all():
 
             descriptions = []
             experiments = models.Experiment.objects.filter(
-                dataset__assembly__annotation=annotation,
+                dataset__assembly=assembly,
                 experiment_type=exp_type,
             )
 
@@ -814,7 +814,7 @@ def get_tfidf_vectorizers():
                 tf.fit(descriptions)
 
                 models.TfidfVectorizer.objects.update_or_create(
-                    annotation=annotation,
+                    assembly=assembly,
                     experiment_type=exp_type,
                     defaults={
                         'tfidf_vectorizer': tf,

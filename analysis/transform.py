@@ -65,12 +65,12 @@ def experiment_description_to_list(experiment):
     return description_list
 
 
-def experiment_to_tfidf_vector(experiment, annotation):
+def experiment_to_tfidf_vector(experiment, assembly):
     '''
     Given the experiment object, transform the metadata into a TF/IDF vector.
     '''
     tfidf_vectorizer = models.TfidfVectorizer.objects.get(
-        annotation=annotation,
+        assembly=assembly,
         experiment_type=experiment.experiment_type,
     )
     term_list = experiment_description_to_list(experiment)
@@ -82,7 +82,7 @@ def dataset_to_tfidf_vector(dataset):
     '''
     Given the dataset object, transform the metadata into a TF/IDF vector.
     '''
-    annotation = dataset.assembly.annotation
+    assembly = dataset.assembly
     experiment = dataset.experiment
 
-    return experiment_to_tfidf_vector(experiment, annotation)
+    return experiment_to_tfidf_vector(experiment, assembly)
