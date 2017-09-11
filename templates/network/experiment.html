@@ -3,29 +3,23 @@
 {% block content %}
 
 <div class="container">
-    <h3>{{experiment.name}}</h3>
-    <div class="row">
-        <div class="col-sm-8">
-            {% if experiment.data_type %}
-            <p>Data type: {{experiment.data_type}}</p>
-            {% endif %}
+    <h1>{{experiment.name}}</h1>
+    {% if experiment.data_type %}
+    <p>Data type: {{experiment.data_type}}</p>
+    {% endif %}
 
-            {% if experiment.cell_type %}
-            <p>Cell type: {{experiment.cell_type}}</p>
-            {% endif %}
+    {% if experiment.cell_type %}
+    <p>Cell type: {{experiment.cell_type}}</p>
+    {% endif %}
 
-            {% if experiment.target %}
-            <p>Antibody: {{experiment.target}}</p>
-            {% endif %}
+    {% if experiment.target %}
+    <p>Antibody: {{experiment.target}}</p>
+    {% endif %}
 
-            {% if experiment.description %}
-            <p>Description: {{experiment.description|linebreaks}}</p>
-            {% endif %}
-        </div>
-        <div class="col-sm-4">
-            <a href="{% url 'similar_experiments' pk=experiment.pk %}" class="btn btn-primary btn-block">Similar experiments</a>
-        </div>
-    </div>
+    {% if experiment.description %}
+    <p>Description: {{experiment.description|linebreaks}}</p>
+    {% endif %}
+    <a href="{% url 'similar_experiments' pk=experiment.pk %}" class="btn btn-primary btn-block">Similar experiments</a>
     <h2>Datasets</h2>
     {% for dataset in datasets %}
         <a href='/network/dataset/{{dataset.pk}}'>{{dataset.name}}</a><br>
