@@ -26,6 +26,10 @@
             <a href="{% url 'similar_experiments' pk=experiment.pk %}" class="btn btn-primary btn-block">Similar experiments</a>
         </div>
     </div>
+    <h2>Datasets</h2>
+    {% for dataset in datasets %}
+        <a href='/network/dataset/{{dataset.pk}}'>{{dataset.name}}</a><br>
+    {% endfor %}
     <h2>Metagene plots</h2>
     <div id='metaplot_carousel'></div>
     <h2>Top 20 genes</h2>
