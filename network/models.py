@@ -600,6 +600,8 @@ class TfidfVectorizer(models.Model):
 
 class Locus(models.Model):
     group = models.ForeignKey('LocusGroup')
+    enhancer = models.ForeignKey('Enhancer', blank=True, null=True)
+    transcript = models.ForeignKey('Transcript', blank=True, null=True)
 
     strand = models.CharField(choices=STRANDS, max_length=1, null=True)
     chromosome = models.CharField(max_length=32)
@@ -658,9 +660,6 @@ class Gene(models.Model):
 
 class Transcript(models.Model):
     gene = models.ForeignKey('Gene')
-    promoter_locus = models.ForeignKey('Locus', related_name='from_promoter')
-    genebody_locus = models.ForeignKey('Locus', related_name='from_genebody')
-    mRNA_locus = models.ForeignKey('Locus', related_name='from_mRNA')
 
     name = models.CharField(max_length=32)
     chromosome = models.CharField(max_length=32)
@@ -707,7 +706,6 @@ class Transcript(models.Model):
 
 class Enhancer(models.Model):
     annotation = models.ForeignKey('Annotation')
-    locus = models.ForeignKey('Locus')
 
     name = models.CharField(max_length=32)
     chromosome = models.CharField(max_length=32)
