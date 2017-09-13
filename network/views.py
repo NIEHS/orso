@@ -722,52 +722,54 @@ class DatasetComparison(TemplateView, AddMyUserMixin):
         ds_x = models.Dataset.objects.get(pk=kwargs['x'])
         ds_y = models.Dataset.objects.get(pk=kwargs['y'])
 
-        if (ds_x.assembly == ds_y.assembly) and \
-                (ds_x.experiment.experiment_type ==
-                 ds_y.experiment.experiment_type):
+        if (ds_x.assembly != ds_y.assembly and
+                ds_x.experiment.experiment_type !=
+                ds_y.experiment.experiment_type):
+            raise ValueError('Assembly and experiment type do not match.')
 
-            genes = models.Gene.objects.filter(
-                annotation__assembly=ds_x.assembly,
-                selected_transcript__isnull=False,
-            ).order_by('pk').values_list('name', flat=True)
+        locus_group = models.LocusGroup.objects.get(
+            assembly=ds_x.assembly,
+            group_type=ds_x.experiment.experiment_type.relevant_regions,
+        )
 
-            intersections_x = (
-                models.TranscriptIntersection
-                      .objects
-                      .annotate(
-                          size=F('transcript__end') - F('transcript__start'))
-                      .filter(
-                          dataset=ds_x,
-                          transcript__selecting__isnull=False,
-                          size__gte=200)
-                      .order_by('transcript__selecting__pk')
-                      .values_list('normalized_coding_value', flat=True))
-            intersections_y = (
-                models.TranscriptIntersection
-                      .objects
-                      .annotate(
-                          size=F('transcript__end') - F('transcript__start'))
-                      .filter(
-                          dataset=ds_y,
-                          transcript__selecting__isnull=False,
-                          size__gte=200)
-                      .order_by('transcript__selecting__pk')
-                      .values_list('normalized_coding_value', flat=True))
+        if locus_group.group_type in ['genebody', 'promoter', 'mRNA']:
+            loci = (models.Locus
+                          .objects
+                          .annotate(
+                              size=F('transcript__end') -
+                              F('transcript__start'))
+                          .filter(
+                              group=locus_group,
+                              transcript__selecting__isnull=False,
+                              size__gte=200)
+                          .order_by('pk'))
+            names = loci.values_list('transcript__gene__name', flat=True)
+        elif locus_group.group_type in ['enhancer']:
+            loci = \
+                models.Locus.objects.filter(group=locus_group).order_by('pk')
+            names = loci.values_list('enhancer__name', flat=True)
 
-            context['scatter'] = \
-                [[gene, x, y] for gene, x, y in
-                 zip(genes, intersections_x, intersections_y)
-                 if (x, y) != (0, 0)]
+        intersections_x = models.DatasetIntersection.objects.filter(
+            locus__in=loci, dataset=ds_x
+        ).order_by('locus__pk').values_list('normalized_value', flat=True)
+        intersections_y = models.DatasetIntersection.objects.filter(
+            locus__in=loci, dataset=ds_y
+        ).order_by('locus__pk').values_list('normalized_value', flat=True)
 
-            log_change = dict()
-            for gene, int_x, int_y in zip(
-                    genes, intersections_x, intersections_y):
-                log_change[gene] = math.log2((int_x + 1) / (int_y + 1))
-            log_change = \
-                sorted(log_change.items(), key=lambda x: -abs(x[1]))[:100]
+        context['scatter'] = \
+            [[name, x, y] for name, x, y in
+             zip(names, intersections_x, intersections_y)
+             if (x, y) != (0, 0)]
 
-            context['log_change'] = [list(x) for x in sorted(
-                log_change, key=lambda x: -x[1])]
+        log_change = dict()
+        for name, int_x, int_y in zip(
+                names, intersections_x, intersections_y):
+            log_change[name] = math.log2((int_x + 1) / (int_y + 1))
+        log_change = \
+            sorted(log_change.items(), key=lambda x: -abs(x[1]))[:20]
+
+        context['log_change'] = [list(x) for x in sorted(
+            log_change, key=lambda x: -x[1])]
 
         context['dataset_x'] = ds_x
         context['dataset_y'] = ds_y
