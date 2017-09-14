@@ -30,18 +30,21 @@ class Command(BaseCommand):
 
         for i, ds_1 in enumerate(datasets):
             for ds_2 in datasets[i + 1:]:
-                try:
-                    distances.append((
-                        models.DatasetDataDistance.objects.get(
-                            dataset_1=ds_1, dataset_2=ds_2).distance,
-                        models.DatasetMetadataDistance.objects.get(
-                            dataset_1=ds_1, dataset_2=ds_2).distance,
-                    ))
-                except (
-                    models.DatasetDataDistance.DoesNotExist,
-                    models.DatasetMetadataDistance.DoesNotExist,
-                ):
-                    pass
+
+                if ds_1.experiment != ds_2.experiment:
+
+                    try:
+                        distances.append((
+                            models.DatasetDataDistance.objects.get(
+                                dataset_1=ds_1, dataset_2=ds_2).distance,
+                            models.DatasetMetadataDistance.objects.get(
+                                dataset_1=ds_1, dataset_2=ds_2).distance,
+                        ))
+                    except (
+                        models.DatasetDataDistance.DoesNotExist,
+                        models.DatasetMetadataDistance.DoesNotExist,
+                    ):
+                        pass
 
         if options['output_plot']:
             plt.scatter(
