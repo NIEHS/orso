@@ -571,12 +571,8 @@ def _pca_analysis(locusgroup_pk, experimenttype_pk, size_threshold=200):
             ]
 
         # Get loci associated with the transcripts and locus group
-        query = Q(group=locus_group) & (
-            Q(from_promoter__in=transcripts) |
-            Q(from_genebody__in=transcripts) |
-            Q(from_mRNA__in=transcripts)
-        )
-        loci = models.Locus.objects.filter(query)
+        loci = models.Locus.objects.filter(
+            group=locus_group, transcript__in=transcripts)
 
     elif locus_group.group_type in ['enhancer']:
         loci = models.Locus.objects.filter(group=locus_group)
