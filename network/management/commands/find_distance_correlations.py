@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('TkAgg')  # noqa
+import matplotlib.pyplot as plt
 from django.core.management.base import BaseCommand
 from scipy.stats import spearmanr
 
@@ -33,6 +36,15 @@ class Command(BaseCommand):
                     models.DatasetMetadataDistance.DoesNotExist,
                 ):
                     pass
+
+        if options['output_plot']:
+            plt.scatter(
+                [x[0] for x in distances], [x[1] for x in distances])
+            plt.title('Distance correlation: {}, {}'.format(
+                options['assembly'], options['experiment_type']))
+            plt.xlabel('Data distances')
+            plt.ylabel('Metadata distances')
+            plt.savefig(options['output_plot'])
 
         rho, p = spearmanr(distances)
         print('Rho: {}'.format(str(rho)))
