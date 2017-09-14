@@ -9,6 +9,9 @@ from network import models
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
+        parser.add_argument('assembly', type=str)
+        parser.add_argument('experiment_type', type=str)
+
         parser.add_argument(
             '--output_plot',
             action='store',
@@ -19,7 +22,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        datasets = models.Dataset.objects.all()
+        datasets = models.Dataset.objects.filter(
+            assembly__name=options['assembly'],
+            experiment__experiment_type__name=options['experiment_type'],
+        )
         distances = []
 
         for i, ds_1 in enumerate(datasets):
