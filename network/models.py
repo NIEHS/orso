@@ -607,22 +607,6 @@ class Locus(models.Model):
     chromosome = models.CharField(max_length=32)
     regions = ArrayField(ArrayField(models.IntegerField(), size=2))
 
-    def get_gene(self):
-        try:
-            return Gene.objects.get(
-                Q(transcript__promoter_locus=self) |
-                Q(transcript__genebody_locus=self) |
-                Q(transcript__mRNA_locus=self)
-            )
-        except ObjectDoesNotExist:
-            return None
-
-    def get_enhancer(self):
-        try:
-            return Enhancer.objects.get(locus=self)
-        except ObjectDoesNotExist:
-            return None
-
 
 class LocusGroup(models.Model):
     assembly = models.ForeignKey('Assembly')

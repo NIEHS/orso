@@ -53,12 +53,12 @@ class PCAPlotSerializer(serializers.ModelSerializer):
 
         if pca.locus_group.group_type in ['genebody', 'promoter', 'mRNA']:
             locus_names = [
-                x.locus.get_gene().name for x in
+                x.locus.transcript.gene.name for x in
                 models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
             ]
         elif pca.locus_group.group_type in ['enhancer']:
             locus_names = [
-                x.locus.get_enhancer().name for x in
+                x.locus.enhancer.name for x in
                 models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
             ]
 
