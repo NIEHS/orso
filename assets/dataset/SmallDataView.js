@@ -232,8 +232,6 @@ class SmallDataView extends React.Component {
                                 <li><b>Assembly:</b> {this.props.meta_data['assemblies'].join(', ')}</li>
                                 <li><b>Data type:</b> {this.props.meta_data['data_type']}</li>
                                 <li><b>Cell type:</b> {this.props.meta_data['cell_type']}</li>
-                                {this.props.meta_data['description'] &&
-                                    <li><b>Description:</b> {this.props.meta_data['description']}</li>}
                                 {this.props.meta_data['target'] &&
                                     <li><b>Target:</b> {this.props.meta_data['target']}</li>}
                             </ul>
