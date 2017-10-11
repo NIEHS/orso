@@ -38,9 +38,19 @@ class MetaPlotCarousel extends React.Component {
                 tickvals: plot_data['metaplot']['ticks']['tickvals'],
                 ticktext: plot_data['metaplot']['ticks']['ticktext'],
             },
+            margin: {
+                l: 50,
+                r: 50,
+                b: 80,
+                t: 10,
+                pad: 4,
+            }
         };
 
-        Plotly.newPlot('' + this.props.exp_id + '.' + div_number, data, layout);
+        var options = {
+        };
+
+        Plotly.newPlot('' + this.props.exp_id + '.' + div_number, data, layout, options);
     }
 
     componentDidMount(){
