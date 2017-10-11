@@ -73,6 +73,7 @@ class PCA extends React.Component {
 
         var data = [trace1];
         var layout = {
+            height: 800,
             margin: {
                 l: 0,
                 r: 0,
@@ -96,6 +97,7 @@ class PCA extends React.Component {
         };
         var options = {
             displaylogo: false,
+            displayModeBar: false,
             modeBarButtonsToRemove: [
                 'sendDataToCloud',
                 'resetCameraLastSave3d',
@@ -123,7 +125,21 @@ class PCA extends React.Component {
             orientation: 'h',
         }];
 
-        Plotly.newPlot('variance_plot', data);
+        var layout = {
+            margin: {
+                l: 50,
+                r: 50,
+                b: 50,
+                t: 50,
+                pad: 4,
+            },
+        };
+
+        var options = {
+            displayModeBar: false,
+        };
+
+        Plotly.newPlot('variance_plot', data, layout, options);
     }
 
     drawPlotlyComponent(component, div){
@@ -146,6 +162,16 @@ class PCA extends React.Component {
                 tickfont: {
                     size: 10,
                 },
+            },
+            autosize: false,
+            width: $('#tabs').width(),
+            height: $('#tabs').height(),
+            margin: {
+                l: 50,
+                r: 50,
+                b: 50,
+                t: 50,
+                pad: 4,
             },
         };
 
@@ -262,7 +288,7 @@ class PCA extends React.Component {
                         <li><a data-toggle='tab' href='#pc_2_tab'>PC 2</a></li>
                         <li><a data-toggle='tab' href='#pc_3_tab'>PC 3</a></li>
                     </ul>
-                    <div className='tab-content'>
+                    <div className='tab-content' id='tabs'>
                         <div id='variance_plot_tab' className='tab-pane fade in active'>
                             <h4>Variance ratios</h4>
                             <div id='variance_plot'></div>
