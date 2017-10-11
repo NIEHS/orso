@@ -35,8 +35,9 @@ let createBrowser = function(el, id, assembly, height, width, selectable) {
         selectable_datasets={selectable}/>, el);
 };
 
-let createSmallDataView = function(el, meta_data, plot_data, urls, args) {
+let createSmallDataView = function(el, exp_id, meta_data, plot_data, urls, args) {
     ReactDOM.render(<SmallDataView
+        exp_id={exp_id}
         meta_data={meta_data}
         plot_data={plot_data}
         urls={urls}
