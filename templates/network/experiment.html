@@ -4,30 +4,31 @@
 
 <div class="container">
     <h1>{{experiment.name}}</h1>
-    {% if experiment.data_type %}
-    <p>Data type: {{experiment.data_type}}</p>
-    {% endif %}
-
-    {% if experiment.cell_type %}
-    <p>Cell type: {{experiment.cell_type}}</p>
-    {% endif %}
-
-    {% if experiment.target %}
-    <p>Antibody: {{experiment.target}}</p>
-    {% endif %}
-
-    {% if experiment.description %}
-    <p>Description: {{experiment.description|linebreaks}}</p>
-    {% endif %}
     <a href="{% url 'similar_experiments' pk=experiment.pk %}" class="btn btn-primary btn-block">Similar experiments</a>
     <h2>Datasets</h2>
     {% for dataset in datasets %}
         <a href='/network/dataset/{{dataset.pk}}'>{{dataset.name}}</a><br>
     {% endfor %}
-    <h2>Metagene plots</h2>
-    <div id='metaplot_carousel'></div>
+    <h2>Metadata</h2>
+    {% if experiment.data_type %}
+    <p><b>Data type:</b> {{experiment.data_type}}</p>
+    {% endif %}
+
+    {% if experiment.cell_type %}
+    <p><b>Cell type:</b> {{experiment.cell_type}}</p>
+    {% endif %}
+
+    {% if experiment.target %}
+    <p><b>Antibody:</b> {{experiment.target}}</p>
+    {% endif %}
+
+    {% if experiment.description %}
+    <p><b>Description:</b> {{experiment.description|linebreaks}}</p>
+    {% endif %}
     <h2>Top 20 genes</h2>
     <div id='gene_values'></div>
+    <h2>Metagene plots</h2>
+    <div id='metaplot_carousel'></div>
 </div>
 
 {% endblock content %}
