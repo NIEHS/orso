@@ -2,25 +2,22 @@
 
 {% block content %}
 <div class="container container-fluid">
-    <div>
-        <h1>
-            {{user.username}}
-            <button type="button" id="favorite_button" class="panel-close-button">
-                {% if is_favorite %}
-                <span id="star_glyph" class="glyphicon glyphicon-star"></span>
-                {% else %}
-                <span id="star_glyph" class="glyphicon glyphicon-star-empty"></span>
-                {% endif %}
-            </button>
-        </h1>
-    </div>
-    <div class="row">
-        <div class="col-sm-4">{{meta_data.user_favorite_number}} favorite users</div>
-        <div class="col-sm-4">{{meta_data.data_favorite_number}} favorite datasets</div>
-        <div class="col-sm-4">Favorited by {{meta_data.user_favorited_by_number}} users</div>
-    </div>
-    <div><h2>{{dataset_number}} datasets</h2></div>
-    <div>{{user.username}}'s datasets have been favorited {{meta_data.data_favorited_by_number}} times</div>
+    <h1>
+        {{user.username}}
+        <button type="button" id="favorite_button" class="panel-close-button">
+            {% if is_favorite %}
+            <span id="star_glyph" class="glyphicon glyphicon-star"></span>
+            {% else %}
+            <span id="star_glyph" class="glyphicon glyphicon-star-empty"></span>
+            {% endif %}
+        </button>
+    </h1>
+    <h2>User interactions</h2>
+    {{meta_data.user_favorite_number}} favorite users</br>
+    {{meta_data.data_favorite_number}} favorite datasets</br>
+    Favorited by {{meta_data.user_favorited_by_number}} users</br>
+    {{user.username}}'s datasets have been favorited {{meta_data.data_favorited_by_number}} times</br>
+    <h2>Experiments overview</h2>
     <div class="row">
         <div class="col-sm-6">
             <div>Assemblies:</div>
@@ -31,7 +28,8 @@
             <div id="pie_2"></div>
         </div>
     </div>
-    <div>Most recent dataset:</div>
+    <h2>Most recent experiment</h2>
+    </br>
     <div id="recent_dataset"></div>
 </div>
 {% endblock content %}
