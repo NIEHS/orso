@@ -69,6 +69,7 @@ $(document).ready(function(){
 
     window.apps.createSmallDataView(
         $('#recent_dataset')[0],
+        {{latest_dataset.meta_data.id}},
         {{latest_dataset.meta_data|safe}},
         {{latest_dataset.plot_data|safe}},
         {{latest_dataset.urls|safe}},
