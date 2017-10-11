@@ -63,24 +63,61 @@ class PieChart extends React.Component {
         $(svgElement).empty();
     }
 
+    drawPie(){
+        var data = [{
+            values: Object.values(this.props.data),
+            labels: Object.keys(this.props.data),
+            type: 'pie',
+            hoverinfo: 'none',
+        }];
+
+        var layout = {
+            height: $(this.refs.pie).width(),
+            margin: {
+                l: 10,
+                r: 10,
+                b: 10,
+                t: 10,
+                pad: 4,
+            },
+        };
+
+        var options = {
+            displaylogo: false,
+            displayModeBar: false,
+        };
+
+        Plotly.newPlot(this.pieId(), data, layout, options);
+    }
+
+    clearPie(){
+        $(this.refs.pie).empty();
+    }
+
     componentDidMount(){
-        let svg = this.refs.svg;
-        this.drawD3(svg, this.props.data);
+        this.drawPie();
     }
 
     componentWillUnmount(){
-        this.removeD3(this.refs.svg);
+        this.clearPie();
+    }
+
+    pieId(){
+        return '_pie_' + this.props.index;
     }
 
     render(){
-        return <div className='pie_chart'>
-            <svg style={{height:"100%", width:"100%"}} ref='svg'></svg>
-        </div>;
+        return <div ref='pie' id={this.pieId()}></div>;
     }
 }
 
+PieChart.defaultProps = {
+    index: 0,
+};
+
 PieChart.propTypes = {
     data: React.PropTypes.object.isRequired,
+    index: React.PropTypes.number.isRequired,
 };
 
 export default PieChart;

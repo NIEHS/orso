@@ -160,8 +160,10 @@ let createIntersectionComparison = function(el, x_name, y_name, x_data, y_data) 
         y_data={y_data}/>, el);
 };
 
-let createPieChart = function(el, data) {
-    ReactDOM.render(<PieChart data={data}/>, el);
+let createPieChart = function(el, data, index) {
+    ReactDOM.render(<PieChart
+        data={data}
+        index={index}/>, el);
 };
 
 let appendSmallUserView = function(el, meta_data, plot_data, urls, args) {

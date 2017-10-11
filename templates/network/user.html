@@ -58,11 +58,13 @@ $(document).ready(function(){
 
     window.apps.createPieChart(
         $('#pie_1')[0],
-        {{plot_data.assembly_counts|safe}}
+        {{plot_data.assembly_counts|safe}},
+        0,
     );
     window.apps.createPieChart(
         $('#pie_2')[0],
-        {{plot_data.experiment_counts|safe}}
+        {{plot_data.experiment_counts|safe}},
+        1,
     );
 
     window.apps.createSmallDataView(
