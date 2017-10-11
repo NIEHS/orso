@@ -60,7 +60,6 @@ class MyUser(models.Model):
 
         if my_user:
             detail['is_favorite'] = self.is_favorite(my_user)
-            detail['is_recommended'] = self.is_recommended(my_user)
 
         return detail
 
@@ -119,12 +118,6 @@ class MyUser(models.Model):
 
     def is_favorite(self, my_user):
         if UserFavorite.objects.filter(owner=my_user, favorite=self).exists():
-            return 'true'
-        else:
-            return 'false'
-
-    def is_recommended(self, my_user):
-        if UserRecommendation.objects.filter(owner=my_user, recommended=self).exists():  # noqa
             return 'true'
         else:
             return 'false'
