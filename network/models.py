@@ -79,15 +79,15 @@ class MyUser(models.Model):
 
         return assembly_counts
 
-    def get_dataset_experiment_type_counts(self):
-        datasets = Experiment.objects.filter(owners__in=[self])
+    def get_experiment_type_counts(self):
+        experiments = Experiment.objects.filter(owners__in=[self])
         experiment_type_counts = dict()
 
-        for ds in datasets:
-            if ds.experiment_type.name in experiment_type_counts:
-                experiment_type_counts[ds.experiment_type.name] += 1
+        for exp in experiments:
+            if exp.experiment_type.name in experiment_type_counts:
+                experiment_type_counts[exp.experiment_type.name] += 1
             else:
-                experiment_type_counts[ds.experiment_type.name] = 1
+                experiment_type_counts[exp.experiment_type.name] = 1
 
         return experiment_type_counts
 
@@ -132,8 +132,7 @@ class MyUser(models.Model):
     def get_display_data(self, my_user):
         plot_data = dict()
         plot_data['assembly_counts'] = self.get_dataset_assembly_counts()
-        plot_data['experiment_counts'] = \
-            self.get_dataset_experiment_type_counts()
+        plot_data['experiment_counts'] = self.get_experiment_type_counts()
 
         meta_data = self.get_user_details(my_user)
         urls = self.get_urls()
