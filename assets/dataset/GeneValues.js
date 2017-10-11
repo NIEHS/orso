@@ -16,7 +16,20 @@ class GeneValues extends React.Component {
             type: 'bar',
         }];
 
-        Plotly.newPlot('gene_values_plot', data);
+        var layout = {
+            margin: {
+                l: 50,
+                r: 50,
+                b: 80,
+                t: 40,
+                pad: 4,
+            }
+        };
+
+        var options = {
+        };
+
+        Plotly.newPlot('gene_values_plot', data, layout, options);
     }
 
     componentDidMount(){
