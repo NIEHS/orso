@@ -109,9 +109,21 @@ class SmallDataView extends React.Component {
                 tickvals: plot_data['metaplot']['ticks']['tickvals'],
                 ticktext: plot_data['metaplot']['ticks']['ticktext'],
             },
+            margin : {
+                l: 50,
+                r: 50,
+                b: 60,
+                t: 10,
+                pad: 4,
+            }
         };
 
-        Plotly.newPlot('' + this.props.exp_id + '.' + div_number, data, layout);
+        var options = {
+            displaylogo: false,
+            displayModeBar: false,
+        };
+
+        Plotly.newPlot('' + this.props.exp_id + '.' + div_number, data, layout, options);
     }
 
     drawScoreHistogram() {
@@ -152,7 +164,14 @@ class SmallDataView extends React.Component {
                         width: 3,
                     },
                 },
-            ]
+            ],
+            margin : {
+                l: 50,
+                r: 50,
+                b: 60,
+                t: 10,
+                pad: 4,
+            },
         };
 
         Plotly.newPlot('' + this.props.exp_id + '.' + div_number, data, layout);
