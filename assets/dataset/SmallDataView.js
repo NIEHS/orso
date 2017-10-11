@@ -227,7 +227,7 @@ class SmallDataView extends React.Component {
             <div className="panel-body">
                 <div className='small_data_view'>
                     <div className="row">
-                        <div style={{height:"200px"}} className="col-sm-5">
+                        <div style={{height:"200px"}} className="col-sm-4">
                             <ul>
                                 <li><b>Assembly:</b> {this.props.meta_data['assemblies'].join(', ')}</li>
                                 <li><b>Data type:</b> {this.props.meta_data['data_type']}</li>
@@ -237,7 +237,7 @@ class SmallDataView extends React.Component {
                                     <li><b>Description:</b> {this.props.meta_data['description']}</li>}
                             </ul>
                         </div>
-                        <div style={{height:"200px"}} className="col-sm-7">
+                        <div style={{height:"200px"}} className="col-sm-8">
                             <div id={carousel_id} className="carousel slide" data-ride="carousel" data-interval="false" style={{height: '100%', width: '100%'}}>
                                 <ol ref='carousel_indicators' className="carousel-indicators"></ol>
                                 <div ref='carousel_inner' className="carousel-inner" role="listbox" style={{height: '100%', width: '80%', left: '10%'}}></div>
