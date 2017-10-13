@@ -21,6 +21,7 @@ for i in [
 
 
 def add_gene_loci(assembly_name, annotation_gtf, annotation_table):
+    # TODO: Add loci just from the annotation table. The GTF is unnecessary.
     '''
     Add loci from annotated genes to database.
     '''
