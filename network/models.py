@@ -12,6 +12,7 @@ from django.contrib.postgres.fields import JSONField, ArrayField
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 from picklefield.fields import PickledObjectField
+from scipy.stats import variation as coeff_variance
 
 STRANDS = (('+', '+'), ('-', '-'))
 LOCUS_GROUP_TYPES = (
