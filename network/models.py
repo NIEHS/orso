@@ -608,6 +608,17 @@ class PCALocusOrder(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
 
+class IDF(models.Model):
+    '''
+    JSON containing IDF values.
+    '''
+    assembly = models.ForeignKey('Assembly')
+    experiment_type = models.ForeignKey('ExperimentType')
+
+    idf = JSONField()
+    last_updated = models.DateTimeField(auto_now=True)
+
+
 class TfidfVectorizer(models.Model):
     '''
     scikit-learn TfidfVectorizer object.
