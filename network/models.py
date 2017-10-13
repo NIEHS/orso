@@ -6,10 +6,8 @@ import json
 from collections import defaultdict
 
 from django.db import models
-from django.db.models import Q
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField, ArrayField
-from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 from picklefield.fields import PickledObjectField
 from scipy.stats import variation as coeff_variance
