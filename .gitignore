@@ -1,6 +1,7 @@
 *.log
 *.py[co]
 *.djcache
+*.bigWig
 
 data/*
 project/django_project/settings/local.py
