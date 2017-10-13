@@ -653,31 +653,34 @@ class Transcript(models.Model):
             end__gte=start,
         )
 
-    # TODO: Fix for loci or cut
-    # def get_intersection_variance(self):
-    #     '''
-    #     For the transcript, return variance (coefficient of variance) across
-    #     intersection values.
-    #     '''
-    #     values = []
-    #     for intersection in TranscriptIntersection.objects.filter(
-    #             transcript=self):
-    #         values.append(intersection.normalized_genebody_value)
-    #     return coeff_variance(values)
+    def get_intersection_variance(self, experiment_type_name,
+                                  locus_group_type):
+        '''
+        For the transcript, return variance (coefficient of variance) across
+        intersection values.
+        '''
+        values = DatasetIntersection.objects.filter(
+            locus__transcript=self,
+            locus__group__group_type=locus_group_type,
+            dataset__experiment__experiment_type__name=experiment_type_name,
+        ).values_list('normalized_value', flat=True)
+        if numpy.mean(values) == 0:
+            return 0.0
+        else:
+            return coeff_variance(values)
 
-    # TODO: Fix for loci
-    # def get_median_expression(self):
-    #     '''
-    #     For the transcript, return the median expression values from
-    #     intersections.
-    #     '''
-    #     values = []
-    #     for intersection in TranscriptIntersection.objects.filter(
-    #         transcript=self,
-    #         dataset__experiment__experiment_type__name='RNA-seq',
-    #     ):
-    #         values.append(intersection.normalized_coding_value)
-    #     return numpy.median(values)
+    def get_intersection_median(self, experiment_type_name,
+                                locus_group_type):
+        '''
+        For the transcript, return the median expression values from
+        intersections.
+        '''
+        values = DatasetIntersection.objects.filter(
+            locus__transcript=self,
+            locus__group__group_type=locus_group_type,
+            dataset__experiment__experiment_type__name=experiment_type_name,
+        ).values_list('normalized_value', flat=True)
+        return numpy.median(values)
 
 
 class Enhancer(models.Model):
