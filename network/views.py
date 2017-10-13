@@ -371,7 +371,7 @@ class Experiment(DetailView, AddMyUserMixin):
             locus__group__group_type='genebody'
         ).order_by('-average_value'):
 
-            transcript = intersection.locus.from_genebody.get()
+            transcript = intersection.locus.transcript
             if all([
                 transcript.end - transcript.start >= 200,
                 transcript.gene.name not in gene_set,
