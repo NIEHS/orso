@@ -369,6 +369,34 @@ class Experiment(models.Model):
 
         return metadata
 
+    def get_word_set(self):
+        '''
+        Get set of words from Experiment metadata.
+        '''
+        # Make translation for removing punctuation
+        trans = str.maketrans(
+            string.punctuation, ' ' * len(string.punctuation))
+
+        # Make word list from description, cell type, and target
+        word_list = self.description.translate(trans).split()
+        if self.cell_type:
+            word_list.extend(self.cell_type.translate(trans).split())
+        if self.target:
+            word_list.extend(self.target.translate(trans).split())
+
+        # Convert to lowercase
+        word_list = [x.lower() for x in word_list]
+        # Remove NLTK stopwords
+        word_list = \
+            [x for x in word_list if x not in stopwords.words('english')]
+        # Remove ENCODE-specific stopwords
+        if self.project.name == 'ENCODE':
+            word_list = \
+                [x for x in word_list if x not in settings.ENCODE_FILTER]
+
+        # Convert to set
+        return set(word_list)
+
 
 class Dataset(models.Model):
     assembly = models.ForeignKey('Assembly')
