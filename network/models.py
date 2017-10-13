@@ -14,12 +14,20 @@ from nltk.corpus import stopwords
 from picklefield.fields import PickledObjectField
 from scipy.stats import variation as coeff_variance
 
+from analysis.ontology import Ontology as OntologyObject
+
 STRANDS = (('+', '+'), ('-', '-'))
 LOCUS_GROUP_TYPES = (
     ('promoter', 'promoter'),
     ('genebody', 'genebody'),
     ('mRNA', 'mRNA'),
     ('enhancer', 'enhancer'),
+)
+ONTOLOGY_TYPES = (
+    ('GeneOntology', 'GeneOntology'),
+    ('DiseaseOntology', 'DiseaseOntology'),
+    ('CellOntology', 'CellOntology'),
+    ('CellLineOntology', 'CellLineOntology'),
 )
 
 
@@ -813,3 +821,13 @@ class MetaPlot(models.Model):
 
     metaplot = JSONField()
     last_updated = models.DateTimeField(auto_now=True)
+
+
+class Ontology(models.Model):
+    name = models.CharField(max_length=128)
+    ontology_type = models.CharField(choices=ONTOLOGY_TYPES, max_length=64)
+    obo_file = models.FilePathField(path=settings.DATA_PATH)
+    ac_file = models.FilePathField(path=settings.DATA_PATH)
+
+    def get_ontology_object(self):
+        return OntologyObject(self.obo_file, self.ac_file, self.ontology_type)
