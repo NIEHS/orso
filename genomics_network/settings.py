@@ -164,3 +164,5 @@ CACHES = {
         'LOCATION': '127.0.0.1:11211',
     }
 }
+
+DATA_PATH = '/Users/lavenderca/genomics_network/data'
