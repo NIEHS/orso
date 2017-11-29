@@ -379,23 +379,33 @@ class Experiment(models.Model):
 
         return metadata
 
-    def get_word_set(self):
+    def get_word_set(self, ngram_level=3):
         '''
         Get set of words from Experiment metadata.
         '''
+        def find_ngrams(input_list, n):
+            return [' '.join(words) for words in
+                    zip(*[input_list[i:] for i in range(n)])]
+
         # Make translation for removing punctuation
-        trans = str.maketrans(
-            string.punctuation, ' ' * len(string.punctuation))
+        trans = str.maketrans('', '', string.punctuation)
 
-        # Make word list from description, cell type, and target
-        word_list = self.description.translate(trans).split()
-        if self.cell_type:
-            word_list.extend(self.cell_type.translate(trans).split())
-        if self.target:
-            word_list.extend(self.target.translate(trans).split())
+        word_source = '\n'.join([
+            self.description,
+            self.cell_type,
+            self.target,
+        ])
 
-        # Convert to lowercase
-        word_list = [x.lower() for x in word_list]
+        word_source = word_source.translate(trans).lower()
+
+        word_list = []
+
+        for line in word_source.split('\n'):
+            words = line.split()
+            word_list.extend(words)
+            for i in range(2, ngram_level + 1):
+                word_list.extend(find_ngrams(words, i))
+
         # Remove NLTK stopwords
         word_list = \
             [x for x in word_list if x not in stopwords.words('english')]
