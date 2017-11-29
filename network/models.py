@@ -836,4 +836,5 @@ class Ontology(models.Model):
     ac_file = models.FilePathField(path=settings.DATA_PATH)
 
     def get_ontology_object(self):
-        return OntologyObject(self.obo_file, self.ac_file, self.ontology_type)
+        return OntologyObject(self.obo_file, self.ac_file,
+                              ontology_type=self.ontology_type)
