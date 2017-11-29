@@ -409,10 +409,6 @@ class Experiment(models.Model):
         # Remove NLTK stopwords
         word_list = \
             [x for x in word_list if x not in stopwords.words('english')]
-        # Remove ENCODE-specific stopwords
-        if self.project.name == 'ENCODE':
-            word_list = \
-                [x for x in word_list if x not in settings.ENCODE_FILTER]
 
         # Convert to set
         return set(word_list)
