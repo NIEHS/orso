@@ -679,7 +679,8 @@ class Gene(models.Model):
             expression_values[transcript] = []
             intersections = \
                 DatasetIntersection.objects.filter(
-                    locus=transcript.mRNA_locus,
+                    locus__group__group_type='mRNA',
+                    locus__transcript=transcript,
                     dataset__experiment__experiment_type__name='RNA-seq',
                 )
             for intersection in intersections:
