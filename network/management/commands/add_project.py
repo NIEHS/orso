@@ -64,6 +64,12 @@ class Command(BaseCommand):
             help='Assign project to owner',
         )
 
+        parser.add_argument(
+            '--encode',
+            action='store_true',
+            help='Use ENCODE-appropriate URLs'
+        )
+
     def handle(self, *args, **options):
 
         with open(options['input_json']) as _in:
@@ -174,15 +180,23 @@ class Command(BaseCommand):
 
                 assembly = dataset['assembly']
                 try:
-                    ambiguous_url = get_encode_url(dataset['ambiguous_href'])
+                    if options['encode']:
+                        ambiguous_url = \
+                            get_encode_url(dataset['ambiguous_href'])
+                    else:
+                        ambiguous_url = dataset['ambiguous_href']
                 except:
                     ambiguous_url = None
                 else:
                     slug = dataset['ambiguous']
 
                 try:
-                    plus_url = get_encode_url(dataset['plus_href'])
-                    minus_url = get_encode_url(dataset['minus_href'])
+                    if options['encode']:
+                        plus_url = get_encode_url(dataset['plus_href'])
+                        minus_url = get_encode_url(dataset['minus_href'])
+                    else:
+                        plus_url = dataset['plus_href']
+                        minus_url = dataset['minus_href']
                 except:
                     plus_url = None
                     minus_url = None
