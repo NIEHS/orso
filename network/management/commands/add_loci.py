@@ -25,11 +25,8 @@ def add_gene_loci(assembly_name, annotation_gtf, annotation_table):
     '''
     Add loci from annotated genes to database.
     '''
-    # Create Assembly if it does not exist
-    if models.Assembly.objects.filter(name=assembly_name).exists():
-        assembly_obj = models.Assembly.objects.get(name=assembly_name)
-    else:
-        assembly_obj = models.Assembly.objects.create(name=assembly_name)
+    # Exception will be raised if assembly does not exist
+    assembly_obj = models.Assembly.objects.get(name=assembly_name)
 
     # Create Annotation
     annotation_obj = models.Annotation.objects.create(
