@@ -29,10 +29,10 @@ def add_gene_loci(assembly_name, annotation_gtf, annotation_table):
     assembly_obj = models.Assembly.objects.get(name=assembly_name)
 
     # Create Annotation
-    annotation_obj = models.Annotation.objects.create(
-        name=assembly_name + ' RefSeq',
+    annotation_obj = models.Annotation.objects.get_or_create(
+        name=annotation_name,
         assembly=assembly_obj,
-    )
+    )[0]
 
     # Create LocusGroup objects
     promoter_group = models.LocusGroup.objects.create(
