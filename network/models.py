@@ -200,6 +200,9 @@ class Experiment(models.Model):
     description = models.TextField(blank=True)
     created = models.DateTimeField(auto_now_add=True)
 
+    consortial_id = models.CharField(max_length=128, null=True, unique=True,
+                                     default=None)
+
     class Meta:
         get_latest_by = 'created'
 
@@ -426,6 +429,9 @@ class Dataset(models.Model):
     ambiguous_url = models.URLField(null=True, blank=True)
     plus_url = models.URLField(null=True, blank=True)
     minus_url = models.URLField(null=True, blank=True)
+
+    consortial_id = models.CharField(max_length=128, null=True, unique=True,
+                                     default=None)
 
     class Meta:
         get_latest_by = 'created'
