@@ -73,6 +73,7 @@ class Ontology:
         self.determine_term_depths()
 
         self.word_to_terms_cache = dict()
+        self.words_to_sim_cache = dict()
 
     def parse_corpus(self):
         '''
@@ -319,17 +320,27 @@ class Ontology:
         elif metric == 'jaccard':
             return self.jaccard(term_list_1, term_list_2, **kwargs)
 
-    def get_word_similarity(self, word_1, word_2, **kwargs):
+    def get_word_similarity(self, word_1, word_2, metric='resnik', **kwargs):
         '''
         For two words, find the similarity of associated terms.
         '''
-        terms_1 = self.get_terms(word_1, **kwargs)
-        terms_2 = self.get_terms(word_2, **kwargs)
+        _word_1, _word_2 = sorted([word_1, word_2])
 
-        if terms_1 and terms_2:
-            return self.get_term_list_similarity(terms_1, terms_2, **kwargs)
+        if (_word_1, _word_2, metric) in self.words_to_sim_cache:
+            return self.words_to_sim_cache[(_word_1, _word_2, metric)]
         else:
-            return None
+
+            terms_1 = self.get_terms(_word_1, **kwargs)
+            terms_2 = self.get_terms(_word_2, **kwargs)
+
+            if terms_1 and terms_2:
+                sim = self.get_term_list_similarity(
+                    terms_1, terms_2, metric, **kwargs)
+            else:
+                sim = None
+
+            self.words_to_sim_cache[(_word_1, _word_2, metric)] = sim
+            return sim
 
     def _check_type(self, term):
         '''
