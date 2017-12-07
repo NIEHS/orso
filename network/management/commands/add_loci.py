@@ -20,8 +20,7 @@ for i in [
     CHROM_LIST.append('chr{}'.format(i))
 
 
-def add_gene_loci(assembly_name, annotation_gtf, annotation_table):
-    # TODO: Add loci just from the annotation table. The GTF is unnecessary.
+def add_gene_loci(assembly_name, annotation_name, annotation_table):
     '''
     Add loci from annotated genes to database.
     '''
@@ -48,123 +47,89 @@ def add_gene_loci(assembly_name, annotation_gtf, annotation_table):
         group_type='mRNA',
     )
 
-    # Get transcripts from annotation file
-    transcripts = dict()
-    with open(annotation_gtf) as f:
-        for line in f:
-            line_split = line.strip().split('\t')
-
-            chromosome = line_split[0]
-            start = int(line_split[3])
-            end = int(line_split[4])
-            strand = line_split[6]
-            detail = line_split[8]
-
-            if chromosome in CHROM_LIST:
-                transcript_id = detail.split(
-                    'transcript_id')[1].split(';')[0].split('"')[1]
-
-                _id = (transcript_id, chromosome)
-                if _id not in transcripts:
-                    transcripts[_id] = {
-                        'chromosome': chromosome,
-                        'strand': strand,
-                        'exons': [],
-                    }
-                transcripts[_id]['exons'].append((start, end))
-
-    for transcript in transcripts.values():
-        transcript['exons'].sort(key=lambda x: x[0])
-        transcript['start'] = transcript['exons'][0][0]
-        transcript['end'] = transcript['exons'][-1][1]
-
-    gene_set = set()
-    transcript_to_gene = dict()
-
-    # Create gene objects and find associated transcripts
     with open(annotation_table) as f:
         reader = csv.DictReader(f, delimiter='\t')
-        for line in reader:
-            gene_name = line['name2']
-            transcript_name = line['name']
+        for row in reader:
 
-            gene_set.add(gene_name)
-            transcript_to_gene[transcript_name] = gene_name
+            transcript_name = row['name']
+            gene_name = row['name2']
+            chromosome = row['chrom']
+            strand = row['strand']
+            transcript_start = int(row['txStart'])
+            transcript_end = int(row['txEnd'])
 
-    gene_objs = []
-    for gene in gene_set:
-        gene_objs.append(models.Gene(
-            name=gene,
-            annotation=annotation_obj,
-        ))
-    models.Gene.objects.bulk_create(gene_objs)
+            exons = []
+            for start, end in zip(
+                row['exonStarts'].split(',')[:-1],
+                row['exonEnds'].split(',')[:-1],
+            ):
+                exons.append([int(start), int(end)])
 
-    # Create transcripts and associated loci
-    for tr_id, transcript in transcripts.items():
-        tr_name = tr_id[0].split('_dup')[0]
+            if chromosome in CHROM_LIST:
 
-        associated_gene_name = transcript_to_gene[tr_name]
-        associated_gene = models.Gene.objects.get(
-            name=associated_gene_name,
-            annotation=annotation_obj,
-        )
+                # Get or create gene
+                gene = models.Gene.objects.get_or_create(
+                    name=gene_name,
+                    annotation=annotation_obj,
+                )[0]
 
-        #  Add promoter locus
-        if transcript['strand'] == '+':
-            _region = [transcript['start'], transcript['start']]
-        elif transcript['strand'] == '-':
-            _region = [transcript['end'], transcript['end']]
-        else:
-            raise ValueError('Transcript is without strand value.')
-        promoter_locus = models.Locus.objects.create(
-            group=promoter_group,
-            strand=transcript['strand'],
-            chromosome=transcript['chromosome'],
-            regions=[_region],
-        )
+                # Create transcript
+                transcript = models.Transcript.objects.create(
+                    gene=gene,
+                    name=transcript_name,
+                    chromosome=chromosome,
+                    strand=strand,
+                    start=transcript_start,
+                    end=transcript_end,
+                    exons=exons,
+                )
 
-        # Add genebody locus
-        genebody_locus = models.Locus.objects.create(
-            group=genebody_group,
-            strand=transcript['strand'],
-            chromosome=transcript['chromosome'],
-            regions=[[transcript['start'], transcript['end']]],
-        )
+                # Create promoter locus
+                if strand == '+':
+                    regions = [[transcript_start, transcript_end]]
+                elif strand == '-':
+                    regions = [[transcript_end, transcript_end]]
+                else:
+                    raise ValueError('Transcript is without strand value.')
+                models.Locus.objects.create(
+                    group=promoter_group,
+                    transcript=transcript,
+                    strand=strand,
+                    chromosome=chromosome,
+                    regions=regions,
+                )
 
-        # Add mRNA locus
-        mRNA_locus = models.Locus.objects.create(
-            group=mRNA_group,
-            strand=transcript['strand'],
-            chromosome=transcript['chromosome'],
-            regions=transcript['exons'],
-        )
+                # Create genebody locus
+                models.Locus.objects.create(
+                    group=genebody_group,
+                    transcript=transcript,
+                    strand=strand,
+                    chromosome=chromosome,
+                    regions=[[transcript_start, transcript_end]],
+                )
 
-        models.Transcript.objects.create(
-            name=tr_name,
-            gene=associated_gene,
-            start=transcript['start'],
-            end=transcript['end'],
-            chromosome=transcript['chromosome'],
-            strand=transcript['strand'],
-            exons=transcript['exons'],
-            promoter_locus=promoter_locus,
-            genebody_locus=genebody_locus,
-            mRNA_locus=mRNA_locus,
-        )
+                # Create mRNA locus
+                models.Locus.objects.create(
+                    group=mRNA_group,
+                    transcript=transcript,
+                    strand=strand,
+                    chromosome=chromosome,
+                    regions=exons,
+                )
 
 
-def add_enhancer_loci(assembly_name, enhancer_bed_file):
-    # Create Assembly if it does not exist
-    if models.Assembly.objects.filter(name=assembly_name).exists():
-        assembly_obj = models.Assembly.objects.get(name=assembly_name)
-    else:
-        assembly_obj = models.Assembly.objects.create(name=assembly_name)
+def add_enhancer_loci(assembly_name, annotation_name, enhancer_bed_file):
+    '''
+    Add enhancer loci from BED file.
+    '''
+    # Exception will be raised if assembly does not exist
+    assembly_obj = models.Assembly.objects.get(name=assembly_name)
 
     # Create Annotation
-    annotation_obj = models.Annotation.objects.create(
-        name=assembly_name + ' Enhancers',
+    annotation_obj = models.Annotation.objects.get_or_create(
+        name=annotation_name,
         assembly=assembly_obj,
-    )
+    )[0]
 
     # Create LocusGroup objects
     enhancer_group = models.LocusGroup.objects.create(
@@ -179,48 +144,62 @@ def add_enhancer_loci(assembly_name, enhancer_bed_file):
             start = int(start) + 1
             end = int(end)
 
-            locus = models.Locus.objects.create(
-                group=enhancer_group,
-                chromosome=chromosome,
-                regions=[[start, end]],
-            )
-
-            models.Enhancer.objects.create(
+            enhancer = models.Enhancer.objects.create(
                 annotation=annotation_obj,
                 name=name,
                 chromosome=chromosome,
                 start=start,
                 end=end,
-                locus=locus,
+            )
+
+            models.Locus.objects.create(
+                group=enhancer_group,
+                enhancer=enhancer,
+                chromosome=chromosome,
+                regions=[[start, end]],
             )
 
 
 class Command(BaseCommand):
+    help = '''
+        Adds loci and associated genes/enhancers to the database.
+
+        If an assembly object does not exist for the assembly name provided, an
+        exception will be raised.
+
+        For genes, the loci file is expected to be a table from UCSC table
+        browser with transcript and exon information. The following fields are
+        required:
+
+        transcript name ("name"),
+        gene name ("name2"),
+        chromosome ("chrom"),
+        strand ("strand"),
+        transcript start ("txStart"),
+        transcript end ("txEnd"),
+        exon starts ("exonStarts"), and
+        exon ends ("exonEnds").
+
+        For enhancers, the loci file is expected to be a BED4 file.
+    '''
+
     def add_arguments(self, parser):
-        parser.add_argument('loci_info_file', type=str)
-        '''
-        Format of each annotation_list row:
-
-        genes:
-        genes ASSEMBLY_NAME PATH_TO_GTF PATH_TO_UCSC_ANNOTATION_TABLE
-
-        enhancers:
-        enhancers ASSEMBLY_NAME PATH_TO_BED
-        '''
+        parser.add_argument('loci_type', type=str,
+                            choices=['genes', 'enhancers'])
+        parser.add_argument('assembly_obj_name', type=str)
+        parser.add_argument('annotation_name', type=str)
+        parser.add_argument('loci_file', type=str)
 
     def handle(self, *args, **options):
-        with open(options['loci_info_file']) as _list:
-            for line in _list:
-
-                _id = line.strip().split()[0]
-
-                if _id == 'genes':
-
-                    assembly, annotation_file, annotation_table = \
-                        line.strip().split()[1:]
-                    add_gene_loci(assembly, annotation_file, annotation_table)
-
-                elif _id == 'enhancers':
-
-                    assembly, enhancer_bed = line.strip().split()[1:]
-                    add_enhancer_loci(assembly, enhancer_bed)
+        if options['loci_type'] == 'genes':
+            add_gene_loci(
+                options['assembly_obj_name'],
+                options['annotation_name'],
+                options['loci_file'],
+            )
+        elif options['loci_type'] == 'enhancers':
+            add_enhancer_loci(
+                options['assembly_obj_name'],
+                options['annotation_name'],
+                options['loci_file'],
+            )
