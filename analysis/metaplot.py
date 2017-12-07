@@ -132,7 +132,10 @@ def read_metaplot_bigwig_average_over_bed(tab_file):
 
     entry_num = len(entry_name_set)
     for i, value in enumerate(metaplot_values):
-        metaplot_values[i] = value / entry_num
+        try:
+            metaplot_values[i] = value / entry_num
+        except ZeroDivisionError:
+            metaplot_values[i] = 0
 
     return metaplot_values
 
