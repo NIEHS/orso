@@ -760,12 +760,18 @@ class DatasetIntersection(models.Model):
     raw_value = models.FloatField()
     normalized_value = models.FloatField()
 
+    class Meta:
+        unique_together = ('locus', 'dataset')
+
 
 class ExperimentIntersection(models.Model):
     locus = models.ForeignKey('Locus')
     experiment = models.ForeignKey('Experiment')
 
     average_value = models.FloatField()
+
+    class Meta:
+        unique_together = ('locus', 'experiment')
 
 
 class DatasetDistance(models.Model):
