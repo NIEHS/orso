@@ -843,7 +843,7 @@ class MetaPlot(models.Model):
 
 
 class Ontology(models.Model):
-    name = models.CharField(max_length=128)
+    name = models.CharField(unique=True, max_length=128)
     ontology_type = models.CharField(choices=ONTOLOGY_TYPES, max_length=64)
     obo_file = models.FilePathField(path=settings.DATA_PATH)
     ac_file = models.FilePathField(path=settings.DATA_PATH)
