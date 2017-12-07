@@ -10,3 +10,7 @@ project/django_project/settings/local.py
 webpack-stats.json
 project/static/bundles
 project/.happypack
+
+.env
+
+notebooks/*
