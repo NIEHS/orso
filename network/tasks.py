@@ -63,36 +63,231 @@ def _select_representative_transcripts(gene_pk):
 
 
 @task()
-def process_datasets(datasets, pca_transform=True):
+def add_or_update_encode():
 
-    download_list_file = NamedTemporaryFile(mode='w')
-    bigwig_paths = dict()
-    for ds in datasets:
-        if ds.is_stranded():
-            download_list_file.write('{}\n'.format(ds.plus_url))
-            download_list_file.write('{}\n'.format(ds.minus_url))
-            bigwig_paths[ds.pk] = {
-                'ambiguous': None,
-                'plus': os.path.basename(ds.plus_url),
-                'minus': os.path.basename(ds.minus_url),
-            }
+    def get_encode_url(url):
+        return 'https://www.encodeproject.org{}'.format(url)
+
+    project = models.Project.objects.get_or_create(
+        name='TEST',
+    )[0]
+
+    encode = Encode()
+    encode.get_experiments()
+    print('{} experiments found in ENCODE!!'.format(len(encode.experiments)))
+
+    experiments_to_process = set()
+    datasets_to_process = set()
+
+    for experiment in encode.experiments[:1]:
+        encode_id = experiment['name']
+
+        # Create experiment name from fields
+        experiment_name = encode_id
+        dataset_basename = ''
+
+        # - Add assay to experiment name
+        try:
+            assay = \
+                ASSAY_REPLACEMENT[experiment['detail']['assay_term_name']]
+        except KeyError:
+            assay = experiment['detail']['assay_term_name']
+        assay = assay.replace('-seq', 'seq').replace(' ', '_')
+        experiment_name += '-{}'.format(assay)
+        dataset_basename += assay
+
+        # - Add target to experiment name
+        try:
+            target = '-'.join(
+                experiment['detail']['target']
+                .split('/')[2]
+                .split('-')[:-1]
+            ).replace('%20', ' ')
+        except:
+            target = None
         else:
-            download_list_file.write('{}\n'.format(ds.ambiguous_url))
-            bigwig_paths[ds.pk] = {
-                'ambiguous': os.path.basename(ds.ambiguous_url),
-                'plus': None,
-                'minus': None,
-            }
-    download_list_file.flush()
-    call([
-        'aria2c',
-        '--allow-overwrite=true',
-        '--conditional-get=true',
-        '-x', '16',
-        '-s', '16',
-        '-i', download_list_file.name,
-    ])
-    download_list_file.close()
+            _target = target.replace(' ', '_').replace('-', '_')
+            experiment_name += '-{}'.format(_target)
+            dataset_basename += '-{}'.format(_target)
+
+        # - Add cell type or tissue to experiment name
+        try:
+            biosample_term_name = \
+                experiment['detail']['biosample_term_name']
+        except:
+            biosample_term_name = None
+        else:
+            _biosample = ('').join(w.replace('-', '').capitalize() for w in
+                                   biosample_term_name.split())
+            experiment_name += '-{}'.format(_biosample)
+            dataset_basename += '-{}'.format(_biosample)
+
+        # Create experiment description from fields
+        experiment_description = ''
+        for field in EXPERIMENT_DESCRIPTION_FIELDS:
+            if field in experiment['detail']:
+
+                if type(experiment['detail'][field]) is list:
+                    value = '; '.join(experiment['detail'][field])
+                else:
+                    value = experiment['detail'][field]
+
+                if field == 'target':
+                    value = value.split('/')[2]
+
+                experiment_description += '{}: {}\n'.format(
+                    ' '.join(field.split('_')).title(),
+                    value.capitalize(),
+                )
+        experiment_description = experiment_description.rstrip()
+
+        # Get or create associated experiment type object
+        try:
+            experiment_type = models.ExperimentType.objects.get(
+                name=experiment['detail']['assay_term_name'])
+        except models.ExperimentType.DoesNotExist:
+            experiment_type = models.ExperimentType.objects.create(
+                name=experiment['detail']['assay_term_name'],
+                short_name=experiment['detail']['assay_term_name'],
+                relevant_regions='genebody',
+            )
+
+        # Update or create experiment object
+        exp, exp_created = models.Experiment.objects.update_or_create(
+            project=project,
+            slug=experiment['name'],
+            defaults={
+                'name': experiment_name,
+                'project': project,
+                'description': experiment_description,
+                'experiment_type': experiment_type,
+                'cell_type': biosample_term_name,
+            },
+        )
+        if target:
+            exp.target = target
+            exp.save()
+        if exp_created:
+            experiments_to_process.add(exp)
+
+        for dataset in experiment['datasets']:
+
+            # Create description for dataset
+            dataset_description = ''
+            for field in DATASET_DESCRIPTION_FIELDS:
+                for detail in ['ambiguous_detail',
+                               'plus_detail',
+                               'minus_detail']:
+                    values = set()
+                    try:
+                        if type(dataset[detail][field]) is list:
+                            values.update(dataset[detail][field])
+                        else:
+                            values.add(dataset[detail][field])
+                        dataset_description += '{}: {}\n'.format(
+                            ' '.join(field.split('_')).title(),
+                            '\n'.join(
+                                str(val) for val in values),
+                        )
+                    except KeyError:
+                        pass
+            dataset_description = dataset_description.rstrip()
+
+            # Get associated URLs
+            try:
+                ambiguous_url = get_encode_url(dataset['ambiguous_href'])
+            except:
+                ambiguous_url = None
+            else:
+                slug = dataset['ambiguous']
+            try:
+                plus_url = get_encode_url(dataset['plus_href'])
+                minus_url = get_encode_url(dataset['minus_href'])
+            except:
+                plus_url = None
+                minus_url = None
+            else:
+                slug = '{}-{}'.format(
+                    dataset['plus'],
+                    dataset['minus'],
+                )
+
+            # Create dataset name
+            assembly = dataset['assembly']
+            dataset_name = '{}-{}-{}'.format(
+                slug,
+                dataset_basename,
+                assembly,
+            )
+
+            # Get assembly object
+            try:
+                assembly_obj = models.Assembly.objects.get(name=assembly)
+            except models.Assembly.DoesNotExist:
+                assembly_obj = None
+                print(
+                    'Assembly "{}" does not exist for dataset {}. '
+                    'Skipping dataset.'.format(assembly, dataset_name)
+                )
+
+            # Add dataset
+            if assembly_obj:
+
+                # Update or create dataset
+                ds, ds_created = models.Dataset.objects.update_or_create(
+                    slug=slug,
+                    defaults={
+                        'experiment': exp,
+                        'name': dataset_name,
+                        'assembly': assembly_obj,
+                    },
+                )
+
+                # Update URLs, if appropriate
+                updated_url = False
+                if ambiguous_url:
+                    if ds.ambiguous_url != ambiguous_url:
+                        ds.ambiguous_url = ambiguous_url
+                        updated_url = True
+                if plus_url and minus_url:
+                    if all([
+                        ds.plus_url != plus_url,
+                        ds.minus_url != minus_url,
+                    ]):
+                        ds.plus_url = plus_url
+                        ds.minus_url = minus_url
+                        updated_url = True
+                if updated_url:
+                    ds.save()
+
+                # Check if intersections and metaplots already exist
+                already_processed = True
+                num_total_loci = len(models.Locus.objects.filter(
+                    group__assembly=assembly_obj))
+                num_existing_intersections = \
+                    len(models.DatasetIntersection.objects.filter(
+                        dataset=ds))
+                if num_total_loci != num_existing_intersections:
+                    already_processed = False
+                num_total_metaplots = len(models.LocusGroup.objects.filter(
+                    assembly=assembly_obj))
+                num_existing_metaplots = len(models.MetaPlot.objects.filter(
+                    dataset=ds))
+                if num_total_metaplots != num_existing_metaplots:
+                    already_processed = False
+
+                if ds_created or updated_url or not already_processed:
+                    datasets_to_process.add(ds)
+                    experiments_to_process.add(exp)
+
+    print('Processing {} datasets...'.format(len(datasets_to_process)))
+    process_datasets(list(datasets_to_process))
+    print('Processing {} experiments...'.format(len(experiments_to_process)))
+    process_experiments(list(experiments_to_process))
+
+
+@task()
+def process_datasets(datasets, chunk=1000):
 
     assembly_to_intersection_bed = dict()
     for ds in datasets:
@@ -112,32 +307,88 @@ def process_datasets(datasets, pca_transform=True):
                 metaplot.generate_metaplot_bed(lg, bed)
                 assembly_to_metaplot_bed[ds.assembly][lg] = bed
 
-    tasks = []
-    for ds in datasets:
-        intersection_beds = assembly_to_intersection_bed[ds.assembly]
-        for lg, bed in intersection_beds.items():
-            tasks.append(process_dataset_intersection.s(
-                ds.pk,
-                lg.pk,
-                bed.name,
-                bigwig_paths[ds.pk],
-            ))
+    bigwig_dir = os.path.join(os.getcwd(), 'data', 'bigwig_temp')
+    os.makedirs(bigwig_dir, exist_ok=True)
 
-        metaplot_beds = assembly_to_metaplot_bed[ds.assembly]
-        for lg, bed in metaplot_beds.items():
-            tasks.append(process_dataset_metaplot.s(
-                ds.pk,
-                lg.pk,
-                bed.name,
-                bigwig_paths[ds.pk],
-            ))
+    for i in range(0, len(datasets), chunk):
+        index_1 = i * chunk
+        index_2 = min((i + 1) * chunk, len(datasets))
+        dataset_chunk = datasets[index_1:index_2]
 
-    job = group(tasks)
-    results = job.apply_async()
-    results.join()
+        download_list_file = NamedTemporaryFile(mode='w')
+        bigwig_paths = dict()
+        for ds in dataset_chunk:
+            if ds.is_stranded():
 
-    if pca_transform:
-        transform_dataset_values_by_pca(datasets)
+                download_list_file.write('{}\n'.format(ds.plus_url))
+                download_list_file.write('\tdir={}\n'.format(bigwig_dir))
+                download_list_file.write('{}\n'.format(ds.minus_url))
+                download_list_file.write('\tdir={}\n'.format(bigwig_dir))
+
+                plus_local_path = os.path.join(
+                    bigwig_dir, os.path.basename(ds.plus_url))
+                minus_local_path = os.path.join(
+                    bigwig_dir, os.path.basename(ds.minus_url))
+
+                bigwig_paths[ds.pk] = {
+                    'ambiguous': None,
+                    'plus': plus_local_path,
+                    'minus': minus_local_path,
+                }
+
+            else:
+
+                download_list_file.write('{}\n'.format(ds.ambiguous_url))
+                download_list_file.write('\tdir={}\n'.format(bigwig_dir))
+
+                ambiguous_local_path = os.path.join(
+                    bigwig_dir, os.path.basename(ds.ambiguous_url))
+
+                bigwig_paths[ds.pk] = {
+                    'ambiguous': ambiguous_local_path,
+                    'plus': None,
+                    'minus': None,
+                }
+
+        download_list_file.flush()
+        call([
+            'aria2c',
+            '--allow-overwrite=true',
+            '--conditional-get=true',
+            '-x', '16',
+            '-s', '16',
+            '-i', download_list_file.name,
+        ])
+        download_list_file.close()
+
+        tasks = []
+        for ds in dataset_chunk:
+            intersection_beds = assembly_to_intersection_bed[ds.assembly]
+            for lg, bed in intersection_beds.items():
+                tasks.append(process_dataset_intersection.s(
+                    ds.pk,
+                    lg.pk,
+                    bed.name,
+                    bigwig_paths[ds.pk],
+                ))
+
+            metaplot_beds = assembly_to_metaplot_bed[ds.assembly]
+            for lg, bed in metaplot_beds.items():
+                tasks.append(process_dataset_metaplot.s(
+                    ds.pk,
+                    lg.pk,
+                    bed.name,
+                    bigwig_paths[ds.pk],
+                ))
+
+        job = group(tasks)
+        results = job.apply_async()
+        results.join()
+
+        for paths in bigwig_paths.values():
+            for field in ['ambiguous', 'plus', 'minus']:
+                if paths[field]:
+                    os.remove(paths[field])
 
     for bed_dict in assembly_to_intersection_bed.values():
         for bed in bed_dict.values():
@@ -191,6 +442,11 @@ def process_dataset_metaplot(dataset_pk, locusgroup_pk, bed_path, bigwigs):
             'metaplot': json.dumps(metaplot_out),
         }
     )
+
+
+@task
+def process_experiments(experiments):
+    set_experiment_intersection_values(experiments)
 
 
 def get_metadata_similarities():
