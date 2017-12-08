@@ -33,6 +33,39 @@ from analysis import transform
 
 from subprocess import call
 
+ASSAY_REPLACEMENT = {
+    'single cell isolation followed by RNA-seq': 'SingleCell RNA-seq',
+    'shRNA knockdown followed by RNA-seq': 'shRNA-KD RNA-seq',
+    'siRNA knockdown followed by RNA-seq': 'siRNA-KD RNA-seq',
+    'CRISPR genome editing followed by RNA-seq': 'CRISPR RNA-seq',
+    'whole-genome shotgun bisulfite sequencing': 'WGBS',
+    'microRNA-seq': 'miRNA-seq',
+}
+
+EXPERIMENT_DESCRIPTION_FIELDS = [
+    'assay_slims',
+    'assay_synonyms',
+    'assay_term_name',
+    'assay_title',
+    'biosample_summary',
+    'biosample_synonyms',
+    'biosample_term_name',
+    'biosample_type',
+    'category_slims',
+    'objective_slims',
+    'organ_slims',
+    'target',
+    'system_slims',
+]
+
+DATASET_DESCRIPTION_FIELDS = [
+    'assembly',
+    'biological_replicates',
+    'output_category',
+    'output_type',
+    'technical_replicates',
+]
+
 
 def single_instance_task(cache_id, timeout=None):
     def decorator(func):
