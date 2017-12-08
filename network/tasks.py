@@ -608,12 +608,12 @@ def update_data_recommendations():
         #  Find dataset correlation rank order
         #  Get z scores for each experiment
         z_score_dict = defaultdict(list)
-        for exps, score in z_scores.items():
+        for exps, _score in z_scores.items():
             exp_1, exp_2 = exps
             if exp_1 in owned_exps and exp_2 in compare_exps:
-                z_score_dict[exp_2].append([score, exp_1])
+                z_score_dict[exp_2].append([_score, exp_1])
             elif exp_1 in compare_exps and exp_2 in owned_exps:
-                z_score_dict[exp_1].append([score, exp_2])
+                z_score_dict[exp_1].append([_score, exp_2])
 
         #  Find max z score for each experiment
         max_z_score_dict = dict()
@@ -701,7 +701,7 @@ def update_user_recommendations():
                 if fav.owner != dataset_owner:
                     scores[(fav.owner, dataset_owner)] += 1
 
-        for key, score in scores.items():
+        for key, _score in scores.items():
             owner, favorite = key
 
             ur = models.UserRecommendation.objects.filter(
@@ -715,13 +715,13 @@ def update_user_recommendations():
 
             if not uf.exists():
                 if ur.exists():
-                    ur[0].score = score
+                    ur[0].score = _score
                     ur[0].save()
                 else:
                     models.UserRecommendation.objects.create(
                         owner=owner,
                         recommended=favorite,
-                        score=score,
+                        score=_score,
                     )
 
     def clean_up_user_recommendations():
