@@ -790,23 +790,39 @@ def _get_associated_transcript(gene_pk):
 
 
 @task
-def pca_analysis():
+def add_or_update_pca(datasets):
     '''
-    Perform PCA analysis for each locus group.
+    Perform PCA analysis observing the datasets.
     '''
-    tasks = []
+    # tasks = []
+    #
+    dataset_pks = set([ds.pk for ds in datasets])
 
-    for lg in models.LocusGroup.objects.all():
-        for exp_type in models.ExperimentType.objects.all():
-            tasks.append(_pca_analysis.s(lg.pk, exp_type.pk))
+    for lg in sorted(models.LocusGroup.objects.all(), key=lambda x: x.pk):
+        for exp_type in sorted(models.ExperimentType.objects.all(),
+                               key=lambda x: x.pk):
 
-    job = group(tasks)
-    results = job.apply_async()
-    results.join()
+            subset = set(models.Dataset.objects.filter(
+                assembly=lg.assembly,
+                experiment__experiment_type=exp_type,
+            ).values_list('pk', flat=True))
+
+            # tasks.append(_pca_analysis.s(
+            #     lg.pk, exp_type.pk, list(dataset_pks & subset)))
+
+            # print(lg.pk, exp_type.pk)
+            #
+            _pca_analysis(lg.pk, exp_type.pk, list(dataset_pks & subset))
+
+#     job = group(tasks)
+#     results = job.apply_async()
+#     results.join()
 
 
 @task
-def _pca_analysis(locusgroup_pk, experimenttype_pk, size_threshold=200):
+def _pca_analysis(locusgroup_pk, experimenttype_pk, dataset_pks,
+                  size_threshold=200):
+
     locus_group = models.LocusGroup.objects.get(pk=locusgroup_pk)
     experiment_type = models.ExperimentType.objects.get(pk=experimenttype_pk)
 
@@ -833,10 +849,18 @@ def _pca_analysis(locusgroup_pk, experimenttype_pk, size_threshold=200):
     elif locus_group.group_type in ['enhancer']:
         loci = models.Locus.objects.filter(group=locus_group)
 
-    datasets = models.Dataset.objects.filter(
-        assembly=locus_group.assembly,
-        experiment__experiment_type=experiment_type,
-    )
+    datasets = models.Dataset.objects.filter(pk__in=list(dataset_pks))
+
+    loci_num = len(models.Locus.objects.filter(group=locus_group))
+    temp_datasets = []
+    for ds in datasets:
+        intersection_num = len(models.DatasetIntersection.objects.filter(
+            dataset=ds,
+            locus__group=locus_group,
+        ))
+        if loci_num == intersection_num:
+            temp_datasets.append(ds)
+    datasets = temp_datasets
 
     if len(datasets) >= 3:
         pca = PCA(n_components=3)
@@ -981,35 +1005,55 @@ def _pca_analysis(locusgroup_pk, experimenttype_pk, size_threshold=200):
         models.PCALocusOrder.objects.bulk_create(
             _pca_locus_orders)
 
-        # Set the PCA to datasets relationship
-        if not created:
-            pca.transformed_datasets.clear()
-        _pca_transformed_datasets = []
-        for ds, values in zip(datasets, fitted_values):
-            _pca_transformed_datasets.append(models.PCATransformedValues(
-                pca=pca,
-                dataset=ds,
-                transformed_values=values.tolist(),
+
+@task
+def add_or_update_pca_transformed_values():
+    tasks = []
+
+    for pca in models.PCA.objects.all():
+        for dataset in models.Dataset.objects.filter(
+            assembly=pca.locus_group.assembly,
+            experiment__experiment_type=pca.experiment_type,
+        ):
+            tasks.append(_add_or_update_pca_transformed_values.s(
+                dataset.pk, pca.pk
             ))
-        models.PCATransformedValues.objects.bulk_create(
-            _pca_transformed_datasets)
+
+    job = group(tasks)
+    results = job.apply_async()
+    results.join()
 
 
 @task
-def transform_dataset_values_by_pca(datasets):
-    '''
-    For datasets, transform values and set PCATransformedValues.
-    '''
-    for ds in datasets:
-        pca = models.PCA.objects.get(
-            annotation__assembly=ds.assembly,
-            experiment_type=ds.experiment.experiment_type,
-        )
-        fitted_values = transform.pca_transform_intersections(ds)
+def _add_or_update_pca_transformed_values(dataset_pk, pca_pk):
+    dataset = models.Dataset.objects.get(pk=dataset_pk)
+    pca = models.PCA.objects.get(pk=pca_pk)
+
+    order = models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
+    loci = [x.locus for x in order]
+
+    intersection_values = []
+    missing_values = False
+    for locus in loci:
+        try:
+            intersection_values.append(
+                models.DatasetIntersection.objects.get(
+                    dataset=dataset, locus=locus).normalized_value
+            )
+        except models.DatasetIntersection.DoesNotExist:
+            print('Missing intersection: Dataset: {}; Locus: {}.'.format(
+                str(dataset.pk), str(locus.pk)))
+            missing_values = True
+            break
+
+    if not missing_values:
+        transformed_values = pca.pca.transform([intersection_values])[0]
         models.PCATransformedValues.objects.update_or_create(
             pca=pca,
-            dataset=ds,
-            transformed_values=fitted_values.tolist(),
+            dataset=dataset,
+            defaults={
+                'transformed_values': transformed_values.tolist(),
+            },
         )
 
 
