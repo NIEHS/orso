@@ -33,6 +33,10 @@ from analysis import transform
 
 from subprocess import call
 
+from analysis.encode import Encode
+
+from progress.bar import Bar
+
 ASSAY_REPLACEMENT = {
     'single cell isolation followed by RNA-seq': 'SingleCell RNA-seq',
     'shRNA knockdown followed by RNA-seq': 'shRNA-KD RNA-seq',
