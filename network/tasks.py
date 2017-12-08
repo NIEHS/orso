@@ -473,7 +473,7 @@ def process_dataset_metaplot(dataset_pk, locusgroup_pk, bed_path, bigwigs):
         locus_group=locus_group,
         defaults={
             'metaplot': json.dumps(metaplot_out),
-        }
+        },
     )
 
 
