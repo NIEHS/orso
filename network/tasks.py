@@ -1014,6 +1014,52 @@ def transform_dataset_values_by_pca(datasets):
 
 
 @task
+def get_idf_objects():
+    '''
+    For each annotation/experiment type pair, create an IDF JSON.
+    '''
+    for assembly in models.Assembly.objects.all():
+        for exp_type in models.ExperimentType.objects.all():
+            idf = transform.generate_idf(assembly, exp_type)
+
+            models.IDF.objects.update_or_create(
+                assembly=assembly,
+                experiment_type=exp_type,
+                defaults={
+                    'idf': json.dumps(idf),
+                },
+            )
+
+
+@task
+def set_dataset_metadata_distance_by_sem_idf():
+    model = Word2Vec.load(W2V_MODEL)
+    for assembly in models.Assembly.objects.all():
+        for exp_type in models.ExperimentType.objects.all():
+            idf = json.loads(models.IDF.objects.get(
+                assembly=assembly, experiment_type=exp_type).idf)
+            datasets = models.Dataset.objects.filter(
+                assembly=assembly, experiment__experiment_type=exp_type)
+
+            for ds_1 in datasets:
+                for ds_2 in datasets:
+                    if ds_1 != ds_2:
+                        semantic_idf = transform.semantic_idf(
+                            models.Experiment.objects.get(dataset=ds_1),
+                            models.Experiment.objects.get(dataset=ds_2),
+                            idf,
+                            model=model,
+                        )
+                        models.DatasetMetadataDistance.objects.update_or_create(  # noqa
+                            dataset_1=ds_1,
+                            dataset_2=ds_2,
+                            defaults={
+                                'distance': semantic_idf,
+                            },
+                        )
+
+
+@task
 def get_tfidf_vectorizers():
     '''
     For each annotation/experiment type pair, create a TF/IDF vectorizer and
