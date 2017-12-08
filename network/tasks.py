@@ -29,7 +29,6 @@ from scipy.spatial.distance import mahalanobis
 from sklearn.ensemble import RandomForestClassifier
 
 from analysis import score
-from analysis import transform
 
 from subprocess import call
 
