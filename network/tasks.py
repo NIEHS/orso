@@ -2,7 +2,6 @@ from celery.decorators import task, periodic_task
 from celery import group
 from django.utils import timezone
 from django.core.cache import cache
-from django.db.models import Q
 
 from analysis.correlation import Correlation
 from analysis import transcript_coverage
@@ -18,9 +17,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 from sklearn.metrics import jaccard_similarity_score
 from sklearn.decomposition import PCA
-
-from combat.combat import combat
-import pandas as pd
 
 import os
 from tempfile import NamedTemporaryFile
