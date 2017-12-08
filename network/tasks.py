@@ -1014,221 +1014,248 @@ def transform_dataset_values_by_pca(datasets):
 
 
 @task
-def get_idf_objects():
+def update_dataset_data_scores(datasets, quiet=False):
     '''
-    For each annotation/experiment type pair, create an IDF JSON.
+    Update or create dataset data distance values.
     '''
-    for assembly in models.Assembly.objects.all():
-        for exp_type in models.ExperimentType.objects.all():
-            idf = transform.generate_idf(assembly, exp_type)
+    updated = set()
 
-            models.IDF.objects.update_or_create(
-                assembly=assembly,
-                experiment_type=exp_type,
-                defaults={
-                    'idf': json.dumps(idf),
-                },
-            )
+    bar_max = 0
+    for ds in datasets:
+        bar_max += models.Dataset.objects.filter(
+            assembly=ds.assembly,
+            experiment__experiment_type=ds.experiment.experiment_type,
+        ).count()
+    bar = Bar('Processing', max=bar_max)
 
+    for ds_1 in datasets:
+        for ds_2 in models.Dataset.objects.filter(
+            assembly=ds_1.assembly,
+            experiment__experiment_type=ds_1.experiment.experiment_type,
+        ):
 
-@task
-def set_dataset_metadata_distance_by_sem_idf():
-    model = Word2Vec.load(W2V_MODEL)
-    for assembly in models.Assembly.objects.all():
-        for exp_type in models.ExperimentType.objects.all():
-            idf = json.loads(models.IDF.objects.get(
-                assembly=assembly, experiment_type=exp_type).idf)
-            datasets = models.Dataset.objects.filter(
-                assembly=assembly, experiment__experiment_type=exp_type)
+            _ds_1, _ds_2 = sorted([ds_1, ds_2], key=lambda x: x.pk)
+            exp_type_1 = _ds_1.experiment.experiment_type
+            exp_type_2 = _ds_2.experiment.experiment_type
+            if all([
+                (_ds_1, _ds_2) not in updated,
+                _ds_1 != _ds_2,
+                models.PCATransformedValues.objects.filter(
+                    dataset=_ds_1,
+                    pca__locus_group__group_type=exp_type_1.relevant_regions,
+                ).exists(),
+                models.PCATransformedValues.objects.filter(
+                    dataset=_ds_2,
+                    pca__locus_group__group_type=exp_type_2.relevant_regions,
+                ).exists(),
+            ]):
 
-            for ds_1 in datasets:
-                for ds_2 in datasets:
-                    if ds_1 != ds_2:
-                        semantic_idf = transform.semantic_idf(
-                            models.Experiment.objects.get(dataset=ds_1),
-                            models.Experiment.objects.get(dataset=ds_2),
-                            idf,
-                            model=model,
-                        )
-                        models.DatasetMetadataDistance.objects.update_or_create(  # noqa
-                            dataset_1=ds_1,
-                            dataset_2=ds_2,
-                            defaults={
-                                'distance': semantic_idf,
-                            },
-                        )
-
-
-@task
-def get_tfidf_vectorizers():
-    '''
-    For each annotation/experiment type pair, create a TF/IDF vectorizer and
-    create the associated object.
-    '''
-    EXPERIMENT_DESCRIPTION_FIELDS = [
-        'assay_slims',
-        'assay_synonyms',
-        'assay_term_name',
-        'assay_title',
-        'biosample_summary',
-        'biosample_synonyms',
-        'biosample_term_name',
-        'biosample_type',
-        'category_slims',
-        'objective_slims',
-        'organ_slims',
-        'target',
-        'system_slims',
-    ]
-
-    for assembly in models.Assembly.objects.all():
-        for exp_type in models.ExperimentType.objects.all():
-
-            descriptions = []
-            experiments = models.Experiment.objects.filter(
-                dataset__assembly=assembly,
-                experiment_type=exp_type,
-            )
-
-            if experiments:
-                for exp in experiments:
-
-                    description = exp.description
-                    description = description.translate(
-                        str.maketrans('', '', string.punctuation))
-                    description = description.split()
-                    for field in EXPERIMENT_DESCRIPTION_FIELDS:
-                        description = [x for x in description if x != field]
-
-                    if exp.cell_type:
-                        description.append(exp.cell_type)
-                    if exp.target:
-                        description.append(exp.target)
-
-                    descriptions.append(' '.join(description))
-
-                tf = TfidfVectorizer(analyzer='word', ngram_range=(1, 1),
-                                     min_df=0, stop_words='english')
-                tf.fit(descriptions)
-
-                models.TfidfVectorizer.objects.update_or_create(
-                    assembly=assembly,
-                    experiment_type=exp_type,
+                distance = score.score_datasets_by_pca_distance(_ds_1, _ds_2)
+                models.DatasetDataDistance.objects.update_or_create(
+                    dataset_1=_ds_1,
+                    dataset_2=_ds_2,
                     defaults={
-                        'tfidf_vectorizer': tf,
+                        'distance': distance,
+                    },
+                )
+                updated.add((_ds_1, _ds_2))
+
+            bar.next()
+
+    bar.finish()
+
+
+@task
+def update_dataset_metadata_scores(datasets):
+    '''
+    Update or create dataset metadata distance values.
+    '''
+    updated = set()
+
+    bar_max = 0
+    for ds in datasets:
+        bar_max += models.Dataset.objects.filter(
+            assembly=ds.assembly,
+            experiment__experiment_type=ds.experiment.experiment_type,
+        ).count()
+    bar = Bar('Processing', max=bar_max)
+
+    onts = []
+    onts.append(models.Ontology.objects.get(name='cell_ontology'))
+    onts.append(models.Ontology.objects.get(name='cell_line_ontology'))
+    onts.append(models.Ontology.objects.get(name='brenda_tissue_ontology'))
+    cell_ont_list = [ont.get_ontology_object() for ont in onts]
+
+    gene_ont = models.Ontology.objects.get(
+        name='gene_ontology').get_ontology_object()
+
+    for ds_1 in datasets:
+        for ds_2 in models.Dataset.objects.filter(
+            assembly=ds_1.assembly,
+            experiment__experiment_type=ds_1.experiment.experiment_type,
+        ):
+
+            _ds_1, _ds_2 = sorted([ds_1, ds_2], key=lambda x: x.pk)
+            if all([
+                (_ds_1, _ds_2) not in updated,
+                _ds_1 != _ds_2,
+            ]):
+
+                exp_1 = models.Experiment.objects.get(dataset=_ds_1)
+                exp_2 = models.Experiment.objects.get(dataset=_ds_2)
+
+                total_sim = 0
+
+                cell_ont_sims = []
+                for ont_obj in cell_ont_list:
+                    sim = ont_obj.get_word_similarity(
+                        exp_1.cell_type, exp_2.cell_type, metric='lin')
+                    if sim:
+                        cell_ont_sims.append(sim)
+                if cell_ont_sims:
+                    total_sim += max(cell_ont_sims)
+
+                gene_ont_sim = gene_ont.get_word_similarity(
+                    exp_1.target, exp_2.target, metric='jaccard',
+                    weighting='information_content')
+                if gene_ont_sim:
+                    total_sim += gene_ont_sim
+
+                models.DatasetMetadataDistance.objects.update_or_create(
+                    dataset_1=_ds_1,
+                    dataset_2=_ds_2,
+                    defaults={
+                        'distance': total_sim,
                     },
                 )
 
+            bar.next()
 
-@task
-def set_dataset_data_distance(pk_1, pk_2):
-    '''
-    For the datasets, calculate and set the DatasetDataDistance.
-    '''
-    dataset_1 = models.Dataset.objects.get(pk=pk_1)
-    dataset_2 = models.Dataset.objects.get(pk=pk_2)
-    distance = score.score_datasets_by_pca_distance(dataset_1, dataset_2)
-    models.DatasetDataDistance.objects.update_or_create(
-        dataset_1=dataset_1,
-        dataset_2=dataset_2,
-        defaults={
-            'distance': distance,
-        }
-    )
+    bar.finish()
 
 
 @task
-def set_dataset_metadata_distance(pk_1, pk_2):
+def update_experiment_data_scores(experiments):
     '''
-    For the datasets, calculate and set the DatasetMetadataDistance.
+    Update or create experiment data distance values.
     '''
-    dataset_1 = models.Dataset.objects.get(pk=pk_1)
-    dataset_2 = models.Dataset.objects.get(pk=pk_2)
-    distance = score.score_datasets_by_tfidf(dataset_1, dataset_2)
-    models.DatasetMetadataDistance.objects.update_or_create(
-        dataset_1=dataset_1,
-        dataset_2=dataset_2,
-        defaults={
-            'distance': distance,
-        }
-    )
+    updated = set()
 
+    bar_max = 0
+    for exp in experiments:
+        assemblies = models.Assembly.objects.filter(dataset__experiment=exp)
+        bar_max += models.Experiment.objects.filter(
+            dataset__assembly__in=assemblies,
+            experiment_type=exp.experiment_type,
+        ).count()
+    bar = Bar('Processing', max=bar_max)
 
-@task
-def set_experiment_data_distance(pk_1, pk_2):
-    '''
-    For the experiments, calculate and set the ExperimentDataDistance.
-    '''
-    experiment_1 = models.Experiment.objects.get(pk=pk_1)
-    experiment_2 = models.Experiment.objects.get(pk=pk_2)
-    distance = score.score_experiments_by_pca_distance(
-        experiment_1, experiment_2)
-    models.ExperimentDataDistance.objects.update_or_create(
-        experiment_1=experiment_1,
-        experiment_2=experiment_2,
-        defaults={
-            'distance': distance,
-        }
-    )
-
-
-@task
-def set_experiment_metadata_distance(pk_1, pk_2):
-    '''
-    For the experiments, calculate and set the ExperimentMetadataDistance.
-    '''
-    experiment_1 = models.Experiment.objects.get(pk=pk_1)
-    experiment_2 = models.Experiment.objects.get(pk=pk_2)
-    distance = score.score_experiments_by_tfidf(experiment_1, experiment_2)
-    models.ExperimentMetadataDistance.objects.update_or_create(
-        experiment_1=experiment_1,
-        experiment_2=experiment_2,
-        defaults={
-            'distance': distance,
-        }
-    )
-
-
-@task
-def set_dataset_distances(datasets):
-    '''
-    For all datasets, set DatasetDataDistance and DatasetMetadataDistance.
-    '''
-    other_datasets = models.Dataset.objects.exclude(
-        pcatransformedvalues__isnull=True)
-    for ds_1 in datasets:
-        for ds_2 in other_datasets:
-            if ds_1 != ds_2:
-                if all([
-                    ds_1.assembly == ds_2.assembly,
-                    ds_1.experiment.experiment_type ==
-                    ds_2.experiment.experiment_type,
-                ]):
-                    set_dataset_data_distance.delay(ds_1.pk, ds_2.pk)
-                    set_dataset_metadata_distance.delay(ds_1.pk, ds_2.pk)
-
-
-@task
-def set_experiment_distances(experiments):
-    '''
-    For all experiments, set ExperimentDataDistance and
-    ExperimentMetadataDistance.
-    '''
-    other_experiments = models.Experiment.objects.exclude(
-        dataset__pcatransformedvalues__isnull=True)
     for exp_1 in experiments:
-        for exp_2 in other_experiments:
-            if exp_1 != exp_2:
-                assemblies_1 = models.Assembly.objects.filter(
-                    dataset__experiment=exp_1)
-                assemblies_2 = models.Assembly.objects.filter(
-                    dataset__experiment=exp_2)
-                if all([
-                    assemblies_1 & assemblies_2,
-                    exp_1.experiment_type == exp_2.experiment_type,
-                ]):
-                    set_experiment_data_distance.delay(exp_1.pk, exp_2.pk)
-                    set_experiment_metadata_distance.delay(exp_1.pk, exp_2.pk)
+        assemblies = models.Assembly.objects.filter(dataset__experiment=exp_1)
+        for exp_2 in models.Experiment.objects.filter(
+            dataset__assembly__in=assemblies,
+            experiment_type=exp_1.experiment_type,
+        ):
+
+            _exp_1, _exp_2 = sorted([exp_1, exp_2], key=lambda x: x.pk)
+            rr_1 = _exp_1.experiment_type.relevant_regions
+            rr_2 = _exp_2.experiment_type.relevant_regions
+            if all([
+                (_exp_1, _exp_2) not in updated,
+                _exp_1 != _exp_2,
+                models.PCATransformedValues.objects.filter(
+                    dataset__experiment=_exp_1,
+                    pca__locus_group__group_type=rr_1,
+                ).exists(),
+                models.PCATransformedValues.objects.filter(
+                    dataset__experiment=_exp_2,
+                    pca__locus_group__group_type=rr_2,
+                ).exists(),
+            ]):
+
+                distance = score.score_experiments_by_pca_distance(
+                    _exp_1, _exp_2)
+                models.ExperimentDataDistance.objects.update_or_create(
+                    experiment_1=_exp_1,
+                    experiment_2=_exp_2,
+                    defaults={
+                        'distance': distance,
+                    },
+                )
+                updated.add((_exp_1, _exp_2))
+
+            bar.next()
+
+    bar.finish()
+
+
+@task
+def update_experiment_metadata_scores(experiments):
+    '''
+    Update or create experiment metadata distance values.
+    '''
+    updated = set()
+
+    bar_max = 0
+    for exp in experiments:
+        assemblies = models.Assembly.objects.filter(dataset__experiment=exp)
+        bar_max += models.Experiment.objects.filter(
+            dataset__assembly__in=assemblies,
+            experiment_type=exp.experiment_type,
+        ).count()
+    bar = Bar('Processing', max=bar_max)
+
+    onts = []
+    onts.append(models.Ontology.objects.get(name='cell_ontology'))
+    onts.append(models.Ontology.objects.get(name='cell_line_ontology'))
+    onts.append(models.Ontology.objects.get(name='brenda_tissue_ontology'))
+    cell_ont_list = [ont.get_ontology_object() for ont in onts]
+
+    gene_ont = models.Ontology.objects.get(
+        name='gene_ontology').get_ontology_object()
+
+    for exp_1 in experiments:
+        assemblies = models.Assembly.objects.filter(dataset__experiment=exp_1)
+        for exp_2 in models.Experiment.objects.filter(
+            dataset__assembly__in=assemblies,
+            experiment_type=exp_1.experiment_type,
+        ):
+
+            _exp_1, _exp_2 = sorted([exp_1, exp_2], key=lambda x: x.pk)
+            if all([
+                (_exp_1, _exp_2) not in updated,
+                _exp_1 != _exp_2,
+            ]):
+
+                total_sim = 0
+
+                cell_ont_sims = []
+                for ont_obj in cell_ont_list:
+                    sim = ont_obj.get_word_similarity(
+                        _exp_1.cell_type, _exp_2.cell_type, metric='lin')
+                    if sim:
+                        cell_ont_sims.append(sim)
+                if cell_ont_sims:
+                    total_sim += max(cell_ont_sims)
+
+                gene_ont_sim = gene_ont.get_word_similarity(
+                    _exp_1.target, _exp_2.target, metric='jaccard',
+                    weighting='information_content')
+                if gene_ont_sim:
+                    total_sim += gene_ont_sim
+
+                models.ExperimentMetadataDistance.objects.update_or_create(
+                    experiment_1=_exp_1,
+                    experiment_2=_exp_2,
+                    defaults={
+                        'distance': total_sim,
+                    },
+                )
+                updated.add((_exp_1, _exp_2))
+
+            bar.next()
+
+    bar.finish()
 
 
 @task
@@ -1268,12 +1295,12 @@ def _set_selected_transcript_for_gene(gene_pk):
 
 
 @task
-def set_experiment_intersection_values():
+def set_experiment_intersection_values(experiments):
     '''
     For each experiment, set average intersection values.
     '''
     job = group(_set_experiment_intersection_values.s(exp.pk)
-                for exp in models.Experiment.objects.all())
+                for exp in experiments)
     job.apply_async()
 
 
