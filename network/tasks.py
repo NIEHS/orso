@@ -481,58 +481,6 @@ def process_experiments(experiments):
     set_experiment_intersection_values(experiments)
 
 
-def get_metadata_similarities():
-    EXPERIMENT_DESCRIPTION_FIELDS = [
-        'assay_slims',
-        'assay_synonyms',
-        'assay_term_name',
-        'assay_title',
-        'biosample_summary',
-        'biosample_synonyms',
-        'biosample_term_name',
-        'biosample_type',
-        'category_slims',
-        'objective_slims',
-        'organ_slims',
-        'target',
-        'system_slims',
-    ]
-
-    descriptions = []
-    exps = []
-
-    for exp in models.Experiment.objects.all():
-        description = exp.description
-
-        description = description.translate(
-            str.maketrans('', '', string.punctuation))
-        description = description.split()
-        for field in EXPERIMENT_DESCRIPTION_FIELDS:
-            description = [x for x in description if x != field]
-        if exp.data_type:
-            description.append(exp.data_type)
-        if exp.cell_type:
-            description.append(exp.cell_type)
-        if exp.target:
-            description.append(exp.target)
-
-        descriptions.append(' '.join(description))
-        exps.append(exp)
-
-    tf = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), min_df=0,
-                         stop_words='english')
-    tfidf_matrix = tf.fit_transform(descriptions)
-    cosine_similarities = linear_kernel(tfidf_matrix, tfidf_matrix)
-
-    similarities = dict()
-    for i, row in enumerate(cosine_similarities):
-        similarities[exps[i]] = dict()
-        for j, value in enumerate(row):
-            if i != j:
-                similarities[exps[i]][exps[j]] = value
-    return similarities
-
-
 def get_region_variance(gr):
     intersection_values = models.IntersectionValues.objects.filter(
         genomic_regions=gr)
