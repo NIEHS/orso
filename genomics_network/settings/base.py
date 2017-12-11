@@ -169,6 +169,7 @@ CELERY_IMPORTS = (
     'network.tasks.process_experiments',
     'network.tasks.select_transcripts',
     'network.tasks.update_encode',
+    'network.tasks.update_pca',
 )
 
 CACHES = {

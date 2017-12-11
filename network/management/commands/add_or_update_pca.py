@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from network import models
-from network.tasks import add_or_update_pca
+from network.tasks.update_pca import add_or_update_pca
 
 
 class Command(BaseCommand):
