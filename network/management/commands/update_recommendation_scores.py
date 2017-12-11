@@ -1,6 +1,12 @@
 from django.core.management.base import BaseCommand
 
-from network import models, tasks
+from network import models
+from network.tasks.data_recommendations import \
+    update_dataset_data_scores, update_experiment_data_scores
+from network.tasks.metadata_recommendations import \
+    update_dataset_metadata_scores, update_experiment_metadata_scores
+from network.tasks.user_recommendations import \
+    update_user_based_recommendations
 
 
 class Command(BaseCommand):
@@ -39,15 +45,15 @@ class Command(BaseCommand):
 
             if options['primary']:
                 print('Updating primary data-based dataset recommendations...')
-                tasks.update_dataset_data_scores(datasets)
+                update_dataset_data_scores(datasets)
                 print('Updating primary data-based experiment '
                       'recommendations...')
-                tasks.update_experiment_data_scores(experiments)
+                update_experiment_data_scores(experiments)
             if options['metadata']:
                 print('Updating metadata-based dataset recommendations...')
-                tasks.update_dataset_metadata_scores(datasets)
+                update_dataset_metadata_scores(datasets)
                 print('Updating metadata-based experiment recommendations...')
-                tasks.update_experiment_metadata_scores(experiments)
+                update_experiment_metadata_scores(experiments)
             if options['user']:
                 print('Updating user-based experiment recommendations...')
-                tasks.update_user_based_recommendations()
+                update_user_based_recommendations()
