@@ -16,7 +16,6 @@ from tempfile import NamedTemporaryFile
 import json
 from analysis import metaplot
 from analysis.normalization import normalize_locus_intersection_values
-from analysis.expression import select_transcript_by_expression
 
 from scipy.spatial.distance import mahalanobis
 from sklearn.ensemble import RandomForestClassifier
@@ -74,17 +73,6 @@ def single_instance_task(cache_id, timeout=None):
                     cache.delete(cache_id)
         return wrapper
     return decorator
-
-
-@task()
-def select_all_representative_transcripts(genes):
-    job = group(_select_representative_transcripts.s(g.pk) for g in genes)
-    job.apply_async()
-
-
-@task()
-def _select_representative_transcripts(gene_pk):
-    select_transcript_by_expression(models.Gene.objects.get(pk=gene_pk))
 
 
 @task()
@@ -1046,42 +1034,6 @@ def update_experiment_metadata_scores(experiments):
             bar.next()
 
     bar.finish()
-
-
-@task
-def set_selected_transcripts_for_genes():
-    '''
-    For each gene set the selected transcript using expression values.
-    '''
-    job = group(_set_selected_transcript_for_gene.s(g.pk)
-                for g in models.Gene.objects.all())
-    job.apply_async()
-
-
-@task
-def _set_selected_transcript_for_gene(gene_pk):
-    '''
-    Set selected transcript for a single gene.
-    '''
-    gene = models.Gene.objects.get(pk=gene_pk)
-    transcripts = models.Transcript.objects.filter(gene=gene).order_by(
-        'name', 'pk')
-
-    if transcripts:
-        # If no DatasetIntersection object exists for transcripts, the
-        # following will return None
-        transcript_w_highest_expression = \
-            gene.get_transcript_with_highest_expression()
-
-        if transcript_w_highest_expression:
-            transcript = transcript_w_highest_expression
-        else:
-            transcript = transcripts[0]
-    else:
-        transcript = None
-
-    gene.selected_transcript = transcript
-    gene.save()
 
 
 @task

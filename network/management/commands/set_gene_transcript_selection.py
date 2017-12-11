@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from network.tasks import set_selected_transcripts_for_genes
+from network.tasks.select_transcripts import set_selected_transcripts_for_genes
 
 
 class Command(BaseCommand):

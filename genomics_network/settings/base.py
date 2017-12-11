@@ -164,6 +164,10 @@ CELERY_TIME_ZONE = TIME_ZONE
 CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_RESULT_BACKEND = 'db+sqlite:///celery.sqlite3'
 
+CELERY_IMPORTS = (
+    'network.tasks.select_transcripts',
+)
+
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
