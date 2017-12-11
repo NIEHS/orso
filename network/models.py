@@ -851,3 +851,15 @@ class Ontology(models.Model):
     def get_ontology_object(self):
         return OntologyObject(self.obo_file, self.ac_file,
                               ontology_type=self.ontology_type)
+
+
+class UserToExperimentSimilarity(models.Model):
+    user = models.ForeignKey('MyUser')
+    experiment = models.ForeignKey('Experiment')
+
+    score = models.FloatField()
+
+    class Meta:
+        unique_together = (
+            ('user', 'experiment',),
+        )
