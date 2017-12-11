@@ -1,20 +1,13 @@
-from celery.decorators import task, periodic_task
+from celery.decorators import task
 from celery import group
-from django.utils import timezone
 from django.core.cache import cache
 
-from analysis.correlation import Correlation
 from analysis import transcript_coverage
 from . import models
 
-from datetime import timedelta
-from collections import defaultdict
 from functools import wraps
 
-import string
 import numpy
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel
 from sklearn.metrics import jaccard_similarity_score
 from sklearn.decomposition import PCA
 
