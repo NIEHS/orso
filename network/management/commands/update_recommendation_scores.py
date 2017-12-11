@@ -38,14 +38,15 @@ class Command(BaseCommand):
             experiments = models.Experiment.objects.all()
 
             if options['primary']:
-                print('Processing dataset primary count data...')
+                print('Updating primary data-based dataset recommendations...')
                 tasks.update_dataset_data_scores(datasets)
-                print('Processing experiment primary count data...')
+                print('Updating primary data-based experiment '
+                      'recommendations...')
                 tasks.update_experiment_data_scores(experiments)
             if options['metadata']:
-                print('Processing dataset metadata...')
+                print('Updating metadata-based dataset recommendations...')
                 tasks.update_dataset_metadata_scores(datasets)
-                print('Processing experiment metadata...')
+                print('Updating metadata-based experiment recommendations...')
                 tasks.update_experiment_metadata_scores(experiments)
             if options['user']:
                 pass
