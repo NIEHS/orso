@@ -165,7 +165,10 @@ CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_RESULT_BACKEND = 'db+sqlite:///celery.sqlite3'
 
 CELERY_IMPORTS = (
+    'network.tasks.process_datasets',
+    'network.tasks.process_experiments',
     'network.tasks.select_transcripts',
+    'network.tasks.update_encode',
 )
 
 CACHES = {

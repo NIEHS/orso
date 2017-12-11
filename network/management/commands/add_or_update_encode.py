@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from network.tasks import add_or_update_encode
+from network.tasks.update_encode import add_or_update_encode
 
 
 class Command(BaseCommand):
