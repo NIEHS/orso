@@ -49,4 +49,5 @@ class Command(BaseCommand):
                 print('Updating metadata-based experiment recommendations...')
                 tasks.update_experiment_metadata_scores(experiments)
             if options['user']:
-                pass
+                print('Updating user-based experiment recommendations...')
+                tasks.update_user_based_recommendations()
