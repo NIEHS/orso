@@ -8,7 +8,7 @@ LOGFILE="$LOGS_PATH/gunicorn.log"
 
 # serve w/ gunicorn
 /usr/local/bin/gunicorn genomics_network.wsgi:application \
-    --bind 127.0.0.1:8000 \
+    --bind 0.0.0.0:5000 \
     --chdir=/network \
     --timeout 300 \
     --workers 3 \
