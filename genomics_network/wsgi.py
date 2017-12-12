@@ -8,10 +8,9 @@ https://docs.djangoproject.com/en/1.10/howto/deployment/wsgi/
 """
 
 import os
+from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "genomics_network.settings")
 os.environ['LC_ALL'] = 'en_US.UTF-8'
-
-from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
