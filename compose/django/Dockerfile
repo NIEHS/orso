@@ -57,6 +57,13 @@ COPY ./network /network/network
 COPY ./static /network/static
 COPY ./templates /network/templates
 COPY manage.py /network/manage.py
+RUN gzip -d /network/fixtures/annotation.json.gz
+
+RUN mkdir -p /network/data/
+RUN mkdir -p /network/data/bigwig_temp
+
+COPY ontologies.tar.gz /network/data
+RUN tar -xzf /network/data/ontologies.tar.gz
 
 RUN chown -R django /network
 RUN chown -R django /app
