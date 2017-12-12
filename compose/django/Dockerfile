@@ -41,8 +41,7 @@ RUN chmod +x /entrypoint.sh && \
     su django -c "fc-cache -fvs" && \
     \
     mkdir -p /app/logs && \
-    mkdir -p /app/public/media && \
-    mkdir -p /app/public/media/bmds_plot
+    mkdir -p /app/public/media
 
 COPY ./requirements /requirements
 RUN pip3 install \
