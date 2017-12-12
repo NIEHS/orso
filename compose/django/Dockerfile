@@ -46,8 +46,7 @@ RUN chmod +x /entrypoint.sh && \
 COPY ./requirements /requirements
 RUN pip3 install \
         -r /requirements/production.txt \
-        --no-cache-dir && \
-    rm -rf /requirements
+        --no-cache-dir
 
 COPY ./analysis /network/analysis
 COPY ./assets /network/assets
