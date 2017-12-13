@@ -69,7 +69,7 @@ RUN mkdir -p /network/data/
 RUN mkdir -p /network/data/bigwig_temp
 
 COPY ontologies.tar.gz /network/data
-RUN tar -xzf /network/data/ontologies.tar.gz
+RUN tar -xzf /network/data/ontologies.tar.gz -C /network/data/
 
 RUN chown -R django /network
 RUN chown -R django /app
