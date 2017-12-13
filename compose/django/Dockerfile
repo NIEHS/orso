@@ -40,6 +40,9 @@ RUN chmod +x /entrypoint.sh && \
     fc-cache -fv && \
     su django -c "fc-cache -fvs" && \
     \
+    curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
+    apt-get install -y nodejs && \
+    \
     mkdir -p /app/logs && \
     mkdir -p /app/public/media
 
@@ -56,6 +59,10 @@ COPY ./network /network/network
 COPY ./static /network/static
 COPY ./templates /network/templates
 COPY manage.py /network/manage.py
+COPY package.json /network/package.json
+COPY webpack.base.js /network/webpack.base.js
+COPY webpack.config.production.js /network/webpack.config.production.js
+
 RUN gzip -d /network/fixtures/annotation.json.gz
 
 RUN mkdir -p /network/data/
@@ -68,5 +75,8 @@ RUN chown -R django /network
 RUN chown -R django /app
 
 WORKDIR /network
+
+RUN npm install && \
+    npm run build
 
 ENTRYPOINT ["/entrypoint.sh"]
