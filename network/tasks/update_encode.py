@@ -439,13 +439,14 @@ def add_or_update_encode():
         # Update or create experiment object
         exp, exp_created = models.Experiment.objects.update_or_create(
             project=project,
-            slug=experiment['name'],
+            consortial_id=experiment['name'],
             defaults={
                 'name': experiment_name,
                 'project': project,
                 'description': experiment_description,
                 'experiment_type': experiment_type,
                 'cell_type': biosample_term_name,
+                'slug': experiment['name'],
             },
         )
         if target:
@@ -483,7 +484,7 @@ def add_or_update_encode():
             except:
                 ambiguous_url = None
             else:
-                slug = dataset['ambiguous']
+                consortial_id = dataset['ambiguous']
             try:
                 plus_url = get_encode_url(dataset['plus_href'])
                 minus_url = get_encode_url(dataset['minus_href'])
@@ -491,7 +492,7 @@ def add_or_update_encode():
                 plus_url = None
                 minus_url = None
             else:
-                slug = '{}-{}'.format(
+                consortial_id = '{}-{}'.format(
                     dataset['plus'],
                     dataset['minus'],
                 )
@@ -499,7 +500,7 @@ def add_or_update_encode():
             # Create dataset name
             assembly = dataset['assembly']
             dataset_name = '{}-{}-{}'.format(
-                slug,
+                consortial_id,
                 dataset_basename,
                 assembly,
             )
@@ -519,11 +520,12 @@ def add_or_update_encode():
 
                 # Update or create dataset
                 ds, ds_created = models.Dataset.objects.update_or_create(
-                    slug=slug,
+                    consortial_id=consortial_id,
                     defaults={
                         'experiment': exp,
                         'name': dataset_name,
                         'assembly': assembly_obj,
+                        'slug': consortial_id,
                     },
                 )
 
