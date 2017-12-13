@@ -202,6 +202,7 @@ class Experiment(models.Model):
 
     consortial_id = models.CharField(max_length=128, null=True, unique=True,
                                      default=None)
+    processed = models.BooleanField(default=False)
 
     class Meta:
         get_latest_by = 'created'
@@ -432,6 +433,7 @@ class Dataset(models.Model):
 
     consortial_id = models.CharField(max_length=128, null=True, unique=True,
                                      default=None)
+    processed = models.BooleanField(default=False)
 
     class Meta:
         get_latest_by = 'created'

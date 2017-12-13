@@ -110,6 +110,10 @@ def process_datasets(datasets, chunk=1000):
         results = job.apply_async()
         results.join()
 
+        for ds in dataset_chunk:
+            ds.processed = True
+            ds.save()
+
         for paths in bigwig_paths.values():
             for field in ['ambiguous', 'plus', 'minus']:
                 if paths[field]:

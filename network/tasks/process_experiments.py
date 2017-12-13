@@ -9,6 +9,10 @@ from network import models
 def process_experiments(experiments):
     set_experiment_intersection_values(experiments)
 
+    for exp in experiments:
+        exp.processed = True
+        exp.save()
+
 
 @task
 def set_experiment_intersection_values(experiments):

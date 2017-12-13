@@ -544,27 +544,15 @@ def add_or_update_encode():
                         ds.minus_url = minus_url
                         updated_url = True
                 if updated_url:
+                    ds.processed = False
+                    exp.processed = False
                     ds.save()
 
-                # Check if intersections and metaplots already exist
-                already_processed = True
-                num_total_loci = len(models.Locus.objects.filter(
-                    group__assembly=assembly_obj))
-                num_existing_intersections = \
-                    len(models.DatasetIntersection.objects.filter(
-                        dataset=ds))
-                if num_total_loci != num_existing_intersections:
-                    already_processed = False
-                num_total_metaplots = len(models.LocusGroup.objects.filter(
-                    assembly=assembly_obj))
-                num_existing_metaplots = len(models.MetaPlot.objects.filter(
-                    dataset=ds))
-                if num_total_metaplots != num_existing_metaplots:
-                    already_processed = False
-
-                if ds_created or updated_url or not already_processed:
+                if not ds.processed:
                     datasets_to_process.add(ds)
-                    experiments_to_process.add(exp)
+
+        if not exp.processed:
+            experiments_to_process.add(exp)
 
     print('Processing {} datasets...'.format(len(datasets_to_process)))
     process_datasets(list(datasets_to_process))
