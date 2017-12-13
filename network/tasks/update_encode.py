@@ -353,7 +353,7 @@ def add_or_update_encode():
         return 'https://www.encodeproject.org{}'.format(url)
 
     project = models.Project.objects.get_or_create(
-        name='TEST',
+        name='ENCODE',
     )[0]
 
     encode = Encode()
@@ -363,7 +363,7 @@ def add_or_update_encode():
     experiments_to_process = set()
     datasets_to_process = set()
 
-    for experiment in encode.experiments[:1]:
+    for experiment in encode.experiments:
         encode_id = experiment['name']
 
         # Create experiment name from fields
