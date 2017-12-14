@@ -8,5 +8,4 @@ sleep 10
 exec /usr/local/bin/celery beat \
     --app=genomics_network \
     --loglevel=INFO \
-    --logfile=$LOGFILE \
-    --uid django
+    --logfile=$LOGFILE
