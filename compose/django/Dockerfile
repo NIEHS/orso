@@ -54,7 +54,7 @@ RUN chmod +x /entrypoint.sh && \
     make install && \
     cd .. && \
     \
-    mkdir -p /network/bin &&
+    mkdir -p /network/bin && \
     wget -O /network/bin/bigWigAverageOverBed \
         http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigAverageOverBed &&
     \
