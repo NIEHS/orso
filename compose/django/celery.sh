@@ -10,4 +10,5 @@ exec /usr/local/bin/celery worker \
     --loglevel=INFO \
     --logfile=$LOGFILE \
     --soft-time-limit=90 \
-    --time-limit=120
+    --time-limit=120 \
+    --uid django
