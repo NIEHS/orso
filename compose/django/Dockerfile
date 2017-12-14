@@ -17,7 +17,9 @@ COPY ./compose/django/fonts /usr/share/fonts/truetype/django
 # 2) install supervisord on python2 (using pip)
 # 3) install phantomjs
 # 4) install fonts
-# 3) create logs path
+# 5) install node
+# 6) install aria2c
+# 7) create logs path
 RUN chmod +x /entrypoint.sh && \
     chmod +x /gunicorn.sh && \
     chmod +x /celery.sh && \
@@ -42,6 +44,14 @@ RUN chmod +x /entrypoint.sh && \
     \
     curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
     apt-get install -y nodejs && \
+    \
+    wget https://github.com/aria2/aria2/releases/download/release-1.33.1/aria2-1.33.1.tar.gz && \
+    tar -xzf aria2-1.33.1.tar.gz && \
+    cd aria2-1.33.1 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
     \
     mkdir -p /app/logs && \
     mkdir -p /app/public/media
