@@ -19,7 +19,8 @@ COPY ./compose/django/fonts /usr/share/fonts/truetype/django
 # 4) install fonts
 # 5) install node
 # 6) install aria2c
-# 7) create logs path
+# 7) download bigWigAverageOverBed binary
+# 8) create logs path
 RUN chmod +x /entrypoint.sh && \
     chmod +x /gunicorn.sh && \
     chmod +x /celery.sh && \
@@ -52,6 +53,10 @@ RUN chmod +x /entrypoint.sh && \
     make && \
     make install && \
     cd .. && \
+    \
+    mkdir -p /network/bin &&
+    wget -O /network/bin/bigWigAverageOverBed \
+        http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigAverageOverBed &&
     \
     mkdir -p /app/logs && \
     mkdir -p /app/public/media
