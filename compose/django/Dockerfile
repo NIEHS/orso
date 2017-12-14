@@ -56,7 +56,7 @@ RUN chmod +x /entrypoint.sh && \
     \
     mkdir -p /network/bin && \
     wget -O /network/bin/bigWigAverageOverBed \
-        http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigAverageOverBed &&
+        http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigAverageOverBed && \
     \
     mkdir -p /app/logs && \
     mkdir -p /app/public/media
