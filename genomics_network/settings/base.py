@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'webpack_loader',
     'rest_framework',
     'selectable',
+    'crispy_forms',
 ]
 
 MIDDLEWARE = [
@@ -151,7 +152,7 @@ WEBPACK_LOADER = {
     }
 }
 
-LOGIN_REDIRECT_URL = 'index'
+LOGIN_REDIRECT_URL = 'home'
 
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 CELERY_TIME_ZONE = TIME_ZONE

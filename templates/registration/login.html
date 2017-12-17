@@ -1,12 +1,21 @@
 {% extends 'base.html' %}
 
-{% block title %}Login{% endblock %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{block.super}}: Login{% endblock %}
+
 
 {% block content %}
-  <h2>Login</h2>
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Login</button>
-  </form>
-{% endblock %}
+  <div class='row-fluid'>
+    <div class="col-md-8 col-md-offset-2">
+      {% crispy form %}
+    </div>
+  </div>
+{% endblock content %}
+
+
+{% block extra_js %}
+  <script type="text/javascript">
+    document.getElementById('id_username').focus();
+  </script>
+{% endblock extra_js %}

@@ -6,6 +6,7 @@ django-extensions==1.7.3
 django-webpack-loader==0.3.3
 django-redis
 django-picklefield==1.0.0
+django-crispy-forms==1.7.0
 
 # tasks
 celery==4.0.0
