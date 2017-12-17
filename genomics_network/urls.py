@@ -28,5 +28,8 @@ urlpatterns = [
         {'authentication_form': forms.LoginForm},
         name='login'),
 
-    url(r'^logout/$', auth_views.logout, name='logout'),
+    url(r'^logout/$',
+        auth_views.logout,
+        {'next_page': 'login'},
+        name='logout'),
 ]
