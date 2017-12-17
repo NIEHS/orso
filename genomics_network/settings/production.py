@@ -26,20 +26,6 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split('|')
 
 # Application definition
 
-INSTALLED_APPS = [
-    'network.apps.NetworkConfig',
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django_extensions',
-    'webpack_loader',
-    'rest_framework',
-    'selectable',
-]
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
