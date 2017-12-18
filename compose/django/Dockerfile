@@ -73,6 +73,7 @@ COPY ./genomics_network /network/genomics_network
 COPY ./network /network/network
 COPY ./static /network/static
 COPY ./templates /network/templates
+COPY ./utils /network/utils
 COPY manage.py /network/manage.py
 COPY package.json /network/package.json
 COPY webpack.base.js /network/webpack.base.js
