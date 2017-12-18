@@ -200,12 +200,12 @@ class Experiment(models.Model):
     description = models.TextField(blank=True)
     created = models.DateTimeField(auto_now_add=True)
 
-    consortial_id = models.CharField(max_length=128, null=True, unique=True,
-                                     default=None)
+    consortial_id = models.CharField(max_length=128, null=True, default=None)
     processed = models.BooleanField(default=False)
 
     class Meta:
         get_latest_by = 'created'
+        unique_together = ('project', 'consortial_id')
 
     def get_absolute_url(self):
         return reverse('experiment', kwargs={'pk': self.pk})
@@ -431,12 +431,12 @@ class Dataset(models.Model):
     plus_url = models.URLField(null=True, blank=True)
     minus_url = models.URLField(null=True, blank=True)
 
-    consortial_id = models.CharField(max_length=128, null=True, unique=True,
-                                     default=None)
+    consortial_id = models.CharField(max_length=128, null=True, default=None)
     processed = models.BooleanField(default=False)
 
     class Meta:
         get_latest_by = 'created'
+        unique_together = ('experiment', 'consortial_id')
 
     def get_absolute_url(self):
         return reverse('dataset', kwargs={'pk': self.pk})
