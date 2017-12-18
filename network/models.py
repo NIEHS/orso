@@ -843,6 +843,11 @@ class MetaPlot(models.Model):
     metaplot = JSONField()
     last_updated = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        unique_together = (
+            ('locus_group', 'dataset',),
+        )
+
 
 class Ontology(models.Model):
     name = models.CharField(unique=True, max_length=128)
