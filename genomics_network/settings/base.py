@@ -184,3 +184,5 @@ CACHES = {
 }
 
 DATA_PATH = '/Users/lavenderca/genomics_network/data'
+
+CRISPY_TEMPLATE_PACK = 'bootstrap3'
