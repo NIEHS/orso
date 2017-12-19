@@ -25,7 +25,7 @@ if [[ $# -eq 0 ]] ; then
 fi
 
 # set the backupfile variable
-BACKUPFILE=/app/data/backups/$1
+BACKUPFILE=/network/backups/$1
 
 # check that the file exists
 if ! [ -f $BACKUPFILE ]; then

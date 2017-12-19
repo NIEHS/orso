@@ -12,7 +12,7 @@ services:
     build: ./compose/postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - postgres_backup:/network/data
+      - postgres_backup:/network/backups
     env_file: .env
 
   redis:
@@ -31,7 +31,8 @@ services:
     env_file: .env
     volumes:
       - public_data:/network/public
-      - postgres_backup:/network/data
+      - internal_data:/network/data
+      - postgres_backup:/network/backups
 
   nginx:
     restart: always

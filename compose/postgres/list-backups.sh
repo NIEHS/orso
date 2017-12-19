@@ -2,5 +2,5 @@
 
 echo "listing available backups"
 echo "-------------------------"
-mkdir -p /app/data/backups
-ls /app/data/backups
+mkdir -p /network/backups
+ls /network/backups

@@ -17,8 +17,8 @@ export PGPASSWORD=$POSTGRES_PASSWORD
 echo "creating backup"
 echo "---------------"
 
-mkdir -p /app/data/backups
+mkdir -p /network/backups
 FILENAME="hawc-$(date +"%Y-%m-%dT%H_%M").sql.gz"
-pg_dump -U $POSTGRES_USER | gzip > /app/data/backups/$FILENAME
+pg_dump -U $POSTGRES_USER | gzip > /network/backups/$FILENAME
 
 echo "successfully created backup $FILENAME"
