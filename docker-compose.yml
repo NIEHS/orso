@@ -1,6 +1,7 @@
 version: '2'
 
 volumes:
+  internal_data: {}
   postgres_data: {}
   postgres_backup: {}
   public_data: {}
