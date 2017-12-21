@@ -766,6 +766,16 @@ class DatasetIntersection(models.Model):
         unique_together = ('locus', 'dataset')
 
 
+class DatasetIntersectionJson(models.Model):
+    locus_group = models.ForeignKey('LocusGroup')
+    dataset = models.ForeignKey('Dataset')
+
+    intersection_values = JSONField()
+
+    class Meta:
+        unique_together = ('locus_group', 'dataset')
+
+
 class ExperimentIntersection(models.Model):
     locus = models.ForeignKey('Locus')
     experiment = models.ForeignKey('Experiment')
