@@ -36,8 +36,8 @@ def process_datasets(datasets, chunk=100):
     os.makedirs(bigwig_dir, exist_ok=True)
 
     for i in range(0, len(datasets), chunk):
-        index_1 = i * chunk
-        index_2 = min((i + 1) * chunk, len(datasets))
+        index_1 = i
+        index_2 = min(i + chunk, len(datasets))
         dataset_chunk = datasets[index_1:index_2]
 
         download_list_file = NamedTemporaryFile(mode='w')
