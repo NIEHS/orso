@@ -521,8 +521,8 @@ def add_or_update_encode():
                 # Update or create dataset
                 ds, ds_created = models.Dataset.objects.update_or_create(
                     consortial_id=consortial_id,
+                    experiment=exp,
                     defaults={
-                        'experiment': exp,
                         'name': dataset_name,
                         'assembly': assembly_obj,
                         'slug': consortial_id,
