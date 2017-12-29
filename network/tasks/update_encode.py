@@ -6,7 +6,6 @@ from celery.decorators import task
 
 from network import models
 from network.tasks.process_datasets import process_datasets
-from network.tasks.process_experiments import process_experiments
 
 HEADERS = {'accept': 'application/json'}
 SELECTION_HIERARCHY = [
@@ -360,7 +359,6 @@ def add_or_update_encode():
     encode.get_experiments()
     print('{} experiments found in ENCODE!!'.format(len(encode.experiments)))
 
-    experiments_to_process = set()
     datasets_to_process = set()
 
     for experiment in encode.experiments:
@@ -452,8 +450,6 @@ def add_or_update_encode():
         if target:
             exp.target = target
             exp.save()
-        if exp_created:
-            experiments_to_process.add(exp)
 
         for dataset in experiment['datasets']:
 
@@ -545,16 +541,10 @@ def add_or_update_encode():
                         updated_url = True
                 if updated_url:
                     ds.processed = False
-                    exp.processed = False
                     ds.save()
 
                 if not ds.processed:
                     datasets_to_process.add(ds)
 
-        if not exp.processed:
-            experiments_to_process.add(exp)
-
     print('Processing {} datasets...'.format(len(datasets_to_process)))
     process_datasets(list(datasets_to_process))
-    print('Processing {} experiments...'.format(len(experiments_to_process)))
-    process_experiments(list(experiments_to_process))

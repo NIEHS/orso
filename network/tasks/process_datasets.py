@@ -130,7 +130,9 @@ def process_datasets(datasets, chunk=1000):
 @task()
 def process_dataset_intersection(dataset_pk, locusgroup_pk, bed_path, bigwigs):
     dataset = models.Dataset.objects.get(pk=dataset_pk)
-    loci = models.Locus.objects.filter(group__pk=locusgroup_pk)
+    locus_group = models.LocusGroup.objects.get(pk=locusgroup_pk)
+
+    loci = models.Locus.objects.filter(group=locus_group).order_by('pk')
     locus_values = transcript_coverage.get_locus_values(
         loci,
         bed_path,
@@ -140,17 +142,23 @@ def process_dataset_intersection(dataset_pk, locusgroup_pk, bed_path, bigwigs):
     )
     normalized_values = \
         normalize_locus_intersection_values(loci, locus_values)
-    models.DatasetIntersection.objects.filter(
-        dataset=dataset, locus__in=loci).delete()
-    intersections = []
+    intersection_values = {
+        'locus_pks': [],
+        'raw_values': [],
+        'normalized_values': [],
+    }
     for locus in loci:
-        intersections.append(models.DatasetIntersection(
-            dataset=dataset,
-            locus=locus,
-            raw_value=locus_values[locus],
-            normalized_value=normalized_values[locus],
-        ))
-    models.DatasetIntersection.objects.bulk_create(intersections)
+        intersection_values['locus_pks'].append(locus.pk)
+        intersection_values['raw_values'].append(locus_values[locus])
+        intersection_values['normalized_values'].append(
+            normalized_values[locus])
+    models.DatasetIntersectionJson.objects.update_or_create(
+        dataset=dataset,
+        locus_group=locus_group,
+        defaults={
+            'intersection_values': json.dumps(intersection_values),
+        }
+    )
 
 
 @task()
