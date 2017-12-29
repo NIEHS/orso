@@ -1,5 +1,5 @@
 import os
-from subprocess import call
+import subprocess
 
 BIGWIG_AVERAGE_OVER_BED_PATH = \
     os.path.abspath(os.path.join(
@@ -10,9 +10,12 @@ def call_bigwig_average_over_bed(bigwig_name, bed_name, out_name):
     '''
     Call Kent tools bigWigAverageOverBed.
     '''
-    call([
+    FNULL = open(os.devnull, 'w')
+    cmd = [
         BIGWIG_AVERAGE_OVER_BED_PATH,
         bigwig_name,
         bed_name,
         out_name,
-    ])
+    ]
+    print('Running subprocess: {}'.format(' '.join(cmd)))
+    subprocess.call(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
