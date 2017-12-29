@@ -12,7 +12,7 @@ from network import models
 
 
 @task()
-def process_datasets(datasets, chunk=1000):
+def process_datasets(datasets, chunk=100):
 
     assembly_to_intersection_bed = dict()
     for ds in datasets:
