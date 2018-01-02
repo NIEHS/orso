@@ -5,6 +5,7 @@ from scipy.spatial.distance import mahalanobis
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 
+from analysis.utils import generate_intersection_df
 from network import models
 
 
@@ -24,7 +25,163 @@ def add_or_update_pca(datasets):
                 experiment__experiment_type=exp_type,
             ).values_list('pk', flat=True))
 
-            _pca_analysis(lg.pk, exp_type.pk, list(dataset_pks & subset))
+            _pca_analysis_json(lg.pk, exp_type.pk, list(dataset_pks & subset))
+
+
+@task
+def _pca_analysis_json(locusgroup_pk, experimenttype_pk, dataset_pks,
+                       size_threshold=200):
+    locus_group = models.LocusGroup.objects.get(pk=locusgroup_pk)
+    experiment_type = models.ExperimentType.objects.get(pk=experimenttype_pk)
+    datasets = models.Dataset.objects.filter(pk__in=list(dataset_pks))
+
+    df = generate_intersection_df(locus_group, experiment_type, datasets)
+
+    # Initial filtering
+    if locus_group.group_type in ['promoter', 'genebody', 'mRNA']:
+
+        # Filter for selected transcripts (highest expression per gene)
+        selected_transcripts = models.Transcript.objects.filter(
+            gene__annotation__assembly=locus_group.assembly,
+            selecting__isnull=False,
+        )
+        selected_locus_pks = models.Locus.objects.filter(
+            transcript__in=selected_transcripts,
+            group=locus_group,
+        ).values_list('pk', flat=True)
+        df = df.loc[list(selected_locus_pks)]
+
+        # Filter out shorter transcripts
+        if experiment_type.name != 'microRNA-seq':
+            selected_transcripts = [
+                t for t in selected_transcripts
+                if t.end - t.start + 1 >= size_threshold
+            ]
+            selected_locus_pks = models.Locus.objects.filter(
+                transcript__in=selected_transcripts,
+                group=locus_group,
+            ).values_list('pk', flat=True)
+            df = df.loc[list(selected_locus_pks)]
+
+    elif locus_group.group_type in ['enhancer']:
+        pass
+
+    if len(datasets) >= 3:
+        pca = PCA(n_components=3)
+        rf = RandomForestClassifier(n_estimators=1000)
+
+        # Get cell lines and targets
+        _order = df.columns.values.tolist()
+        _datasets = list(models.Dataset.objects.filter(pk__in=_order))
+        _datasets.sort(key=lambda ds: _order.index(ds.pk))
+
+        cell_types = [ds.experiment.cell_type for ds in _datasets]
+        targets = [ds.experiment.target for ds in _datasets]
+
+        # Apply to RF classifier, get importances
+        _data = numpy.transpose(numpy.array(df))
+        _loci = list(df.index)
+
+        cell_type_importances = rf.fit(
+            _data, cell_types).feature_importances_
+        target_importances = rf.fit(
+            _data, targets).feature_importances_
+        totals = [x + y for x, y in zip(cell_type_importances,
+                                        target_importances)]
+
+        # Filter by importances
+        filtered_loci = \
+            [locus for locus, total in sorted(zip(_loci, totals),
+                                              key=lambda x: -x[1])][:1000]
+        df = df.loc[filtered_loci]
+
+        # Filter datasets by Mahalanobis distance after PCA
+        df_filtered = df
+
+        if df.shape[1] >= 10:
+            _datasets = df.columns.values.tolist()
+            _data = numpy.transpose(numpy.array(df))
+
+            fitted = pca.fit_transform(_data)
+
+            mean = numpy.mean(fitted, axis=0)
+            cov = numpy.cov(fitted, rowvar=False)
+            inv = numpy.linalg.inv(cov)
+            m_dist = []
+            for vector in fitted:
+                m_dist.append(mahalanobis(vector, mean, inv))
+
+            Q1 = numpy.percentile(m_dist, 25)
+            Q3 = numpy.percentile(m_dist, 75)
+            cutoff = Q3 + 1.5 * (Q3 - Q1)
+
+            selected_datasets = []
+            for dist, ds in zip(m_dist, _datasets):
+                if dist < cutoff:
+                    selected_datasets.append(ds)
+
+            if selected_datasets:
+                df_filtered = df[selected_datasets]
+
+        # Fit with filtered data
+        _data = numpy.transpose(numpy.array(df_filtered))
+
+        fitted = pca.fit_transform(_data)
+        if fitted.shape[0] > 1:
+            cov = numpy.cov(fitted, rowvar=False)
+            if fitted.shape[0] > 3:
+                inv = numpy.linalg.inv(cov)
+            else:
+                inv = numpy.linalg.pinv(cov)
+        else:
+            cov = None
+            inv = None
+
+        # Fit values to PCA, create the associated PCA plot
+        _data = numpy.transpose(numpy.array(df))
+        _datasets = df.columns.values.tolist()
+
+        transformed = pca.transform(_data)
+        pca_plot = []
+        for pk, transformed_data in zip(_datasets, transformed):
+            ds = models.Dataset.objects.get(pk=pk)
+            pca_plot.append({
+                'dataset_pk': ds.pk,
+                'experiment_pk': ds.experiment.pk,
+                'experiment_cell_type': ds.experiment.cell_type,
+                'experiment_target': ds.experiment.target,
+                'transformed_values': transformed_data.tolist(),
+            })
+
+        # Update or create the PCA object
+        pca_object, created = models.PCA.objects.update_or_create(
+            locus_group=locus_group,
+            experiment_type=experiment_type,
+            defaults={
+                'plot': pca_plot,
+                'pca': pca,
+                'covariation_matrix': cov,
+                'inverse_covariation_matrix': inv,
+            },
+        )
+
+        # Set the PCA to loci relationships
+        if not created:
+            pca_object.selected_loci.clear()
+
+        _order = list(df.index)
+        _loci = list(models.Locus.objects.filter(pk__in=_order))
+        _loci.sort(key=lambda locus: _order.index(locus.pk))
+
+        _pca_locus_orders = []
+        for i, locus in enumerate(_loci):
+            _pca_locus_orders.append(models.PCALocusOrder(
+                pca=pca_object,
+                locus=locus,
+                order=i,
+            ))
+        models.PCALocusOrder.objects.bulk_create(
+            _pca_locus_orders)
 
 
 @task
