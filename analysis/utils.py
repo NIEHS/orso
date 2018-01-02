@@ -26,14 +26,18 @@ def call_bigwig_average_over_bed(bigwig_name, bed_name, out_name):
     subprocess.call(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
 
 
-def generate_intersection_df(locus_group, experiment_type):
+def generate_intersection_df(locus_group, experiment_type, datasets=None):
     '''
     For a given LocusGroup, generate a pandas DF with intersection values.
     '''
+    if not datasets:
+        datasets = models.Dataset.objects.all()
+
     d = {}
     for intersection in models.DatasetIntersectionJson.objects.filter(
         locus_group=locus_group,
         dataset__experiment__experiment_type=experiment_type,
+        dataset__in=datasets,
     ):
         values = json.loads(intersection.intersection_values)
         series = pd.Series(
