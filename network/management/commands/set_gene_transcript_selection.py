@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 
-from network.tasks.select_transcripts import set_selected_transcripts_for_genes
+from network.tasks.select_transcripts import \
+    set_selected_transcripts_for_genes_json
 
 
 class Command(BaseCommand):
@@ -9,4 +10,4 @@ class Command(BaseCommand):
     '''
 
     def handle(self, *args, **options):
-        set_selected_transcripts_for_genes()
+        set_selected_transcripts_for_genes_json()
