@@ -115,7 +115,7 @@ def _pca_analysis(locusgroup_pk, experimenttype_pk, dataset_pks,
         cell_type_importances = rf.fit(
             _intersection_values, _cell_types).feature_importances_
         target_importances = rf.fit(
-            _intersection_values, _cell_types).feature_importances_
+            _intersection_values, _targets).feature_importances_
         totals = [x + y for x, y in zip(cell_type_importances,
                                         target_importances)]
         filtered_loci = \
