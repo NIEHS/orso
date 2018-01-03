@@ -37,36 +37,38 @@ def _pca_analysis_json(locusgroup_pk, experimenttype_pk, dataset_pks,
 
     df = generate_intersection_df(locus_group, experiment_type, datasets)
 
-    # Initial filtering
-    if locus_group.group_type in ['promoter', 'genebody', 'mRNA']:
+    if df.shape[1] >= 3:
 
-        # Filter for selected transcripts (highest expression per gene)
-        selected_transcripts = models.Transcript.objects.filter(
-            gene__annotation__assembly=locus_group.assembly,
-            selecting__isnull=False,
-        )
-        selected_locus_pks = models.Locus.objects.filter(
-            transcript__in=selected_transcripts,
-            group=locus_group,
-        ).values_list('pk', flat=True)
-        df = df.loc[list(selected_locus_pks)]
+        # Initial filtering
+        if locus_group.group_type in ['promoter', 'genebody', 'mRNA']:
 
-        # Filter out shorter transcripts
-        if experiment_type.name != 'microRNA-seq':
-            selected_transcripts = [
-                t for t in selected_transcripts
-                if t.end - t.start + 1 >= size_threshold
-            ]
+            # Filter for selected transcripts (highest expression per gene)
+            selected_transcripts = models.Transcript.objects.filter(
+                gene__annotation__assembly=locus_group.assembly,
+                selecting__isnull=False,
+            )
             selected_locus_pks = models.Locus.objects.filter(
                 transcript__in=selected_transcripts,
                 group=locus_group,
             ).values_list('pk', flat=True)
+
             df = df.loc[list(selected_locus_pks)]
 
-    elif locus_group.group_type in ['enhancer']:
-        pass
+            # Filter out shorter transcripts
+            if experiment_type.name != 'microRNA-seq':
+                selected_transcripts = [
+                    t for t in selected_transcripts
+                    if t.end - t.start + 1 >= size_threshold
+                ]
+                selected_locus_pks = models.Locus.objects.filter(
+                    transcript__in=selected_transcripts,
+                    group=locus_group,
+                ).values_list('pk', flat=True)
+                df = df.loc[list(selected_locus_pks)]
 
-    if len(datasets) >= 3:
+        elif locus_group.group_type in ['enhancer']:
+            pass
+
         pca = PCA(n_components=3)
         rf = RandomForestClassifier(n_estimators=1000)
 
