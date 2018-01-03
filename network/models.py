@@ -901,7 +901,7 @@ class UserToExperimentSimilarity(models.Model):
     experiment = models.ForeignKey('Experiment')
 
     score = models.FloatField()
-    
+
     last_updated = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
