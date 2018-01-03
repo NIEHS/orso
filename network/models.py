@@ -41,6 +41,10 @@ class MyUser(models.Model):
     slug = models.CharField(
         max_length=128)
 
+    class Meta:
+        verbose_name = 'MyUser'
+        verbose_name_plural = 'MyUsers'
+
     def get_user_favorites_count(self):
         pass
 
@@ -173,6 +177,9 @@ class Project(models.Model):
 
     name = models.CharField(max_length=128)
     description = models.TextField(blank=True)
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    updated = models.DateTimeField(auto_now=True, null=True)
 
 
 class ExperimentType(models.Model):
