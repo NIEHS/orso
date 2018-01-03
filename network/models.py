@@ -179,7 +179,7 @@ class Project(models.Model):
     description = models.TextField(blank=True)
 
     created = models.DateTimeField(auto_now_add=True, null=True)
-    updated = models.DateTimeField(auto_now=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
 
 
 class ExperimentType(models.Model):
@@ -206,6 +206,7 @@ class Experiment(models.Model):
     slug = models.CharField(max_length=128)
     description = models.TextField(blank=True)
     created = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
 
     consortial_id = models.CharField(max_length=128, null=True, default=None)
     processed = models.BooleanField(default=False)
@@ -432,6 +433,7 @@ class Dataset(models.Model):
     name = models.CharField(max_length=128)
     slug = models.CharField(max_length=128)
     created = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
     description = models.TextField(blank=True)
 
     ambiguous_url = models.URLField(null=True, blank=True)
@@ -614,6 +616,8 @@ class PCA(models.Model):
     covariation_matrix = PickledObjectField(null=True, blank=True)
     inverse_covariation_matrix = PickledObjectField(null=True, blank=True)
 
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
 
 class PCATransformedValues(models.Model):
     '''
@@ -769,6 +773,9 @@ class DatasetIntersection(models.Model):
     raw_value = models.FloatField()
     normalized_value = models.FloatField()
 
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
     class Meta:
         unique_together = ('locus', 'dataset')
 
@@ -779,6 +786,9 @@ class DatasetIntersectionJson(models.Model):
 
     intersection_values = JSONField()
 
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
     class Meta:
         unique_together = ('locus_group', 'dataset')
 
@@ -788,6 +798,9 @@ class ExperimentIntersection(models.Model):
     experiment = models.ForeignKey('Experiment')
 
     average_value = models.FloatField()
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
         unique_together = ('locus', 'experiment')
@@ -801,6 +814,8 @@ class DatasetDistance(models.Model):
         'Dataset', related_name='%(app_label)s_%(class)s_first')
     dataset_2 = models.ForeignKey(
         'Dataset', related_name='%(app_label)s_%(class)s_second')
+
+    last_updated = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
         abstract = True
@@ -831,6 +846,8 @@ class ExperimentDistance(models.Model):
         'Experiment', related_name='%(app_label)s_%(class)s_first')
     experiment_2 = models.ForeignKey(
         'Experiment', related_name='%(app_label)s_%(class)s_second')
+
+    last_updated = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
         abstract = True
@@ -872,6 +889,8 @@ class Ontology(models.Model):
     obo_file = models.FilePathField(path=settings.DATA_PATH)
     ac_file = models.FilePathField(path=settings.DATA_PATH)
 
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
     def get_ontology_object(self):
         return OntologyObject(self.obo_file, self.ac_file,
                               ontology_type=self.ontology_type)
@@ -882,6 +901,8 @@ class UserToExperimentSimilarity(models.Model):
     experiment = models.ForeignKey('Experiment')
 
     score = models.FloatField()
+    
+    last_updated = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
         unique_together = (
