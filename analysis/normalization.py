@@ -9,6 +9,10 @@ def normalize_locus_intersection_values(loci, locus_values):
     normalized_values = dict()
     locus_cpk = dict()  # cpk = counts per kb
 
+    # Set negative values to zero
+    for locus in loci:
+        locus_values[locus] = max(locus_values[locus], 0)
+
     for locus in loci:
         length = 0
         for region in locus.regions:
