@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from network.tasks.update_pca import add_or_update_pca_transformed_values
+from network.tasks.update_pca import add_or_update_pca_transformed_values_json
 
 
 class Command(BaseCommand):
@@ -9,4 +9,4 @@ class Command(BaseCommand):
     '''
 
     def handle(self, *args, **options):
-        add_or_update_pca_transformed_values()
+        add_or_update_pca_transformed_values_json()

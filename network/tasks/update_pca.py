@@ -1,3 +1,5 @@
+import json
+
 import numpy
 from celery import group
 from celery.decorators import task
@@ -422,3 +424,55 @@ def _add_or_update_pca_transformed_values(dataset_pk, pca_pk):
                 'transformed_values': transformed_values.tolist(),
             },
         )
+
+
+@task
+def add_or_update_pca_transformed_values_json():
+    tasks = []
+
+    for pca in models.PCA.objects.all():
+        for dij in models.DatasetIntersectionJson.objects.filter(
+            locus_group=pca.locus_group,
+            dataset__experiment__experiment_type=pca.experiment_type,
+        ):
+            tasks.append(_add_or_update_pca_transformed_values_json.s(
+                dij.pk, pca.pk
+            ))
+
+    job = group(tasks)
+    results = job.apply_async()
+    results.join()
+
+
+@task
+def _add_or_update_pca_transformed_values_json(dij_pk, pca_pk):
+    dij = models.DatasetIntersectionJson.objects.get(pk=dij_pk)
+    pca = models.PCA.objects.get(pk=pca_pk)
+
+    order = models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
+    loci = [x.locus for x in order]
+
+    intersection_values = json.loads(dij.intersection_values)
+
+    locus_values = dict()
+    for val, pk in zip(
+        intersection_values['normalized_values'],
+        intersection_values['locus_pks']
+    ):
+        locus_values[pk] = val
+
+    normalized_values = []
+    for locus in loci:
+        try:
+            normalized_values.append(locus_values[locus.pk])
+        except IndexError:
+            normalized_values.append(0)
+
+    transformed_values = pca.pca.transform([normalized_values])[0]
+    models.PCATransformedValues.objects.update_or_create(
+        pca=pca,
+        dataset=dij.dataset,
+        defaults={
+            'transformed_values': transformed_values.tolist(),
+        },
+    )
