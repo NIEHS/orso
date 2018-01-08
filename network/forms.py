@@ -88,6 +88,27 @@ class ExperimentFilterForm(forms.Form):
         return Q(search_query & filter_query)
 
 
+class AllExperimentFilterForm(ExperimentFilterForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['search'].widget = \
+            AutoCompleteWidget(lookups.AllExpSearchLookup)
+        self.fields['name'].widget = \
+            AutoCompleteWidget(lookups.AllExpNameLookup)
+        self.fields['description'].widget = \
+            AutoCompleteWidget(lookups.AllExpDescriptionLookup)
+        self.fields['data_type'].widget = \
+            AutoCompleteWidget(lookups.AllExpTypeLookup)
+        self.fields['cell_type'].widget = \
+            AutoCompleteWidget(lookups.AllExpCellTypeLookup)
+        self.fields['assembly'].widget = \
+            AutoCompleteWidget(lookups.AllExpAssemblyLookup)
+        self.fields['target'].widget = \
+            AutoCompleteWidget(lookups.AllExpTargetLookup)
+
+
 class RecommendedExperimentFilterForm(ExperimentFilterForm):
     order_choices = [
         ('correlation_rank', 'correlation'),

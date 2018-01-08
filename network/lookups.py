@@ -18,6 +18,34 @@ class DistinctStringLookup(ModelLookup):
         return self.get_item_value(item)
 
 
+class AllExpLookup(DistinctStringLookup):
+    def get_query(self, request, term):
+        return self.get_queryset() \
+            .filter(**{self.distinct_field + "__icontains": term}) \
+            .order_by(self.distinct_field) \
+            .distinct(self.distinct_field)
+
+
+class AllExpNameLookup(AllExpLookup):
+    model = models.Experiment
+    distinct_field = 'name'
+
+
+class AllExpDescriptionLookup(AllExpLookup):
+    model = models.Experiment
+    distinct_field = 'description'
+
+
+class AllExpCellTypeLookup(AllExpLookup):
+    model = models.Experiment
+    distinct_field = 'cell_type'
+
+
+class AllExpTargetLookup(AllExpLookup):
+    model = models.Experiment
+    distinct_field = 'target'
+
+
 class RecExpLookup(DistinctStringLookup):
     def get_query(self, request, term):
         my_user = models.MyUser.objects.get(user=request.user)
@@ -164,6 +192,13 @@ class ExperimentTypeLookup(ModelLookup):
         return self.get_item_value(item)
 
 
+class AllExpTypeLookup(ExperimentTypeLookup):
+    def get_query(self, request, term):
+        return self.get_queryset() \
+            .order_by('experiment_type__name') \
+            .distinct('experiment_type__name')
+
+
 class RecExpTypeLookup(ExperimentTypeLookup):
     def get_query(self, request, term):
         my_user = models.MyUser.objects.get(user=request.user)
@@ -207,6 +242,13 @@ class AssemblyLookup(ModelLookup):
 
     def get_item_label(self, item):
         return self.get_item_value(item)
+
+
+class AllExpAssemblyLookup(AssemblyLookup):
+    def get_query(self, request, term):
+        return self.get_queryset() \
+            .order_by('assembly__name') \
+            .distinct('assembly__name')
 
 
 class RecExpAssemblyLookup(AssemblyLookup):
@@ -294,6 +336,13 @@ class ExperimentSearchLookup(ModelLookup):
         return self.get_item_value(item)
 
 
+class AllExpSearchLookup(ExperimentSearchLookup):
+    def get_query(self, request, term):
+        return self.get_queryset()\
+            .order_by('name')\
+            .distinct()
+
+
 class RecExpSearchLookup(ExperimentSearchLookup):
     def get_query(self, request, term):
         my_user = models.MyUser.objects.get(user=request.user)
@@ -342,6 +391,14 @@ class SimExpSearchLookup(ExperimentSearchLookup):
             .exclude(pk=exp.pk)\
             .order_by('name')\
             .distinct()
+
+registry.register(AllExpNameLookup)
+registry.register(AllExpDescriptionLookup)
+registry.register(AllExpTypeLookup)
+registry.register(AllExpCellTypeLookup)
+registry.register(AllExpTargetLookup)
+registry.register(AllExpAssemblyLookup)
+registry.register(AllExpSearchLookup)
 
 registry.register(RecExpNameLookup)
 registry.register(RecExpDescriptionLookup)

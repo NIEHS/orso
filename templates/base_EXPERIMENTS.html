@@ -6,9 +6,10 @@
 <nav class="navbar navbar-sub">
     <div class="container">
         <ul class="nav navbar-nav">
-            <li><a href="{% url 'recommended_experiments' %}">Recommended experiments</a></li>
-            <li><a href="{% url 'favorite_experiments' %}">Favorite experiments <span id="favorite_counts" class="badge">{{experiment_counts.favorite_experiment_counts}}</span></a></li>
-            <li><a href="{% url 'personal_experiments' %}">Personal experiments <span id="personal_counts" class="badge">{{experiment_counts.personal_experiment_counts}}</span></a></li>
+            <li><a href="{% url 'all_experiments' %}">All</a></li>
+            <li><a href="{% url 'recommended_experiments' %}">Recommended</a></li>
+            <li><a href="{% url 'favorite_experiments' %}">Favorites <span id="favorite_counts" class="badge">{{experiment_counts.favorite_experiment_counts}}</span></a></li>
+            <li><a href="{% url 'personal_experiments' %}">Your experiments <span id="personal_counts" class="badge">{{experiment_counts.personal_experiment_counts}}</span></a></li>
         </ul>
         <ul class="nav navbar-nav navbar-right">
             <li><a href="{% url 'create_experiment' %}"><span class="glyphicon glyphicon-plus"></span> Add new experiment</a></li>

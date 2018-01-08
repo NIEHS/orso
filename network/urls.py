@@ -37,6 +37,8 @@ urlpatterns = [
 
     url(r'^user/(?P<pk>\d+)/$', views.MyUser.as_view(), name='user'),
 
+    url(r'^experiments/$', views.AllExperiments.as_view(),
+        name='all_experiments'),
     url(r'^personal_experiments/$', views.PersonalExperiments.as_view(),
         name='personal_experiments'),
     url(r'^favorite_experiments/$', views.FavoriteExperiments.as_view(),

@@ -485,6 +485,28 @@ class ExperimentList(AddMyUserMixin, ListView):
         return context
 
 
+class AllExperiments(ExperimentList):
+    model = models.Experiment
+    template_name = 'network/all_experiments.html'
+    form_class = forms.AllExperimentFilterForm
+
+    def get_queryset(self):
+
+        query = Q()
+
+        if self.form.is_valid():
+            query &= self.form.get_query()
+
+        qs = self.model.objects.filter(query)
+
+        for obj in qs:
+            obj.plot_data = obj.get_average_metaplots()
+            obj.meta_data = obj.get_metadata(self.my_user)
+            obj.urls = obj.get_urls()
+
+        return qs
+
+
 class PersonalExperiments(ExperimentList):
     model = models.Experiment
     template_name = 'network/personal_experiments.html'
