@@ -181,6 +181,9 @@ class Project(models.Model):
     created = models.DateTimeField(auto_now_add=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
 
+    def __str__(self):
+        return self.name
+
 
 class ExperimentType(models.Model):
     '''
@@ -210,6 +213,9 @@ class Experiment(models.Model):
 
     consortial_id = models.CharField(max_length=128, null=True, default=None)
     processed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         get_latest_by = 'created'
@@ -447,6 +453,9 @@ class Dataset(models.Model):
         get_latest_by = 'created'
         unique_together = ('experiment', 'consortial_id')
 
+    def __str__(self):
+        return self.name
+
     def get_absolute_url(self):
         return reverse('dataset', kwargs={'pk': self.pk})
 
@@ -578,6 +587,9 @@ class Assembly(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name_plural = 'Assemblies'
+
     def get_transcripts(self):
         return Transcript.objects.filter(
             gene__annotation=self.annotation)
@@ -597,6 +609,9 @@ class Annotation(models.Model):
 
     name = models.CharField(max_length=32)
     last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
 
 
 class PCA(models.Model):
@@ -618,6 +633,13 @@ class PCA(models.Model):
 
     last_updated = models.DateTimeField(auto_now=True, null=True)
 
+    def __str__(self):
+        return str(self.pk)
+
+    class Meta:
+        verbose_name = 'PCA'
+        verbose_name_plural = 'PCAs'
+
 
 class PCATransformedValues(models.Model):
     '''
@@ -628,6 +650,13 @@ class PCATransformedValues(models.Model):
 
     transformed_values = ArrayField(models.FloatField(), size=3)
     last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return str(self.pk)
+
+    class Meta:
+        verbose_name = 'PCA Transformed Values'
+        verbose_name_plural = verbose_name
 
 
 class PCALocusOrder(models.Model):
@@ -672,10 +701,20 @@ class Locus(models.Model):
     chromosome = models.CharField(max_length=32)
     regions = ArrayField(ArrayField(models.IntegerField(), size=2))
 
+    def __str__(self):
+        return str(self.pk)
+
+    class Meta:
+        verbose_name = 'Locus'
+        verbose_name_plural = 'Loci'
+
 
 class LocusGroup(models.Model):
     assembly = models.ForeignKey('Assembly')
     group_type = models.CharField(choices=LOCUS_GROUP_TYPES, max_length=32)
+
+    def __str__(self):
+        return str(self.pk)
 
 
 class Gene(models.Model):
@@ -685,6 +724,9 @@ class Gene(models.Model):
 
     name = models.CharField(
         max_length=32)
+
+    def __str__(self):
+        return self.name
 
     def get_transcript_with_highest_expression(self):
         expression_values = dict()
@@ -717,6 +759,9 @@ class Transcript(models.Model):
     start = models.IntegerField()
     end = models.IntegerField()
     exons = ArrayField(ArrayField(models.IntegerField(), size=2))
+
+    def __str__(self):
+        return self.name
 
     @staticmethod
     def get_transcripts_in_range(annotation, chromosome, start, end):
@@ -765,6 +810,9 @@ class Enhancer(models.Model):
     start = models.IntegerField()
     end = models.IntegerField()
 
+    def __str__(self):
+        return self.name
+
 
 class DatasetIntersection(models.Model):
     locus = models.ForeignKey('Locus')
@@ -788,6 +836,9 @@ class DatasetIntersectionJson(models.Model):
 
     created = models.DateTimeField(auto_now_add=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
+
+    def __str__(self):
+        return str(self.pk)
 
     class Meta:
         unique_together = ('locus_group', 'dataset')
@@ -816,6 +867,9 @@ class DatasetDistance(models.Model):
         'Dataset', related_name='%(app_label)s_%(class)s_second')
 
     last_updated = models.DateTimeField(auto_now=True, null=True)
+
+    def __str__(self):
+        return str(self.pk)
 
     class Meta:
         abstract = True
@@ -877,10 +931,15 @@ class MetaPlot(models.Model):
     metaplot = JSONField()
     last_updated = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return str(self.pk)
+
     class Meta:
         unique_together = (
             ('locus_group', 'dataset',),
         )
+        verbose_name = 'Metaplot'
+        verbose_name_plural = 'Metaplots'
 
 
 class Ontology(models.Model):
@@ -890,6 +949,10 @@ class Ontology(models.Model):
     ac_file = models.FilePathField(path=settings.DATA_PATH)
 
     last_updated = models.DateTimeField(auto_now=True, null=True)
+
+    class Meta:
+        verbose_name = 'Ontology'
+        verbose_name_plural = 'Ontologies'
 
     def get_ontology_object(self):
         return OntologyObject(self.obo_file, self.ac_file,
