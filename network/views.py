@@ -188,8 +188,8 @@ class Home(TemplateView, AddMyUserMixin):
     template_name = 'network/home.html'
 
 
-class Explore(TemplateView, AddMyUserMixin):
-    template_name = 'network/explore.html'
+class ExplorePCA(TemplateView, AddMyUserMixin):
+    template_name = 'explore/pca.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -30,7 +30,7 @@ urlpatterns = [
     url(r'^transcript/(?P<pk>\d+)/$', views.Transcript.as_view(),
         name='transcript'),
 
-    url(r'^explore/$', views.Explore.as_view(), name='explore'),
+    url(r'^explore/pca/$', views.ExplorePCA.as_view(), name='explore_pca'),
     url(r'^explore/overview/$', views.ExploreOverview.as_view(),
         name='explore_overview'),
 
