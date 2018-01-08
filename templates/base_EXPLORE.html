@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
+{% load url_replace %}
 
 {% block content %}
 
 <nav class="navbar navbar-sub">
     <div class="container">
         <ul class="nav navbar-nav">
-            <li><a href="#">Overview</a></li>
+            <li><a href="{% url 'explore_overview' %}">Overview</a></li>
         </ul>
     </div>
 </nav>
