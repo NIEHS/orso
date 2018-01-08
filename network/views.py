@@ -231,6 +231,26 @@ class Explore(TemplateView, AddMyUserMixin):
         return context
 
 
+class ExploreOverview(TemplateView, AddMyUserMixin):
+    template_name = 'explore/overview.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['experiment_number'] = models.Experiment.objects.all().count()
+        context['dataset_number'] = models.Dataset.objects.all().count()
+        context['encode_dataset_number'] = models.Dataset.objects.filter(
+            experiment__project__name='ENCODE').count()
+
+        context['user_number'] = models.MyUser.objects.all().count()
+        context['dataset_from_users_number'] = models.Dataset.objects.exclude(
+            experiment__owners=None).count()
+        context['experiment_from_users_number'] = \
+            models.Experiment.objects.exclude(owners=None).count()
+
+        return context
+
+
 class Gene(DetailView, AddMyUserMixin):
     template_name = 'network/gene.html'
     model = models.Gene

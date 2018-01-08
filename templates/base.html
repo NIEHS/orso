@@ -30,6 +30,7 @@
                 <li><a href="{% url 'home' %}">Home</a></li>
                 <li><a href="{% url 'recommended_experiments' %}">Experiments</a></li>
                 <li><a href="{% url 'recommended_users' %}">People</a></li>
+                <li><a href="#">Explore</a></li>
             </ul>
 
             {% if user.is_authenticated %}
@@ -63,6 +64,8 @@
     <script src='//cdn.plot.ly/plotly-latest.min.js'
             type='text/javascript'></script>
     {% render_bundle 'main' %}
+
+    {% block sub-content %}{% endblock sub-content %}
 
     {% block extra-js %}
     {% endblock extra-js %}

@@ -1,0 +1,25 @@
+{% extends 'base_EXPLORE.html' %}
+
+{% block sub-content %}
+<div class="container container-fluid">
+    <div class="jumbotron">
+        <h1><b>{{experiment_number}}</b> experiments</h1>
+        <p>
+            ORSO hosts <b>{{dataset_number}}</b> datasets from
+            <b>{{experiment_number}}</b> experiments, including
+            <b>{{encode_dataset_number}}</b> datasets from ENCODE.
+        </p>
+    </div>
+    <div class="jumbotron">
+        <h1><b>{{user_number}}</b> users</h1>
+        <p>
+            ORSO has <b>{{user_number}}</b> registered users. These users
+            contribute <b>{{dataset_from_users_number}}</b> datasets
+            from <b>{{experiment_from_users_number}}</b> experiments.
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra-js %}
+{% endblock %}

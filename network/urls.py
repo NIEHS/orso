@@ -31,6 +31,8 @@ urlpatterns = [
         name='transcript'),
 
     url(r'^explore/$', views.Explore.as_view(), name='explore'),
+    url(r'^explore/overview/$', views.ExploreOverview.as_view(),
+        name='explore_overview'),
 
     url(r'^experiment/(?P<pk>\d+)/similar_experiments/$',
         views.SimilarExperiments.as_view(), name='similar_experiments'),
