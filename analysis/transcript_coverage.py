@@ -65,6 +65,11 @@ def read_bigwig_average_over_bed_tab_file(loci, tab_file_path):
         for line in f:
             name, size, covered, value_sum, mean, mean0 = line.strip().split()
             locus_pk = int(name.split('_')[0])
+
+            # Rarely, ENCODE uses nan in their bigWig files; if found, set to 0
+            if value_sum == 'nan':
+                value_sum = 0
+
             pk_to_value[locus_pk] += float(value_sum)
 
     locus_values = dict()
