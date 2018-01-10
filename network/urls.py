@@ -33,6 +33,8 @@ urlpatterns = [
     url(r'^explore/pca/$', views.ExplorePCA.as_view(), name='explore_pca'),
     url(r'^explore/overview/$', views.ExploreOverview.as_view(),
         name='explore_overview'),
+    url(r'^explore/recommendations/$', views.ExploreRecommendations.as_view(),
+        name='explore_recommendations'),
 
     url(r'^experiment/(?P<pk>\d+)/similar_experiments/$',
         views.SimilarExperiments.as_view(), name='similar_experiments'),

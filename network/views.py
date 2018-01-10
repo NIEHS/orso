@@ -251,6 +251,37 @@ class ExploreOverview(TemplateView, AddMyUserMixin):
         return context
 
 
+class ExploreRecommendations(TemplateView, AddMyUserMixin):
+    template_name = 'explore/recommendations.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        data = {}
+        for data_dist in models.DatasetDataDistance.objects.all():
+            try:
+                metadata_dist = models.DatasetMetadataDistance.objects.get(
+                    dataset_1=data_dist.dataset_1,
+                    dataset_2=data_dist.dataset_2,
+                )
+            except models.DatasetMetadataDistance.DoesNotExist:
+                pass
+            else:
+                exp_type = data_dist.dataset_1.experiment.experiment_type.name
+
+                if exp_type not in data:
+                    data[exp_type] = []
+
+                data[exp_type].append([
+                    data_dist.distance,
+                    metadata_dist.distance,
+                ])
+
+        context['data'] = data
+
+        return context
+
+
 class Gene(DetailView, AddMyUserMixin):
     template_name = 'network/gene.html'
     model = models.Gene
