@@ -1,5 +1,3 @@
-import json
-import math
 from collections import defaultdict
 from tempfile import NamedTemporaryFile
 
@@ -120,29 +118,8 @@ def generate_locusgroup_bed(locus_group, output_file_obj):
             strand,
         ]) + '\n')
 
-    chrom_sizes = json.loads(locus_group.assembly.chromosome_sizes)
-
     for locus in models.Locus.objects.filter(group=locus_group):
         for i, region in enumerate(locus.regions):
-
-            if locus_group.group_type in ['promoter', 'enhancer']:
-
-                center = math.floor((region[0] + region[1]) / 2)
-                if locus.strand == '+' or locus.strand is None:
-                    interval = [
-                        max(center - 2500, 1),
-                        min(center + 2499, chrom_sizes[locus.chromosome]),
-                    ]
-
-                elif locus.strand == '-':
-                    interval = [
-                        max(center - 2499, 1),
-                        min(center + 2500, chrom_sizes[locus.chromosome]),
-                    ]
-
-                write_to_out(locus, interval, i)
-
-            elif locus_group.group_type in ['genebody', 'mRNA']:
-                write_to_out(locus, region, i)
+            write_to_out(locus, region, i)
 
     OUT.flush()

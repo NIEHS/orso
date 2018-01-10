@@ -1,4 +1,6 @@
 import csv
+import json
+import math
 
 from django.core.management.base import BaseCommand
 from network import models
@@ -26,6 +28,7 @@ def add_gene_loci(assembly_name, annotation_name, annotation_table):
     '''
     # Exception will be raised if assembly does not exist
     assembly_obj = models.Assembly.objects.get(name=assembly_name)
+    chrom_sizes = json.loads(assembly_obj.chromosome_sizes)
 
     # Create Annotation
     annotation_obj = models.Annotation.objects.get_or_create(
@@ -86,9 +89,15 @@ def add_gene_loci(assembly_name, annotation_name, annotation_table):
 
                 # Create promoter locus
                 if strand == '+':
-                    regions = [[transcript_start, transcript_end]]
+                    regions = [[
+                        max(transcript_start - 2500, 1),
+                        min(transcript_start + 2499, chrom_sizes[chromosome]),
+                    ]]
                 elif strand == '-':
-                    regions = [[transcript_end, transcript_end]]
+                    regions = [[
+                        max(transcript_end - 2499, 1),
+                        min(transcript_end + 2500, chrom_sizes[chromosome]),
+                    ]]
                 else:
                     raise ValueError('Transcript is without strand value.')
                 models.Locus.objects.create(
@@ -124,6 +133,7 @@ def add_enhancer_loci(assembly_name, annotation_name, enhancer_bed_file):
     '''
     # Exception will be raised if assembly does not exist
     assembly_obj = models.Assembly.objects.get(name=assembly_name)
+    chrom_sizes = json.loads(assembly_obj.chromosome_sizes)
 
     # Create Annotation
     annotation_obj = models.Annotation.objects.get_or_create(
@@ -152,11 +162,17 @@ def add_enhancer_loci(assembly_name, annotation_name, enhancer_bed_file):
                 end=end,
             )
 
+            center = math.floor((start + end) / 2)
+            regions = [[
+                max(center - 2500, 1),
+                min(center + 2499, chrom_sizes[chromosome]),
+            ]]
+
             models.Locus.objects.create(
                 group=enhancer_group,
                 enhancer=enhancer,
                 chromosome=chromosome,
-                regions=[[start, end]],
+                regions=regions,
             )
 
 
