@@ -257,7 +257,7 @@ class ExploreRecommendations(TemplateView, AddMyUserMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        data = {}
+        paired_data = dict()
         for data_dist in models.DatasetDataDistance.objects.all():
             try:
                 metadata_dist = models.DatasetMetadataDistance.objects.get(
@@ -269,15 +269,33 @@ class ExploreRecommendations(TemplateView, AddMyUserMixin):
             else:
                 exp_type = data_dist.dataset_1.experiment.experiment_type.name
 
-                if exp_type not in data:
-                    data[exp_type] = []
+                if exp_type not in paired_data:
+                    paired_data[exp_type] = []
 
-                data[exp_type].append([
+                paired_data[exp_type].append([
                     data_dist.distance,
                     metadata_dist.distance,
                 ])
 
-        context['data'] = data
+        quartiled_data = dict()
+        for exp_type, _data in paired_data.items():
+            _sorted = sorted(_data, key=lambda x: (-x[1], -x[0]))
+
+            if len(_sorted) >= 4:
+                quartiled = [arr.tolist() for arr in numpy.array_split(
+                    _sorted, 4)]
+            else:
+                quartiled = [arr.tolist() for arr in numpy.array_split(
+                    _sorted, len(_sorted))]
+
+            quartiled_data[exp_type] = []
+            for _list in quartiled:
+                quartiled_data[exp_type].append([x[0] for x in _list])
+
+        context['data'] = {
+            'paired_data': paired_data,
+            'quartiled_data': quartiled_data,
+        }
 
         return context
 
