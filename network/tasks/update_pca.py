@@ -37,7 +37,8 @@ def _pca_analysis_json(locusgroup_pk, experimenttype_pk, dataset_pks,
     experiment_type = models.ExperimentType.objects.get(pk=experimenttype_pk)
     datasets = models.Dataset.objects.filter(pk__in=list(dataset_pks))
 
-    df = generate_intersection_df(locus_group, experiment_type, datasets)
+    df = generate_intersection_df(locus_group, experiment_type,
+                                  datasets=datasets)
 
     if df.shape[1] >= 3:
 
