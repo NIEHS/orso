@@ -85,6 +85,9 @@ def update_experiment_metadata_scores(experiments):
     gene_ont = models.Ontology.objects.get(
         name='gene_ontology').get_ontology_object()
 
+    epi_ont = models.Ontology.objects.get(
+        name='epigenetic_modification_ontology').get_ontology_object()
+
     for exp_1 in experiments:
         assemblies = models.Assembly.objects.filter(dataset__experiment=exp_1)
         for exp_2 in models.Experiment.objects.filter(
@@ -110,6 +113,11 @@ def update_experiment_metadata_scores(experiments):
                     weighting='information_content')
                 if gene_ont_sim:
                     total_sim += gene_ont_sim
+
+                epi_ont_sim = epi_ont.get_word_similarity(
+                    exp_1.target, exp_2.target, metric='lin')
+                if epi_ont_sim:
+                    total_sim += epi_ont_sim
 
                 models.ExperimentMetadataDistance.objects.update_or_create(
                     experiment_1=exp_1,
