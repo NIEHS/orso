@@ -3,6 +3,7 @@
 
 {% block content %}
 
+{% if user.is_authenticated %}
 <nav class="navbar navbar-sub">
     <div class="container">
         <ul class="nav navbar-nav">
@@ -16,6 +17,8 @@
         </ul>
     </div>
 </nav>
+{% endif %}
+
 <form action="." method="get">
 <fieldset>
 <div class="container">
