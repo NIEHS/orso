@@ -186,3 +186,7 @@ CACHES = {
 DATA_PATH = '/Users/lavenderca/genomics_network/data'
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
+NOTEBOOK_ARGUMENTS = [
+    '--NotebookApp.iopub_data_rate_limit=1.0e10',
+]
