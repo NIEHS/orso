@@ -69,6 +69,22 @@ def _pca_analysis_json(locusgroup_pk, experimenttype_pk, dataset_pks,
                 ).values_list('pk', flat=True)
                 df = df.loc[list(selected_locus_pks)]
 
+            # Select 2nd and 3rd quartiles, in terms of variance and signal
+            med_iqr = (
+                df.median(axis=1).quantile(q=0.25),
+                df.median(axis=1).quantile(q=0.75),
+            )
+            var_iqr = (
+                df.var(axis=1).quantile(q=0.25),
+                df.var(axis=1).quantile(q=0.75),
+            )
+            df = df.loc[
+                (df.median(axis=1) >= med_iqr[0]) &
+                (df.median(axis=1) <= med_iqr[1]) &
+                (df.var(axis=1) >= var_iqr[0]) &
+                (df.var(axis=1) <= var_iqr[1])
+            ]
+
         elif locus_group.group_type in ['enhancer']:
             pass
 
