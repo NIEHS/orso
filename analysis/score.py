@@ -1,8 +1,13 @@
-from scipy.spatial.distance import euclidean, mahalanobis
+import numpy
+from scipy.spatial.distance import euclidean
 from sklearn.metrics.pairwise import cosine_distances
 
 from analysis import transform
 from network import models
+
+
+def rss(array):
+    return numpy.sqrt(numpy.sum(numpy.square(array), axis=0))
 
 
 def score_datasets_by_pca_distance(dataset_1, dataset_2):
@@ -25,20 +30,16 @@ def score_datasets_by_pca_distance(dataset_1, dataset_2):
     if transformed_1.pca != transformed_2.pca:
         raise ValueError('Transformed values do not share PCA object.')
 
-    pca = transformed_1.pca
-    inverse_covariation_matrix = pca.inverse_covariation_matrix
+    dist = euclidean(
+        transformed_1.transformed_values,
+        transformed_2.transformed_values,
+    )
+    average_rss = numpy.mean([
+        rss(transformed_1.transformed_values),
+        rss(transformed_2.transformed_values),
+    ])
 
-    if inverse_covariation_matrix is not None:
-        return mahalanobis(
-            transformed_1.transformed_values,
-            transformed_2.transformed_values,
-            inverse_covariation_matrix,
-        )
-    else:
-        return euclidean(
-            transformed_1.transformed_values,
-            transformed_2.transformed_values,
-        )
+    return dist / average_rss
 
 
 def score_experiments_by_pca_distance(experiment_1, experiment_2):
