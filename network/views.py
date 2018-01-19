@@ -278,13 +278,15 @@ class ExploreRecommendations(TemplateView, AddMyUserMixin):
                     paired_data[exp_type] = []
 
                 paired_data[exp_type].append([
+                    data_dist.dataset_1.name,
+                    data_dist.dataset_2.name,
                     data_dist.distance,
                     metadata_dist.distance,
                 ])
 
         quartiled_data = dict()
         for exp_type, _data in paired_data.items():
-            _sorted = sorted(_data, key=lambda x: (-x[1], -x[0]))
+            _sorted = sorted(_data, key=lambda x: (-x[3], -x[2]))
 
             if len(_sorted) >= 4:
                 quartiled = [arr.tolist() for arr in numpy.array_split(
@@ -295,7 +297,7 @@ class ExploreRecommendations(TemplateView, AddMyUserMixin):
 
             quartiled_data[exp_type] = []
             for _list in quartiled:
-                quartiled_data[exp_type].append([x[0] for x in _list])
+                quartiled_data[exp_type].append([x[2] for x in _list])
 
         context['data'] = {
             'paired_data': paired_data,

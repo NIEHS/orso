@@ -15,14 +15,14 @@ class RecommendationScatter extends React.Component {
     }
 
     drawPlotlyScatter(){
-        var x = [], y = [];
+        var x = [], y = [], names = [];
 
         if (this.state.exp_type != '--') {
             var _data = this.props.data['paired_data'][this.state.exp_type];
             for(var i = 0; i < _data.length; i++){
-                // genes.push(this.props.data[i][0]);
-                x.push(_data[i][0]);
-                y.push(_data[i][1]);
+                names.push(_data[i][0] + ':' + _data[i][1])
+                x.push(_data[i][2]);
+                y.push(_data[i][3]);
             }
         }
 
@@ -31,7 +31,7 @@ class RecommendationScatter extends React.Component {
             y: y,
             mode: 'markers',
             type: 'scatter',
-            // text: genes,
+            text: names,
         }];
 
         var layout = {
