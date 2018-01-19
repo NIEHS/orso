@@ -72,16 +72,20 @@ class AddUserToFormMixin(LoginRequiredMixin):
         return kwargs
 
 
-class AddMyUserMixin(ContextMixin, LoginRequiredMixin):
+class AddMyUserMixin(ContextMixin):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['login_user'] = models.MyUser.objects.get(
-            user=self.request.user)
+        if self.request.user.is_authenticated():
+            context['login_user'] = models.MyUser.objects.get(
+                user=self.request.user)
+        else:
+            context['login_user'] = None
         return context
 
 
-class ExperimentCreate(NeverCacheFormMixin, AddMyUserMixin, CreateView):
+class ExperimentCreate(LoginRequiredMixin, NeverCacheFormMixin, AddMyUserMixin,
+                       CreateView):
     model = models.Experiment
     form_class = forms.ExperimentForm
     DatasetFormSet = inlineformset_factory(
@@ -125,7 +129,8 @@ class ExperimentCreate(NeverCacheFormMixin, AddMyUserMixin, CreateView):
                 dataset_formset=dataset_formset))
 
 
-class ExperimentUpdate(NeverCacheFormMixin, AddMyUserMixin, UpdateView):
+class ExperimentUpdate(LoginRequiredMixin, NeverCacheFormMixin, AddMyUserMixin,
+                       UpdateView):
     model = models.Experiment
     form_class = forms.ExperimentForm
     DatasetFormSet = inlineformset_factory(
@@ -171,7 +176,7 @@ class ExperimentUpdate(NeverCacheFormMixin, AddMyUserMixin, UpdateView):
                 dataset_formset=dataset_formset))
 
 
-class ExperimentDelete(NeverCacheFormMixin, DeleteView):
+class ExperimentDelete(LoginRequiredMixin, NeverCacheFormMixin, DeleteView):
     model = models.Experiment
     form_class = forms.ExperimentForm
 
@@ -513,7 +518,10 @@ class MyUser(DetailView, AddMyUserMixin):
 
 class ExperimentList(AddMyUserMixin, ListView):
     def dispatch(self, request, *args, **kwargs):
-        self.my_user = models.MyUser.objects.get(user=self.request.user)
+        if self.request.user.is_authenticated():
+            self.my_user = models.MyUser.objects.get(user=self.request.user)
+        else:
+            self.my_user = None
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
@@ -544,7 +552,8 @@ class ExperimentList(AddMyUserMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['experiment_counts'] = self.my_user.get_experiment_counts()
+        # context['experiment_counts'] = self.my_user.get_experiment_counts()
+        context['experiment_counts'] = 0
         context['form'] = self.form
         context['search_field'] = self.form['search']
         context['other_fields'] = []
@@ -576,7 +585,7 @@ class AllExperiments(ExperimentList):
         return qs
 
 
-class PersonalExperiments(ExperimentList):
+class PersonalExperiments(LoginRequiredMixin, ExperimentList):
     model = models.Experiment
     template_name = 'network/personal_experiments.html'
     form_class = forms.PersonalExperimentFilterForm
@@ -598,7 +607,7 @@ class PersonalExperiments(ExperimentList):
         return qs
 
 
-class FavoriteExperiments(ExperimentList):
+class FavoriteExperiments(LoginRequiredMixin, ExperimentList):
     model = models.Experiment
     template_name = 'network/favorite_experiments.html'
     form_class = forms.FavoriteExperimentFilterForm
@@ -622,7 +631,7 @@ class FavoriteExperiments(ExperimentList):
 
 # TODO: Have RecommendedExperiments and SimilarExperiments inherit from the
 # same class
-class RecommendedExperiments(ExperimentList):
+class RecommendedExperiments(LoginRequiredMixin, ExperimentList):
     model = models.Experiment
     template_name = 'network/recommended_experiments.html'
     form_class = forms.RecommendedExperimentFilterForm
@@ -770,7 +779,7 @@ class PCA(AddMyUserMixin, DetailView):
         return context
 
 
-class FavoriteUsers(TemplateView, AddMyUserMixin):
+class FavoriteUsers(LoginRequiredMixin, TemplateView, AddMyUserMixin):
     template_name = 'network/favorite_users.html'
 
     def get_context_data(self, **kwargs):
