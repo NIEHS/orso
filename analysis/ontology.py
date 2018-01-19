@@ -5,45 +5,6 @@ from collections import defaultdict
 
 from fuzzywuzzy import fuzz
 
-gene_lookup = {
-    'H2AFZ': 'H2AFZ',
-    'H2AK5ac': 'HIST1H2AB',
-    'H2AK9ac': 'HIST1H2AB',
-    'H2BK120ac': 'HIST1H2BK',
-    'H2BK12ac': 'HIST1H2BK',
-    'H2BK15ac': 'HIST1H2BK',
-    'H2BK20ac': 'HIST1H2BK',
-    'H2BK5ac': 'HIST1H2BK',
-    'H3ac': 'HIST1H3A',
-    'H3F3A': 'H3F3A',
-    'H3K14ac': 'HIST2H3A',
-    'H3K18ac': 'HIST2H3A',
-    'H3K23ac': 'HIST2H3A',
-    'H3K23me2': 'HIST2H3A',
-    'H3K27ac': 'HIST2H3A',
-    'H3K27me3': 'HIST2H3A',
-    'H3K36me3': 'HIST2H3A',
-    'H3K4ac': 'HIST2H3A',
-    'H3K4me1': 'HIST2H3A',
-    'H3K4me2': 'HIST2H3A',
-    'H3K4me3': 'HIST2H3A',
-    'H3K56ac': 'HIST2H3A',
-    'H3K79me1': 'HIST2H3A',
-    'H3K79me2': 'HIST2H3A',
-    'H3K79me3': 'HIST2H3A',
-    'H3K9ac': 'HIST2H3A',
-    'H3K9me1': 'HIST2H3A',
-    'H3K9me2': 'HIST2H3A',
-    'H3K9me3': 'HIST2H3A',
-    'H3T11ph': 'H3F3A',
-    'H4K12ac': 'HIST1H4A',
-    'H4K20me1': 'HIST1H4A',
-    'H4K5ac': 'HIST1H4A',
-    'H4K8ac': 'HIST1H4A',
-    'H4K91ac': 'HIST1H4A',
-    'POLR2AphosphoS2': 'POLR2A',
-    'POLR2AphosphoS5': 'POLR2A',
-}
 tag_prefixes = ['eGFP-', 'FLAG-', 'HA-']
 
 
@@ -370,10 +331,6 @@ class Ontology:
         if self.ontology_type == 'GO':
             for prefix in tag_prefixes:
                 word = re.sub('^{}'.format(prefix), '', word)
-            try:
-                word = gene_lookup[word]
-            except KeyError:
-                pass
         elif self.ontology_type in ['CLO', 'CL', 'BTO']:
             word = re.sub(' (cell|cells)$', '', word)
         word = standardize_word(word)
