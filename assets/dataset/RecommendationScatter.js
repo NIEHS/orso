@@ -36,11 +36,9 @@ class RecommendationScatter extends React.Component {
 
         var layout = {
             xaxis: {
-                // type: 'log',
                 autorange: true,
             },
             yaxis: {
-                // type: 'log',
                 autorange: true,
             },
         };
@@ -54,10 +52,6 @@ class RecommendationScatter extends React.Component {
         if (this.state.exp_type != '--') {
             var _data = this.props.data['quartiled_data'][this.state.exp_type];
             for(var i = 0; i < _data.length; i++){
-                // genes.push(this.props.data[i][0]);
-                // x.push(_data[i][0]);
-                // y.push(_data[i][1]);
-                console.log(_data[i]);
                 plot_data.push({
                     y: _data[i],
                     type: 'box',
