@@ -76,15 +76,23 @@ def process_datasets(datasets, chunk=100):
                 }
 
         download_list_file.flush()
-        return_code = call([
-            'aria2c',
-            '--allow-overwrite=true',
-            '--conditional-get=true',
-            '-x', '16',
-            '-s', '16',
-            '-i', download_list_file.name,
-        ])
-        print('aria2c exitted with return code {}.'.format(str(return_code)))
+
+        download_complete = False
+
+        while not download_complete:
+            return_code = call([
+                'aria2c',
+                '--allow-overwrite=true',
+                '--conditional-get=true',
+                '-x', '16',
+                '-s', '16',
+                '-i', download_list_file.name,
+            ])
+            print('aria2c exitted with return code {}.'.format(
+                str(return_code)))
+            if return_code == 0:
+                download_complete = True
+
         download_list_file.close()
 
         tasks = []
