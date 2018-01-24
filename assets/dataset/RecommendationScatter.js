@@ -26,13 +26,19 @@ class RecommendationScatter extends React.Component {
             }
         }
 
-        var plot_data = [{
+        var trace_1 = {
             x: x,
             y: y,
             mode: 'markers',
             type: 'scatter',
             text: names,
-        }];
+            marker: {
+                opacity: 0.4
+            },
+            point_data: data,
+        }
+
+        var plot_data = [trace_1];
 
         var layout = {
             xaxis: {
