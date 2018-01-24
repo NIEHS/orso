@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from functools import wraps
 
 from . import models, forms
+from analysis.utils import generate_intersection_df
 
 
 def get_name(request):
@@ -835,48 +836,41 @@ class DatasetComparison(TemplateView, AddMyUserMixin):
             assembly=ds_x.assembly,
             group_type=ds_x.experiment.experiment_type.relevant_regions,
         )
+        loci = models.Locus.objects.filter(
+            group=locus_group,
+            pca__experiment_type=ds_x.experiment.experiment_type
+        )
 
-        if locus_group.group_type in ['genebody', 'promoter', 'mRNA']:
-            loci = (models.Locus
-                          .objects
-                          .annotate(
-                              size=F('transcript__end') -
-                              F('transcript__start'))
-                          .filter(
-                              group=locus_group,
-                              transcript__selecting__isnull=False,
-                              size__gte=200)
-                          .order_by('pk'))
-            names = loci.values_list('transcript__gene__name', flat=True)
-        elif locus_group.group_type in ['enhancer']:
-            loci = \
-                models.Locus.objects.filter(group=locus_group).order_by('pk')
-            names = loci.values_list('enhancer__name', flat=True)
-
-        intersections_x = models.DatasetIntersection.objects.filter(
-            locus__in=loci, dataset=ds_x
-        ).order_by('locus__pk').values_list('normalized_value', flat=True)
-        intersections_y = models.DatasetIntersection.objects.filter(
-            locus__in=loci, dataset=ds_y
-        ).order_by('locus__pk').values_list('normalized_value', flat=True)
-
-        context['scatter'] = \
-            [[name, x, y] for name, x, y in
-             zip(names, intersections_x, intersections_y)
-             if (x, y) != (0, 0)]
-
-        log_change = dict()
-        for name, int_x, int_y in zip(
-                names, intersections_x, intersections_y):
-            log_change[name] = math.log2((int_x + 1) / (int_y + 1))
-        log_change = \
-            sorted(log_change.items(), key=lambda x: -abs(x[1]))[:20]
-
-        context['log_change'] = [list(x) for x in sorted(
-            log_change, key=lambda x: -x[1])]
+        df = generate_intersection_df(
+            locus_group,
+            ds_x.experiment.experiment_type,
+            datasets=[ds_x, ds_y],
+            loci=loci,
+        )
 
         context['dataset_x'] = ds_x
         context['dataset_y'] = ds_y
+
+        context['scatter'] = [[pk, x, y] for pk, x, y in zip(
+            list(df.index),
+            list(df[ds_x.pk].values),
+            list(df[ds_y.pk].values),
+        ) if (x, y) != (0, 0)]
+
+        log_fold_changes = \
+            [[pk, math.log2((x + 1) / (y + 1))] for pk, x, y in zip(
+                list(df.index),
+                list(df[ds_x.pk].values),
+                list(df[ds_y.pk].values),
+            )]
+        log_fold_changes = \
+            sorted(log_fold_changes, key=lambda x: -abs(x[1]))[:20]
+        log_fold_changes = [[
+            models.Locus.objects.get(pk=pk).get_name(),
+            lfc,
+        ] for pk, lfc in log_fold_changes]
+
+        context['log_change'] = log_fold_changes
 
         return context
 
