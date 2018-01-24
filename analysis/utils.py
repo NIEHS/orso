@@ -26,7 +26,8 @@ def call_bigwig_average_over_bed(bigwig_name, bed_name, out_name):
     subprocess.call(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
 
 
-def generate_intersection_df(locus_group, experiment_type, datasets=None):
+def generate_intersection_df(locus_group, experiment_type, datasets=None,
+                             loci=None):
     '''
     For a given LocusGroup, generate a pandas DF with intersection values.
     '''
@@ -43,4 +44,9 @@ def generate_intersection_df(locus_group, experiment_type, datasets=None):
         series = pd.Series(
             values['normalized_values'], index=values['locus_pks'])
         d.update({intersection.dataset.pk: series})
-    return pd.DataFrame(d)
+    df = pd.DataFrame(d)
+
+    if loci:
+        df = df.loc[[x.pk for x in loci]]
+
+    return df
