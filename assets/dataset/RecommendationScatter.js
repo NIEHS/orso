@@ -14,15 +14,21 @@ class RecommendationScatter extends React.Component {
         };
     }
 
+    datasetUrl(pk_1, pk_2) {
+        return `/network/dataset-comparison/${pk_1}-${pk_2}/`;
+    }
+
     drawPlotlyScatter(){
+        var plot = document.getElementById('rec_scatter_plot');
+        var data = this.props.data['paired_data'][this.state.exp_type];
+
         var x = [], y = [], names = [];
 
         if (this.state.exp_type != '--') {
-            var _data = this.props.data['paired_data'][this.state.exp_type];
-            for(var i = 0; i < _data.length; i++){
-                names.push(_data[i][0] + ':' + _data[i][1])
-                x.push(_data[i][2]);
-                y.push(_data[i][3]);
+            for(var i = 0; i < data.length; i++){
+                names.push(data[i][1] + ':' + data[i][3])
+                x.push(data[i][4]);
+                y.push(data[i][5]);
             }
         }
 
@@ -50,6 +56,15 @@ class RecommendationScatter extends React.Component {
         };
 
         Plotly.newPlot('rec_scatter_plot', plot_data, layout);
+
+        plot.on('plotly_click', function(data){
+            for(var i = 0; i < data.points.length; i++){
+                var index = data.points[i].pointNumber;
+                var pk_1 = data.points[i].data.point_data[index][0],
+                    pk_2 = data.points[i].data.point_data[index][2];
+            }
+            window.open(this.datasetUrl(pk_1, pk_2));
+        }.bind(this));
     }
 
     drawPlotlyBoxPlot(){
