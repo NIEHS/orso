@@ -708,6 +708,14 @@ class Locus(models.Model):
         verbose_name = 'Locus'
         verbose_name_plural = 'Loci'
 
+    def get_name(self):
+        if self.transcript:
+            return self.transcript.gene.name
+        elif self.enhancer:
+            return self.enhancer.name
+        else:
+            return None
+
 
 class LocusGroup(models.Model):
     assembly = models.ForeignKey('Assembly')
