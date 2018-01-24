@@ -300,7 +300,7 @@ class ExploreRecommendations(TemplateView, AddMyUserMixin):
 
             quartiled_data[exp_type] = []
             for _list in quartiled:
-                quartiled_data[exp_type].append([x[2] for x in _list])
+                quartiled_data[exp_type].append([x[4] for x in _list])
 
         context['data'] = {
             'paired_data': paired_data,
