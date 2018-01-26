@@ -3,6 +3,7 @@ import json
 import requests
 
 from celery.decorators import task
+from django.db.models import Q
 
 from network import models
 from network.tasks.process_datasets import process_datasets
@@ -361,6 +362,7 @@ def add_or_update_encode():
 
     datasets_to_process = set()
 
+    # Create experiment and dataset objects; process datasets
     for experiment in encode.experiments:
         encode_id = experiment['name']
 
@@ -548,3 +550,40 @@ def add_or_update_encode():
 
     print('Processing {} datasets...'.format(len(datasets_to_process)))
     process_datasets(list(datasets_to_process))
+
+    # Set revoked status for missing experiments and datasets
+    # Revoke experiments missing from the ENCODE query
+    query = Q()
+    for experiment in encode.experiments:
+        query |= Q(consortial_id=experiment['name'])
+    query_set = models.Experiment.objects.exclude(query)
+    for experiment in query_set:
+        experiment.revoked = True
+        experiment.save()
+    print('{} experiments missing from query. Revoked!!'.format(
+        str(query_set.count())))
+
+    # Revoke datasets missing from the ENCODE query
+    query = Q()
+    for experiment in encode.experiments:
+        for dataset in experiment['datasets']:
+            for key in ['ambiguous', 'plus', 'minus']:
+                try:
+                    query |= Q(consortial_id__contains=dataset[key])
+                except KeyError:
+                    pass
+    query_set = models.Dataset.objects.exclude(query)
+    for dataset in query_set:
+        dataset.revoked = True
+        dataset.save()
+    print('{} datasets missing from query. Revoked!!'.format(
+        str(query_set.count())))
+
+    # Revoke experiments with only revoked datasets
+    query_set = (models.Experiment.objects.filter(revoked=False)
+                                          .exclude(dataset__revoked=False))
+    for experiment in query_set:
+        experiment.revoked = True
+        experiment.save()
+    print('{} experiments with only revoked datasets. Revoked!!'.format(
+        str(query_set.count())))
