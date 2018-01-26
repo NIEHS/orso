@@ -427,14 +427,7 @@ class Experiment(DetailView, AddMyUserMixin):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        login_user = context['login_user']
         exp = self.get_object()
-
-        context['selectable'] = dict()
-        context['selectable']['personal'] = \
-            login_user.get_personal_experiment_ids()
-        context['selectable']['favorite'] = \
-            login_user.get_favorite_experiment_ids()
 
         context['display_data'] = exp.get_display_data(context['login_user'])
         context['plot_data'] = exp.get_average_metaplots()
