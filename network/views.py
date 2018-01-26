@@ -431,9 +431,7 @@ class Experiment(DetailView, AddMyUserMixin):
 
         context['display_data'] = exp.get_display_data(context['login_user'])
         context['plot_data'] = exp.get_average_metaplots()
-
-        context['datasets'] = models.Dataset.objects.filter(
-            experiment=self.get_object())
+        context['datasets'] = models.Dataset.objects.filter(experiment=exp)
 
         gene_values = []
         gene_set = set()
