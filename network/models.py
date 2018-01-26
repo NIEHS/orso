@@ -210,9 +210,10 @@ class Experiment(models.Model):
     description = models.TextField(blank=True)
     created = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
-
     consortial_id = models.CharField(max_length=128, null=True, default=None)
+
     processed = models.BooleanField(default=False)
+    revoked = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -441,13 +442,14 @@ class Dataset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
     description = models.TextField(blank=True)
+    consortial_id = models.CharField(max_length=128, null=True, default=None)
 
     ambiguous_url = models.URLField(null=True, blank=True)
     plus_url = models.URLField(null=True, blank=True)
     minus_url = models.URLField(null=True, blank=True)
 
-    consortial_id = models.CharField(max_length=128, null=True, default=None)
     processed = models.BooleanField(default=False)
+    revoked = models.BooleanField(default=False)
 
     class Meta:
         get_latest_by = 'created'
