@@ -3,6 +3,7 @@ import json
 import numpy
 from celery import group
 from celery.decorators import task
+from django.db.models import Q
 from scipy.spatial.distance import mahalanobis
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
@@ -45,11 +46,18 @@ def _pca_analysis_json(locusgroup_pk, experimenttype_pk, dataset_pks,
         # Initial filtering
         if locus_group.group_type in ['promoter', 'genebody', 'mRNA']:
 
+            query = Q(gene__annotation__assembly=locus_group.assembly)
             # Filter for selected transcripts (highest expression per gene)
-            selected_transcripts = models.Transcript.objects.filter(
-                gene__annotation__assembly=locus_group.assembly,
-                selecting__isnull=False,
-            )
+            query &= Q(selecting__isnull=False)
+            # Filter by prefixes implying limited curation ('LOC', etc.)
+            for prefix in ['LINC', 'LOC']:
+                query &= ~Q(gene__name__startswith=prefix)
+            # Filter by suffixes implying antisense transcripts
+            for suffix in ['-AS', '-AS1', '-AS2', '-AS3', '-AS4', '-AS5']:
+                query &= ~Q(gene__name__endswith=suffix)
+
+            selected_transcripts = models.Transcript.objects.filter(query)
+
             selected_locus_pks = models.Locus.objects.filter(
                 transcript__in=selected_transcripts,
                 group=locus_group,
