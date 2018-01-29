@@ -27,16 +27,18 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        # Get all datasets with project names and IDs
+        query = Q()
         if options['project_names'] or options['project_ids']:
-            query = Q()
             if options['project_names']:
                 for name in options['project_names'].split(','):
                     query |= Q(experiment__project__name=name)
             if options['project_ids']:
                 for pk in options['project_ids'].split(','):
                     query |= Q(experiment__project__pk=pk)
-            datasets = models.Dataset.objects.filter(query)
-        else:
-            datasets = models.Dataset.objects.all()
 
+        # Get all datasets without revoked
+        query = (query) & Q(revoked=False)
+
+        datasets = models.Dataset.objects.filter(query)
         add_or_update_pca(datasets)
