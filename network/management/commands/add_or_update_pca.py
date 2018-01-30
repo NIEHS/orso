@@ -25,6 +25,13 @@ class Command(BaseCommand):
             type=str,
             help='Comma-delimited list of project IDs to consider',
         )
+        parser.add_argument(
+            '--threads',
+            action='store',
+            dest='threads',
+            type=int,
+            help='Number of threads to use',
+        )
 
     def handle(self, *args, **options):
         # Get all datasets with project names and IDs
@@ -41,4 +48,4 @@ class Command(BaseCommand):
         query = (query) & Q(revoked=False)
 
         datasets = models.Dataset.objects.filter(query)
-        add_or_update_pca(datasets)
+        add_or_update_pca(datasets, threads=options['threads'])

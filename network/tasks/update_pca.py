@@ -13,7 +13,7 @@ from network import models
 
 
 @task
-def add_or_update_pca(datasets):
+def add_or_update_pca(datasets, **kwargs):
     '''
     Perform PCA analysis observing the datasets.
     '''
@@ -28,12 +28,13 @@ def add_or_update_pca(datasets):
                 experiment__experiment_type=exp_type,
             ).values_list('pk', flat=True))
 
-            _pca_analysis_json(lg.pk, exp_type.pk, list(dataset_pks & subset))
+            _pca_analysis_json(
+                lg.pk, exp_type.pk, list(dataset_pks & subset), **kwargs)
 
 
 @task
 def _pca_analysis_json(locusgroup_pk, experimenttype_pk, dataset_pks,
-                       size_threshold=200):
+                       size_threshold=200, threads=1):
     locus_group = models.LocusGroup.objects.get(pk=locusgroup_pk)
     experiment_type = models.ExperimentType.objects.get(pk=experimenttype_pk)
     datasets = models.Dataset.objects.filter(pk__in=list(dataset_pks))
@@ -97,7 +98,7 @@ def _pca_analysis_json(locusgroup_pk, experimenttype_pk, dataset_pks,
             pass
 
         pca = PCA(n_components=3)
-        rf = RandomForestClassifier(n_estimators=1000)
+        rf = RandomForestClassifier(n_estimators=1000, n_jobs=threads)
 
         # Get cell lines and targets
         _order = df.columns.values.tolist()
