@@ -981,3 +981,27 @@ class UserToExperimentSimilarity(models.Model):
         unique_together = (
             ('user', 'experiment',),
         )
+
+
+class AdminNotification(models.Model):
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    message = models.TextField()
+
+
+class Activity(models.Model):
+    owner = models.ForeignKey('MyUser', related_name='owner', blank=True)
+    admin_action = models.BooleanField(default=False)
+
+    POSSIBLE_ACTIONS = [
+        ('added', 'added'),
+        ('created', 'created'),
+        ('favorited', 'favorited'),
+    ]
+
+    action = models.CharField(choices=POSSIBLE_ACTIONS, max_length=64)
+
+    dataset = models.ForeignKey('Dataset')
+    experiment = models.ForeignKey('Experiment')
+    user = models.ForeignKey('MyUser', related_name='target_user')
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
