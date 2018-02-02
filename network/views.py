@@ -617,20 +617,8 @@ class PersonalExperiments(LoginRequiredMixin, ExperimentList):
     form_class = forms.PersonalExperimentFilterForm
 
     def get_queryset(self):
-
-        query = Q(owners__in=[self.my_user])
-
-        if self.form.is_valid():
-            query &= self.form.get_query()
-
-        qs = self.model.objects.filter(query)
-
-        for obj in qs:
-            obj.plot_data = obj.get_average_metaplots()
-            obj.meta_data = obj.get_metadata(self.my_user)
-            obj.urls = obj.get_urls()
-
-        return qs
+        base_query = Q(owners__in=[self.my_user])
+        return super().get_queryset(base_query)
 
 
 class FavoriteExperiments(LoginRequiredMixin, ExperimentList):
@@ -639,20 +627,8 @@ class FavoriteExperiments(LoginRequiredMixin, ExperimentList):
     form_class = forms.FavoriteExperimentFilterForm
 
     def get_queryset(self):
-
-        query = Q(experimentfavorite__owner=self.my_user)
-
-        if self.form.is_valid():
-            query &= self.form.get_query()
-
-        qs = self.model.objects.filter(query)
-
-        for obj in qs:
-            obj.plot_data = obj.get_average_metaplots()
-            obj.meta_data = obj.get_metadata(self.my_user)
-            obj.urls = obj.get_urls()
-
-        return qs
+        base_query = Q(experimentfavorite__owner=self.my_user)
+        return super().get_queryset(base_query)
 
 
 # TODO: Have RecommendedExperiments and SimilarExperiments inherit from the
