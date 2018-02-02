@@ -2,6 +2,7 @@ import math
 from collections import defaultdict
 
 import numpy
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic \
@@ -573,10 +574,26 @@ class AllExperiments(ExperimentList):
 
         qs = self.model.objects.filter(query)
 
+        paginator = Paginator(qs, self.get_paginate_by(qs))
+        page = self.request.GET.get('page')
+
+        try:
+            current_objects = paginator.page(page)
+        except PageNotAnInteger:
+            current_objects = paginator.page(1)
+        except EmptyPage:
+            current_objects = paginator.page(paginator.num_pages)
+
+        print(len(qs))
+        print(len(current_objects))
+
         for obj in qs:
-            obj.plot_data = obj.get_average_metaplots()
-            obj.meta_data = obj.get_metadata(self.my_user)
-            obj.urls = obj.get_urls()
+            if obj in current_objects:
+                print(obj.name)
+
+                obj.plot_data = obj.get_average_metaplots()
+                obj.meta_data = obj.get_metadata(self.my_user)
+                obj.urls = obj.get_urls()
 
         return qs
 
