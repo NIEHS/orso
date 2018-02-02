@@ -584,12 +584,8 @@ class AllExperiments(ExperimentList):
         except EmptyPage:
             current_objects = paginator.page(paginator.num_pages)
 
-        print(len(qs))
-        print(len(current_objects))
-
         for obj in qs:
             if obj in current_objects:
-                print(obj.name)
 
                 obj.plot_data = obj.get_average_metaplots()
                 obj.meta_data = obj.get_metadata(self.my_user)
