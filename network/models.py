@@ -4,6 +4,7 @@ import numpy
 import math
 import json
 import string
+import os
 from collections import defaultdict
 
 from django.db import models
@@ -15,6 +16,8 @@ from picklefield.fields import PickledObjectField
 from scipy.stats import variation as coeff_variance
 
 from analysis.ontology import Ontology as OntologyObject
+from analysis.metaplot import generate_metaplot_bed
+from analysis.transcript_coverage import generate_locusgroup_bed
 
 STRANDS = (('+', '+'), ('-', '-'))
 LOCUS_GROUP_TYPES = (
@@ -723,8 +726,27 @@ class LocusGroup(models.Model):
     assembly = models.ForeignKey('Assembly')
     group_type = models.CharField(choices=LOCUS_GROUP_TYPES, max_length=32)
 
+    intersection_bed_path = models.FilePathField(blank=True, null=True)
+    metaplot_bed_path = models.FilePathField(blank=True, null=True)
+
     def __str__(self):
         return str(self.pk)
+
+    def create_and_set_intersection_bed(self):
+        path = os.path.join(settings.INTERSECTION_BED_DIR, '{}-{}-{}.bed'.join(
+            self.pk, self.assembly.name, self.group_type))
+        with open(path, 'w') as BED:
+            generate_locusgroup_bed(self, BED)
+        self.path = path
+        self.save()
+
+    def create_and_set_metaplot_bed(self):
+        path = os.path.join(settings.METAPLOT_BED_DIR, '{}-{}-{}.bed'.join(
+            self.pk, self.assembly.name, self.group_type))
+        with open(path, 'w') as BED:
+            generate_metaplot_bed(self, BED)
+        self.path = path
+        self.save()
 
 
 class Gene(models.Model):
