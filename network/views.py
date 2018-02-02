@@ -547,27 +547,22 @@ class ExperimentList(AddMyUserMixin, ListView):
             pass
         return val
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # context['experiment_counts'] = self.my_user.get_experiment_counts()
-        context['experiment_counts'] = 0
-        context['form'] = self.form
-        context['search_field'] = self.form['search']
-        context['other_fields'] = []
-        for field in self.form:
-            if field.name != 'search':
-                context['other_fields'].append(field)
-        return context
+    def get_page_objs(self, qs):
+        paginator = Paginator(qs, self.get_paginate_by(qs))
+        page = self.request.GET.get('page')
 
+        try:
+            current_objects = paginator.page(page)
+        except PageNotAnInteger:
+            current_objects = paginator.page(1)
+        except EmptyPage:
+            current_objects = paginator.page(paginator.num_pages)
 
-class AllExperiments(ExperimentList):
-    model = models.Experiment
-    template_name = 'network/all_experiments.html'
-    form_class = forms.AllExperimentFilterForm
+        return current_objects
 
-    def get_queryset(self):
+    def get_queryset(self, base_query):
 
-        query = Q()
+        query = base_query
 
         if self.form.is_valid():
             query &= self.form.get_query()
@@ -592,6 +587,28 @@ class AllExperiments(ExperimentList):
                 obj.urls = obj.get_urls()
 
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # context['experiment_counts'] = self.my_user.get_experiment_counts()
+        context['experiment_counts'] = 0
+        context['form'] = self.form
+        context['search_field'] = self.form['search']
+        context['other_fields'] = []
+        for field in self.form:
+            if field.name != 'search':
+                context['other_fields'].append(field)
+        return context
+
+
+class AllExperiments(ExperimentList):
+    model = models.Experiment
+    template_name = 'network/all_experiments.html'
+    form_class = forms.AllExperimentFilterForm
+
+    def get_queryset(self):
+        base_query = Q()
+        return super().get_queryset(base_query)
 
 
 class PersonalExperiments(LoginRequiredMixin, ExperimentList):
