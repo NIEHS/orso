@@ -566,6 +566,26 @@ class Dataset(models.Model):
 
         return out
 
+    def generate_local_bigwig_paths(self):
+        if self.is_stranded():
+            plus_local_path = os.path.join(
+                settings.BIGWIG_TEMP_DIR, os.path.basename(self.plus_url))
+            minus_local_path = os.path.join(
+                settings.BIGWIG_TEMP_DIR, os.path.basename(self.minus_url))
+            return {
+                'ambiguous': None,
+                'plus': plus_local_path,
+                'minus': minus_local_path,
+            }
+        else:
+            ambiguous_local_path = os.path.join(
+                settings.BIGWIG_TEMP_DIR, os.path.basename(self.ambiguous_url))
+            return {
+                'ambiguous': ambiguous_local_path,
+                'plus': None,
+                'minus': None,
+            }
+
 
 class Favorite(models.Model):
     owner = models.ForeignKey('MyUser')
@@ -733,19 +753,29 @@ class LocusGroup(models.Model):
         return str(self.pk)
 
     def create_and_set_intersection_bed(self):
-        path = os.path.join(settings.INTERSECTION_BED_DIR, '{}-{}-{}.bed'.join(
-            self.pk, self.assembly.name, self.group_type))
+        # if not os.path.exists(settings.INTERSECTION_BED_DIR):
+        os.makedirs(settings.INTERSECTION_BED_DIR, exist_ok=True)
+        path = os.path.join(
+            settings.INTERSECTION_BED_DIR,
+            '{}-{}-{}-intersection.bed'.format(
+                self.pk, self.assembly.name, self.group_type)
+        )
         with open(path, 'w') as BED:
             generate_locusgroup_bed(self, BED)
-        self.path = path
+        self.intersection_bed_path = path
         self.save()
 
     def create_and_set_metaplot_bed(self):
-        path = os.path.join(settings.METAPLOT_BED_DIR, '{}-{}-{}.bed'.join(
-            self.pk, self.assembly.name, self.group_type))
+        # if not os.path.exists(settings.METAPLOT_BED_DIR):
+        os.makedirs(settings.METAPLOT_BED_DIR, exist_ok=True)
+        path = os.path.join(
+            settings.METAPLOT_BED_DIR,
+            '{}-{}-{}-metaplot.bed'.format(
+                self.pk, self.assembly.name, self.group_type)
+        )
         with open(path, 'w') as BED:
             generate_metaplot_bed(self, BED)
-        self.path = path
+        self.metaplot_bed_path = path
         self.save()
 
 

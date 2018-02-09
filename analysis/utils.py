@@ -1,7 +1,9 @@
 import json
 import os
 import subprocess
+from tempfile import NamedTemporaryFile
 
+from django.conf import settings
 import pandas as pd
 
 from network import models
@@ -50,3 +52,60 @@ def generate_intersection_df(locus_group, experiment_type, datasets=None,
         df = df.loc[[x.pk for x in loci]]
 
     return df
+
+
+def download_dataset_bigwigs(datasets):
+
+    os.makedirs(settings.BIGWIG_TEMP_DIR, exist_ok=True)
+
+    download_list_file = NamedTemporaryFile(mode='w')
+    bigwig_paths = dict()
+
+    for dataset in datasets:
+
+        paths = dataset.generate_local_bigwig_paths()
+
+        if dataset.is_stranded():
+
+            download_list_file.write('{}\n'.format(dataset.plus_url))
+            download_list_file.write(
+                '\tdir={}\n'.format(os.path.dirname(paths['plus'])))
+            download_list_file.write(
+                '\tout={}\n'.format(os.path.basename(paths['plus'])))
+
+            download_list_file.write('{}\n'.format(dataset.minus_url))
+            download_list_file.write(
+                '\tdir={}\n'.format(os.path.dirname(paths['minus'])))
+            download_list_file.write(
+                '\tout={}\n'.format(os.path.basename(paths['minus'])))
+
+        else:
+
+            download_list_file.write('{}\n'.format(dataset.ambiguous_url))
+            download_list_file.write(
+                '\tdir={}\n'.format(os.path.dirname(paths['ambiguous'])))
+            download_list_file.write(
+                '\tout={}\n'.format(os.path.basename(paths['ambiguous'])))
+
+        bigwig_paths[dataset.pk] = paths
+
+    download_list_file.flush()
+
+    download_complete = False
+    while not download_complete:
+        return_code = subprocess.call([
+            'aria2c',
+            '--allow-overwrite=true',
+            '--conditional-get=true',
+            '-x', '16',
+            '-s', '16',
+            '-i', download_list_file.name,
+        ])
+        print('aria2c exitted with return code {}.'.format(
+            str(return_code)))
+        if return_code == 0:
+            download_complete = True
+
+    download_list_file.close()
+
+    return bigwig_paths

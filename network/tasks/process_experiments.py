@@ -3,15 +3,12 @@ from celery import group
 from celery.decorators import task
 
 from network import models
+from network.tasks import process_dataset_batch
 
 
-@task
-def process_experiments(experiments):
-    set_experiment_intersection_values(experiments)
-
-    for exp in experiments:
-        exp.processed = True
-        exp.save()
+def process_experiment(experiment):
+    datasets = models.Dataset.objects.filter(experiment=experiment)
+    process_dataset_batch[datasets]
 
 
 @task

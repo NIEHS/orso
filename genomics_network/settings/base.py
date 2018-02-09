@@ -184,6 +184,12 @@ CACHES = {
 }
 
 DATA_PATH = '/Users/lavenderca/genomics_network/data'
+INTERSECTION_BED_DIR = os.path.join(
+    PROJECT_PATH, 'data', 'intersection_bed_files')
+METAPLOT_BED_DIR = os.path.join(
+    PROJECT_PATH, 'data', 'metaplot_bed_files')
+BIGWIG_TEMP_DIR = os.path.join(
+    PROJECT_PATH, 'data', 'bigwig_temp')
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
