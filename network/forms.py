@@ -3,11 +3,8 @@ from django.db.models import Q
 from selectable.forms import AutoCompleteWidget
 
 from . import lookups
-# from selectable import forms as selectable
 
 from . import models
-# from django.forms.models import inlineformset_factory
-# from analysis import metaplot
 
 
 class ExperimentFilterForm(forms.Form):
