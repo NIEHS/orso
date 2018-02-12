@@ -88,6 +88,7 @@ class AddMyUserMixin(ContextMixin):
 
 class ExperimentCreate(LoginRequiredMixin, NeverCacheFormMixin, AddMyUserMixin,
                        CreateView):
+    template_name = 'experiments/create.html'
     model = models.Experiment
     form_class = forms.ExperimentForm
     DatasetFormSet = inlineformset_factory(

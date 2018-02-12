@@ -220,14 +220,28 @@ class SimilarExperimentFilterForm(ExperimentFilterForm):
 
 class ExperimentForm(forms.ModelForm):
 
+    def __init__(self, *args, **kwargs):
+        super(ExperimentForm, self).__init__(*args, **kwargs)
+        for field in iter(self.fields):
+            self.fields[field].widget.attrs.update({
+                'class': 'form-control'
+            })
+
     class Meta:
         model = models.Experiment
         fields = (
-            'experiment_type', 'cell_type', 'target', 'description', 'name'
+            'name', 'experiment_type', 'cell_type', 'target', 'description',
         )
 
 
 class DatasetForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        super(DatasetForm, self).__init__(*args, **kwargs)
+        for field in iter(self.fields):
+            self.fields[field].widget.attrs.update({
+                'class': 'form-control'
+            })
 
     class Meta:
         model = models.Dataset
