@@ -215,14 +215,22 @@ class SimilarExperimentFilterForm(ExperimentFilterForm):
                     {'pk': pk})
 
 
-class ExperimentForm(forms.ModelForm):
+class BootstrapModelForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
-        super(ExperimentForm, self).__init__(*args, **kwargs)
+
+        super(BootstrapModelForm, self).__init__(*args, **kwargs)
         for field in iter(self.fields):
             self.fields[field].widget.attrs.update({
-                'class': 'form-control'
+                'class': 'form-control',
             })
+            if type(self.fields[field].widget) == forms.Textarea:
+                self.fields[field].widget.attrs.update({
+                    'rows': 2,
+                })
+
+
+class ExperimentForm(BootstrapModelForm):
 
     class Meta:
         model = models.Experiment

@@ -22,7 +22,7 @@
         <h2>Experiment</h2>
             {{ form }}
         <h2>Datasets</h2>
-        <div class='dataset-formset'>
+        <div class='dataset-formset' style='margin-bottom: 40;'>
                 {{ dataset_formset.management_form }}
                 {{ dataset_formset }}
         </div>
@@ -40,9 +40,6 @@
         deleteText: 'Remove'
     });
 
-    $('textarea').attr('rows', '2');
-
-    $('.dataset-formset').css('margin-bottom', '40');
     $('.add-row').addClass('btn');
     $('.add-row').addClass('btn-default');
 
