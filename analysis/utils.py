@@ -125,3 +125,15 @@ def download_dataset_bigwigs(datasets):
     download_list_file.close()
 
     return bigwig_paths
+
+
+def remove_dataset_bigwigs(datasets):
+
+    for dataset in datasets:
+        paths = dataset.generate_local_bigwig_paths()
+        for path in paths.values():
+            if path:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
