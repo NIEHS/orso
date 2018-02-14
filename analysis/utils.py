@@ -54,6 +54,22 @@ def generate_intersection_df(locus_group, experiment_type, datasets=None,
     return df
 
 
+def generate_pca_transformed_df(pca, datasets=None):
+    if not datasets:
+        datasets = models.Dataset.objects.all()
+
+    d = {}
+    for transformed_values in models.PCATransformedValues.objects.filter(
+        pca=pca,
+        dataset__in=datasets,
+    ):
+        series = pd.Series(transformed_values.transformed_values)
+        d.update({transformed_values.dataset.pk: series})
+    df = pd.DataFrame(d)
+
+    return df
+
+
 def download_dataset_bigwigs(datasets):
 
     os.makedirs(settings.BIGWIG_TEMP_DIR, exist_ok=True)
