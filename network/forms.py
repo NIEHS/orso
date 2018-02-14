@@ -239,14 +239,7 @@ class ExperimentForm(BootstrapModelForm):
         )
 
 
-class DatasetForm(forms.ModelForm):
-
-    def __init__(self, *args, **kwargs):
-        super(DatasetForm, self).__init__(*args, **kwargs)
-        for field in iter(self.fields):
-            self.fields[field].widget.attrs.update({
-                'class': 'form-control'
-            })
+class DatasetForm(BootstrapModelForm):
 
     class Meta:
         model = models.Dataset
