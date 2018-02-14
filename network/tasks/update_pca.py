@@ -502,3 +502,59 @@ def _add_or_update_pca_transformed_values_json(dij_pk, pca_pk):
             'transformed_values': transformed_values.tolist(),
         },
     )
+
+
+def set_pca_plot(pca):
+
+    def get_plot(pca):
+        plot = []
+
+        datasets = models.Dataset.objects.filter(pcatransformedvalues__pca=pca)
+        for ds in datasets:
+            plot.append({
+                'experiment_name': ds.experiment.name,
+                'dataset_name': ds.name,
+                'experiment_pk': ds.experiment.pk,
+                'dataset_pk': ds.pk,
+                'experiment_cell_type': ds.experiment.cell_type,
+                'experiment_target': ds.experiment.target,
+                'transformed_values':
+                    ds.pcatransformedvalues_set
+                      .get(pca=pca).transformed_values,
+            })
+
+        return plot
+
+    def get_explained_variance(pca):
+        return pca.pca.explained_variance_ratio_.tolist()
+
+    def get_components(pca):
+        components = []
+
+        if pca.locus_group.group_type in ['genebody', 'promoter', 'mRNA']:
+            locus_names = [
+                x.locus.transcript.gene.name for x in
+                models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
+            ]
+        elif pca.locus_group.group_type in ['enhancer']:
+            locus_names = [
+                x.locus.enhancer.name for x in
+                models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
+            ]
+
+        for _component in pca.pca.components_:
+            components.append(
+                sorted(
+                    zip(locus_names, _component),
+                    key=lambda x: -abs(x[1]),
+                )[:20]
+            )
+
+        return components
+
+    pca.plot = json.dumps({
+        'plot': get_plot(pca),
+        'explained_variance': get_explained_variance(pca),
+        'components': get_components(pca),
+    })
+    pca.save()

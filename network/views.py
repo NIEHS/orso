@@ -21,6 +21,7 @@ from functools import wraps
 
 from . import models, forms
 from analysis.utils import generate_intersection_df
+from network.tasks.process_datasets import process_dataset
 
 
 def get_name(request):
@@ -123,6 +124,11 @@ class ExperimentCreate(LoginRequiredMixin, NeverCacheFormMixin, AddMyUserMixin,
         self.object.owners.add(login_user)
         dataset_formset.instance = self.object
         dataset_formset.save()
+
+        # Run through and process each dataset
+        for _form in dataset_formset:
+            process_dataset(_form.instance)
+
         return HttpResponseRedirect(self.get_success_url())
 
     def form_invalid(self, form, dataset_formset):
