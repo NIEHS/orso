@@ -6,7 +6,13 @@ class PCA extends React.Component {
     constructor(props) {
         super(props);
 
-        let color_by_choices = ['None', 'Cell type', 'Target'];
+        var color_keys = Object.keys(this.props.plot['colors']).sort();
+        var color_by_choices = ['None'];
+        for (var i = 0; i < color_keys.length; i++) {
+            if (color_keys[i] != 'None') {
+                color_by_choices.push(color_keys[i]);
+            }
+        }
 
         this.state = {
             color_by: 'None',
@@ -28,7 +34,7 @@ class PCA extends React.Component {
     }
 
     drawPlotlyPCA() {
-        var data = this.props.plot;
+        var data = this.props.plot['points'];
 
         var pca = [], cell_types = [], targets = [], names = [];
         for (var i = 0; i < data.length; i++) {
@@ -45,11 +51,7 @@ class PCA extends React.Component {
             }
         }
 
-        var color_scale = d3.scale.category20c();
-        var colors = [];
-        for (var i = 0; i < pca.length; i++) {
-            colors.push(this.colorScale(0));
-        }
+        var colors = this.props.plot['colors'][this.state.color_by];
 
         function unpack(rows, key) {
             return rows.map(function(row)
@@ -200,21 +202,7 @@ class PCA extends React.Component {
     }
 
     updateColor() {
-        var colors = [];
-        var used = [];
-
-        for (var i = 0; i < this.props.plot.length; i++) {
-            var value = '';
-            if (this.state.color_by == 'Cell type') {
-                value = this.props.plot[i]['experiment_cell_type'];
-            } else if (this.state.color_by == 'Target') {
-                value = this.props.plot[i]['experiment_target'];
-            }
-            if ($.inArray(value, used) == -1) {
-                used.push(value);
-            }
-            colors.push(this.colorScale($.inArray(value, used)));
-        }
+        var colors = this.props.plot['colors'][this.state.color_by];
 
         var update = {
             marker: {
@@ -227,11 +215,6 @@ class PCA extends React.Component {
     }
 
     componentDidMount(){
-        var $experiment_select = $(this.refs.select_experiment_type);
-        for (let i in this.state.experiment_type_choices) {
-            $experiment_select.append(
-                '<option val="' + i + '">' + this.state.experiment_type_choices[i] + '</option>');
-        }
 
         var $color_by_select = $(this.refs.color_by_select);
         for (let i in this.state.color_by_choices) {
@@ -313,7 +296,7 @@ class PCA extends React.Component {
 }
 
 PCA.propTypes = {
-    plot: React.PropTypes.array.isRequired,
+    plot: React.PropTypes.object.isRequired,
     explained_variance: React.PropTypes.array.isRequired,
     components: React.PropTypes.array.isRequired,
 };
