@@ -1,15 +1,75 @@
 import json
+from collections import defaultdict
 
+import matplotlib.pyplot as plt
 import numpy
 from celery import group
 from celery.decorators import task
 from django.db.models import Q
+from matplotlib.colors import rgb2hex
 from scipy.spatial.distance import mahalanobis
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 
 from analysis.utils import generate_intersection_df
 from network import models
+
+TOTAL_HISTONE_MARKS = [
+    'H2AFZ',
+    'H2AK5ac',
+    'H2AK9ac',
+    'H2BK120ac',
+    'H2BK12ac',
+    'H2BK15ac',
+    'H2BK20ac',
+    'H2BK5ac',
+    'H3F3A',
+    'H3K14ac',
+    'H3K18ac',
+    'H3K23ac',
+    'H3K23me2',
+    'H3K27ac',
+    'H3K27me3',
+    'H3K36me3',
+    'H3K4ac',
+    'H3K4me1',
+    'H3K4me2',
+    'H3K4me3',
+    'H3K56ac',
+    'H3K79me1',
+    'H3K79me2',
+    'H3K79me3',
+    'H3K9ac',
+    'H3K9me1',
+    'H3K9me2',
+    'H3K9me3',
+    'H3T11ph',
+    'H3ac',
+    'H4K12ac',
+    'H4K20me1',
+    'H4K5ac',
+    'H4K8ac',
+    'H4K91ac',
+]
+HIGHLY_REPRESENTED_MARKS = [
+    'H2AFZ',
+    'H3K27ac',
+    'H3K27me3',
+    'H3K36me3',
+    'H3K4me1',
+    'H3K4me2',
+    'H3K4me3',
+    'H3K79me2',
+    'H3K9ac',
+    'H3K9me3',
+]
+TARGET_VECTORS = HIGHLY_REPRESENTED_MARKS
+TOGGLE_IDS = {
+    'Histone': TOTAL_HISTONE_MARKS,
+    'Control': [
+        'Control',
+    ],
+}
 
 
 @task
@@ -507,20 +567,72 @@ def _add_or_update_pca_transformed_values_json(dij_pk, pca_pk):
 def set_pca_plot(pca):
 
     def get_plot(pca):
-        plot = []
+        plot = {
+            'points': [],
+            'colors': {
+                'None': [],
+                'Cell type': [],
+                'Target': [],
+            },
+            'toggles': {},
+            'vectors': {},
+        }
+        for key in TOGGLE_IDS.keys():
+            plot['toggles'][key] = []
 
-        datasets = models.Dataset.objects.filter(pcatransformedvalues__pca=pca)
+        datasets = \
+            list(models.Dataset.objects.filter(pcatransformedvalues__pca=pca))
+        transformed_values = []
         for ds in datasets:
-            plot.append({
+            transformed_values.append(ds.pcatransformedvalues_set
+                                      .get(pca=pca).transformed_values)
+
+        cmap = plt.get_cmap('hsv')
+
+        target_set = set([ds.experiment.target for ds in datasets])
+        target_to_color = dict()
+        for i, target in enumerate(list(target_set)):
+            j = i % 20
+            index = ((j % 2) * (50) + (j // 2) * (5)) / 100
+            target_to_color[target] = rgb2hex(cmap(index))
+
+        cell_type_set = set([ds.experiment.cell_type for ds in datasets])
+        cell_type_to_color = dict()
+        for i, cell_type in enumerate(list(cell_type_set)):
+            j = i % 20
+            index = ((j % 2) * (50) + (j // 2) * (5)) / 100
+            cell_type_to_color[cell_type] = rgb2hex(cmap(index))
+
+        for ds in datasets:
+            plot['colors']['None'].append(rgb2hex(cmap(0)))
+            plot['colors']['Target'].append(
+                target_to_color[ds.experiment.target])
+            plot['colors']['Cell type'].append(
+                cell_type_to_color[ds.experiment.cell_type])
+
+        vector_categories = defaultdict(list)
+        for ds, values in zip(datasets, transformed_values):
+            target = ds.experiment.target
+            if target in TARGET_VECTORS:
+                vector_categories[target].append(values)
+        for vector, values in vector_categories.items():
+            plot['vectors'].update(
+                {vector: numpy.mean(values, axis=0).tolist()})
+
+        for ds in datasets:
+            target = ds.experiment.target
+            for key, _list in TOGGLE_IDS.items():
+                plot['toggles'][key].append(int(target in _list))
+
+        for ds, values in zip(datasets, transformed_values):
+            plot['points'].append({
                 'experiment_name': ds.experiment.name,
                 'dataset_name': ds.name,
                 'experiment_pk': ds.experiment.pk,
                 'dataset_pk': ds.pk,
                 'experiment_cell_type': ds.experiment.cell_type,
                 'experiment_target': ds.experiment.target,
-                'transformed_values':
-                    ds.pcatransformedvalues_set
-                      .get(pca=pca).transformed_values,
+                'transformed_values': values,
             })
 
         return plot
