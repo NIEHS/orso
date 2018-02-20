@@ -64,12 +64,6 @@ HIGHLY_REPRESENTED_MARKS = [
     'H3K9me3',
 ]
 TARGET_VECTORS = HIGHLY_REPRESENTED_MARKS
-TOGGLE_IDS = {
-    'Histone': TOTAL_HISTONE_MARKS,
-    'Control': [
-        'Control',
-    ],
-}
 
 
 @task
@@ -568,17 +562,17 @@ def set_pca_plot(pca):
 
     def get_plot(pca):
         plot = {
-            'points': [],
-            'colors': {
-                'None': [],
-                'Cell type': [],
-                'Target': [],
+            'color_choices': [
+                'Cell type',
+                'Target',
+            ],
+            'points': {
+                'Histone': [],
+                'Control': [],
+                'Other': [],
             },
-            'toggles': {},
             'vectors': {},
         }
-        for key in TOGGLE_IDS.keys():
-            plot['toggles'][key] = []
 
         datasets = \
             list(models.Dataset.objects.filter(pcatransformedvalues__pca=pca))
@@ -603,29 +597,42 @@ def set_pca_plot(pca):
             index = ((j % 2) * (50) + (j // 2) * (5)) / 100
             cell_type_to_color[cell_type] = rgb2hex(cmap(index))
 
-        for ds in datasets:
-            plot['colors']['None'].append(rgb2hex(cmap(0)))
-            plot['colors']['Target'].append(
-                target_to_color[ds.experiment.target])
-            plot['colors']['Cell type'].append(
-                cell_type_to_color[ds.experiment.cell_type])
-
         vector_categories = defaultdict(list)
         for ds, values in zip(datasets, transformed_values):
             target = ds.experiment.target
             if target in TARGET_VECTORS:
                 vector_categories[target].append(values)
         for vector, values in vector_categories.items():
+            if vector in target_to_color:
+                color = target_to_color[vector]
+            else:
+                color = rgb2hex(cmap(0))
             plot['vectors'].update(
-                {vector: numpy.mean(values, axis=0).tolist()})
-
-        for ds in datasets:
-            target = ds.experiment.target
-            for key, _list in TOGGLE_IDS.items():
-                plot['toggles'][key].append(int(target in _list))
+                {
+                    vector: {
+                        'point': numpy.mean(values, axis=0).tolist(),
+                        'color': color,
+                        'label': vector,
+                    }
+                })
 
         for ds, values in zip(datasets, transformed_values):
-            plot['points'].append({
+            colors = dict()
+            colors.update({'None': rgb2hex(cmap(0))})
+
+            target = ds.experiment.target
+            if target in target_to_color:
+                colors.update({'Target': target_to_color[target]})
+            else:
+                colors.update({'Target': rgb2hex(cmap(0))})
+
+            cell_type = ds.experiment.cell_type
+            if cell_type in cell_type_to_color:
+                colors.update({'Cell type': cell_type_to_color[cell_type]})
+            else:
+                colors.update({'Cell type': rgb2hex(cmap(0))})
+
+            point = {
                 'experiment_name': ds.experiment.name,
                 'dataset_name': ds.name,
                 'experiment_pk': ds.experiment.pk,
@@ -633,7 +640,15 @@ def set_pca_plot(pca):
                 'experiment_cell_type': ds.experiment.cell_type,
                 'experiment_target': ds.experiment.target,
                 'transformed_values': values,
-            })
+                'colors': colors,
+            }
+
+            if target in ['Control']:
+                plot['points']['Control'].append(point)
+            elif target in TOTAL_HISTONE_MARKS:
+                plot['points']['Histone'].append(point)
+            else:
+                plot['points']['Other'].append(point)
 
         return plot
 
