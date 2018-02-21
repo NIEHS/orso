@@ -9,8 +9,18 @@ class PCA extends React.Component {
         var color_by_choices = ['None'];
         color_by_choices = color_by_choices.concat(this.props.plot['color_choices'])
 
-        var points_to_visibility = {};
         var points_keys = Object.keys(this.props.plot['points']);
+
+        var hide_marker_keys = [];
+        for (var i = 0; i < points_keys.length; i++) {
+            var key = points_keys[i];
+            var number_of_points = Object.keys(this.props.plot['points'][key]).length;
+            if (number_of_points > 0 && key != 'Other') {
+                hide_marker_keys.push(key);
+            }
+        }
+
+        var points_to_visibility = {};
         for (var i = 0; i < points_keys.length; i++) {
             points_to_visibility[points_keys[i]] = true;
         }
@@ -18,6 +28,7 @@ class PCA extends React.Component {
         this.state = {
             color_by: 'None',
             color_by_choices: color_by_choices,
+            hide_marker_keys: hide_marker_keys,
             points_to_visibility: points_to_visibility,
             points_to_trace_index: {},  // set during initial plotting
             vector_to_trace_index: {},  // set during initial plotting
@@ -111,7 +122,7 @@ class PCA extends React.Component {
 
         var layout = {
             showlegend: false,
-            height: 800,
+            // height: 800,
             margin: {
                 l: 0,
                 r: 0,
@@ -293,11 +304,11 @@ class PCA extends React.Component {
         }
 
         var $hide_markers = $(this.refs.hide_markers);
-        var toggle_keys = Object.keys(this.props.plot['points']);
-        for (var i = 0; i < toggle_keys.length; i++) {
+        for (var i = 0; i < this.state.hide_marker_keys.length; i++) {
+            var key = this.state.hide_marker_keys[i];
             var $new_div = $(
-                '<input type="checkbox" id="hide_markers_' + i + '" value="' + toggle_keys[i] + '"</input> \
-                <label>' + toggle_keys[i] + '</label>'
+                '<input type="checkbox" id="hide_markers_' + i + '" value="' + key + '"</input> \
+                <label>' + key + '&nbsp;&nbsp;</label>'
             );
             $new_div.on('click', this.update_marker_visibility.bind(this));
             $hide_markers.append($new_div);
@@ -341,52 +352,63 @@ class PCA extends React.Component {
     }
 
     render(){
-        return <div className='pca'>
-            <div className='row'>
-                <div>
-                    <input type='checkbox' id='show_vectors' name='show_vectors' value='show_vectors'
-                        onChange={this.update_vector_visibility.bind(this)}>
-                    </input>
-                    <label>Show vectors</label>
-                    <div ref='hide_markers'>Hide markers:</div>
-                    <div ref='plot' id='plot'></div>
-                    <div>Color by</div>
-                    <select ref='color_by_select'
-                        onChange={this.change_color.bind(this)}
-                        value={this.state.color_by}>
-                    </select>
-                    <div ref='selection_container'>
-                        <div><h4>Selection</h4></div>
-                        <div><b>Experiment name: </b><span ref='selection_exp_name'>--</span></div>
-                        <div><b>Dataset name: </b><span ref='selection_ds_name'>--</span></div>
-                        <div><b>Cell/tissue type: </b><span ref='selection_cell_type'>--</span></div>
-                        <div><b>Target: </b><span ref='selection_target'>--</span></div>
-                        <div><a ref='experiment_link' href='#' className='btn btn-default'>Go to Experiment</a></div>
-                        <div><a ref='dataset_link' href='#' className='btn btn-default'>Go to Dataset</a></div>
+
+        return <div>
+            <div className='pca' style={{paddingTop: '20px'}}>
+                <h2>Plot</h2>
+                <div className='row'>
+                    <div className='col-sm-9' style={{border: '1px solid black'}}>
+                        <div ref='plot' id='plot'></div>
                     </div>
-                    <ul className='nav nav-tabs'>
-                        <li className='active'><a data-toggle='tab' href='#variance_plot_tab'>PCA</a></li>
-                        <li><a data-toggle='tab' href='#pc_1_tab'>PC 1</a></li>
-                        <li><a data-toggle='tab' href='#pc_2_tab'>PC 2</a></li>
-                        <li><a data-toggle='tab' href='#pc_3_tab'>PC 3</a></li>
-                    </ul>
-                    <div className='tab-content' id='tabs'>
-                        <div id='variance_plot_tab' className='tab-pane fade in active'>
-                            <h4>Variance ratios</h4>
-                            <div id='variance_plot'></div>
+                    <div className='col-sm-3'>
+
+                        <div style={{paddingTop: '10px'}}>
+                            <div>Color by</div>
+                            <select ref='color_by_select'
+                                onChange={this.change_color.bind(this)}
+                                value={this.state.color_by}>
+                            </select>
                         </div>
-                        <div id='pc_1_tab' className='tab-pane fade'>
-                            <h4>Principle component 1</h4>
-                            <div id='pc_1'></div>
-                        </div>
-                        <div id='pc_2_tab' className='tab-pane fade'>
-                            <h4>Principle component 2</h4>
-                            <div id='pc_2'></div>
-                        </div>
-                        <div id='pc_3_tab' className='tab-pane fade'>
-                            <h4>Principle component 3</h4>
-                            <div id='pc_3'></div>
-                        </div>
+
+                        {Object.keys(this.props.plot['vectors']).length > 0 &&
+                            <div style={{paddingTop: '10px'}}>
+                                <div>Show vectors</div>
+                                <input type='checkbox' id='show_vectors' name='show_vectors' value='show_vectors'
+                                    onChange={this.update_vector_visibility.bind(this)}>
+                                </input>
+                            </div>
+                        }
+
+                        {this.state.hide_marker_keys.length > 0 &&
+                            <div style={{paddingTop: '10px'}}>
+                                <div>Hide markers</div>
+                                <div ref='hide_markers'></div>
+                            </div>
+                        }
+
+                    </div>
+                </div>
+            </div>
+            <div style={{paddingTop: '20px'}}>
+                <h2>Components</h2>
+                <ul className='nav nav-tabs' style={{paddingTop: '10px'}}>
+                    <li className='active'><a data-toggle='tab' href='#variance_plot_tab'>Variance ratios</a></li>
+                    <li><a data-toggle='tab' href='#pc_1_tab'>Principle component 1</a></li>
+                    <li><a data-toggle='tab' href='#pc_2_tab'>Principle component 2</a></li>
+                    <li><a data-toggle='tab' href='#pc_3_tab'>Principle component 3</a></li>
+                </ul>
+                <div className='tab-content' id='tabs'>
+                    <div id='variance_plot_tab' className='tab-pane fade in active'>
+                        <div id='variance_plot'></div>
+                    </div>
+                    <div id='pc_1_tab' className='tab-pane fade'>
+                        <div id='pc_1'></div>
+                    </div>
+                    <div id='pc_2_tab' className='tab-pane fade'>
+                        <div id='pc_2'></div>
+                    </div>
+                    <div id='pc_3_tab' className='tab-pane fade'>
+                        <div id='pc_3'></div>
                     </div>
                 </div>
             </div>
