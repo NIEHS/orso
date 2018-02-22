@@ -98,15 +98,17 @@ def update_and_clean(dataset_pk):
     ):
         set_pca_plot(pca)
         if pca.locus_group.group_type == experiment_type.relevant_regions:
-            update_data_recommendation_scores(pca)
+            update_data_recommendation_scores(pca.pk)
 
     update_dataset_metadata_scores([dataset])
 
     remove_bigwigs(dataset_pk)
 
 
-def update_data_recommendation_scores(pca):
+@task
+def update_data_recommendation_scores(pca_pk):
 
+    pca = models.PCA.objects.get(pk=pca_pk)
     transformed_df = generate_pca_transformed_df(pca)
 
     correlation_values = []

@@ -1,64 +1,77 @@
-import numpy
+# import numpy
+from celery import group
 from celery.decorators import task
 from progress.bar import Bar
 
 from analysis import score
 from network import models
+from network.tasks.process_datasets import update_data_recommendation_scores
 
 
-@task
-def update_dataset_data_scores(datasets, quiet=False):
-    '''
-    Update or create dataset data distance values.
-    '''
-    bar = Bar('Processing', max=len(datasets))
+def update_data_scores():
+    all_pcas = models.PCA.objects.all()
+    relevant_pcas = [
+        pca for pca in all_pcas if
+        pca.locus_group.group_type == pca.experiment_type.relevant_regions
+    ]
 
-    for ds_1 in datasets:
+    group(update_data_recommendation_scores.s(pca.pk)
+          for pca in relevant_pcas).apply_async().join()
 
-        dataset_to_score = dict()
 
-        for ds_2 in models.Dataset.objects.filter(
-            assembly=ds_1.assembly,
-            experiment__experiment_type=ds_1.experiment.experiment_type,
-        ):
-
-            exp_type_1 = ds_1.experiment.experiment_type
-            exp_type_2 = ds_2.experiment.experiment_type
-
-            if all([
-                ds_1 != ds_2,
-                models.PCATransformedValues.objects.filter(
-                    dataset=ds_1,
-                    pca__locus_group__group_type=exp_type_1.relevant_regions,
-                ).exists(),
-                models.PCATransformedValues.objects.filter(
-                    dataset=ds_2,
-                    pca__locus_group__group_type=exp_type_2.relevant_regions,
-                ).exists(),
-            ]):
-
-                distance = score.score_datasets_by_pca_distance(ds_1, ds_2)
-                dataset_to_score[ds_2] = distance
-
-        distances = list(dataset_to_score.values())
-
-        average = numpy.mean(distances)
-        sd = numpy.std(distances)
-
-        for ds_2, distance in dataset_to_score.items():
-            z_score = (distance - average) / sd
-
-            models.DatasetDataDistance.objects.update_or_create(
-                dataset_1=ds_1,
-                dataset_2=ds_2,
-                defaults={
-                    'distance': z_score,
-                },
-            )
-
-        bar.next()
-
-    bar.finish()
+# @task
+# def update_dataset_data_scores(datasets, quiet=False):
+#     '''
+#     Update or create dataset data distance values.
+#     '''
+#     bar = Bar('Processing', max=len(datasets))
+#
+#     for ds_1 in datasets:
+#
+#         dataset_to_score = dict()
+#
+#         for ds_2 in models.Dataset.objects.filter(
+#             assembly=ds_1.assembly,
+#             experiment__experiment_type=ds_1.experiment.experiment_type,
+#         ):
+#
+#             exp_type_1 = ds_1.experiment.experiment_type
+#             exp_type_2 = ds_2.experiment.experiment_type
+#
+#             if all([
+#                 ds_1 != ds_2,
+#                 models.PCATransformedValues.objects.filter(
+#                     dataset=ds_1,
+#                     pca__locus_group__group_type=exp_type_1.relevant_regions,
+#                 ).exists(),
+#                 models.PCATransformedValues.objects.filter(
+#                     dataset=ds_2,
+#                     pca__locus_group__group_type=exp_type_2.relevant_regions,
+#                 ).exists(),
+#             ]):
+#
+#                 distance = score.score_datasets_by_pca_distance(ds_1, ds_2)
+#                 dataset_to_score[ds_2] = distance
+#
+#         distances = list(dataset_to_score.values())
+#
+#         average = numpy.mean(distances)
+#         sd = numpy.std(distances)
+#
+#         for ds_2, distance in dataset_to_score.items():
+#             z_score = (distance - average) / sd
+#
+#             models.DatasetDataDistance.objects.update_or_create(
+#                 dataset_1=ds_1,
+#                 dataset_2=ds_2,
+#                 defaults={
+#                     'distance': z_score,
+#                 },
+#             )
+#
+#         bar.next()
+#
+#     bar.finish()
 
 
 @task

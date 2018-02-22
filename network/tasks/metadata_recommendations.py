@@ -4,6 +4,11 @@ from progress.bar import Bar
 from network import models
 
 
+def update_metadata_scores():
+    datasets = models.Dataset.objects.all()
+    update_dataset_metadata_scores(datasets)
+
+
 @task
 def update_dataset_metadata_scores(datasets):
     '''
