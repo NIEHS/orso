@@ -83,6 +83,7 @@ COPY webpack.config.production.js /network/webpack.config.production.js
 RUN gzip -df /network/fixtures/annotation.json.gz
 
 RUN mkdir -p /network/data/
+COPY /data/colors /network/data/colors
 RUN mkdir -p /network/data/bigwig_temp
 
 COPY ontologies.tar.gz /network/data
