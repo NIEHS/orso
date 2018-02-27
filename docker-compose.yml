@@ -1,7 +1,6 @@
 version: '2'
 
 volumes:
-  internal_data: {}
   postgres_data: {}
   postgres_backup: {}
   public_data: {}
@@ -32,7 +31,6 @@ services:
     env_file: .env
     volumes:
       - public_data:/network/public
-      - internal_data:/network/data
       - postgres_backup:/network/backups
 
   nginx:
