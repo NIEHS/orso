@@ -79,19 +79,21 @@ class EncodeExperiment(object):
         self._set_cell_type(entry)
         self._set_controls(entry)
         self._set_description(entry)
+        self._set_experiment_type(entry)
         self._set_files(entry)
         self._set_target(entry)
 
-        self._set_short_experiment_type()
         self._set_name()
 
     def _set_cell_type(self, entry):
         if 'biosample_term_name' in entry:
-            self.cell_type = \
+            self.cell_type = entry['biosample_term_name']
+            self.short_cell_type = \
                 ('').join(w.replace('-', '').capitalize()
                           for w in entry['biosample_term_name'].split())
         else:
             self.cell_type = None
+            self.short_cell_type = None
 
     def _set_controls(self, entry):
         self.controls = []
@@ -116,20 +118,24 @@ class EncodeExperiment(object):
 
     def _set_target(self, entry):
         if 'target' in entry:
-            self.target = '-'.join(
+            self.target = entry['target']
+            self.short_target = '-'.join(
                 entry['target']
                 .split('/')[2]
                 .split('-')[:-1]
             ).replace('%20', ' ')
         else:
             self.target = None
+            self.short_target = None
 
     def _set_files(self, entry):
         self.files = []
         for _file in entry['files']:
             self.files.append(_file.split('/')[2])
 
-    def _set_short_experiment_type(self):
+    def _set_experiment_type(self, entry):
+        self.experiment_type = entry['assay_term_name']
+
         term = self.experiment_type
         if term in ASSAY_REPLACEMENT:
             term = ASSAY_REPLACEMENT[term]
@@ -140,8 +146,8 @@ class EncodeExperiment(object):
         fields = [
             self.id,
             self.short_experiment_type,
-            self.target,
-            self.cell_type,
+            self.short_target,
+            self.short_cell_type,
         ]
         fields = [x for x in fields if x is not None]
         self.name = '-'.join(fields)
@@ -163,10 +169,11 @@ class EncodeDataset(object):
 
         for key in [
             'assembly',
-            'cell_type',
-            'experiment_type',
             'replicate',
-            'target',
+
+            'short_cell_type',
+            'short_experiment_type',
+            'short_target',
 
             'plus',
             'minus',
@@ -188,9 +195,9 @@ class EncodeDataset(object):
     def _set_name(self):
         fields = [
             self.id,
-            self.experiment_type,
-            self.target,
-            self.cell_type,
+            self.short_experiment_type,
+            self.short_target,
+            self.short_cell_type,
         ]
         fields = [x for x in fields if x is not None]
         self.name = '-'.join(fields)
@@ -376,9 +383,9 @@ class EncodeProject(object):
                 experiment.datasets.append(EncodeDataset(
                     biological_replicates=replicate,
                     assembly=assembly,
-                    experiment_type=experiment.short_experiment_type,
-                    target=experiment.target,
-                    cell_type=experiment.cell_type,
+                    short_experiment_type=experiment.short_experiment_type,
+                    short_target=experiment.short_target,
+                    short_cell_type=experiment.short_cell_type,
                     plus=strand_files['plus'],
                     minus=strand_files['minus'],
                     ambiguous=strand_files['ambiguous'],
