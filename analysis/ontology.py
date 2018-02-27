@@ -194,7 +194,7 @@ class Ontology:
         else:
             return None
 
-    def resnik(self, term_1, term_2):
+    def resnik(self, term_1, term_2, **kwargs):
         '''
         For two terms, get the Resnik Semantic Similarity.
 
@@ -207,7 +207,7 @@ class Ontology:
         else:
             return None
 
-    def lin(self, term_1, term_2):
+    def lin(self, term_1, term_2, **kwargs):
         '''
         For two terms, get the Lin Semantic Similarity.
 
@@ -223,7 +223,7 @@ class Ontology:
             return None
 
     def jaccard(self, term_list_1, term_list_2, include_parents=False,
-                weighting=None):
+                weighting=None, **kwargs):
         '''
         For two term lists, get the Jaccard index.
         '''
@@ -287,8 +287,10 @@ class Ontology:
         '''
         _word_1, _word_2 = sorted([word_1, word_2])
 
-        if (_word_1, _word_2, metric) in self.words_to_sim_cache:
-            return self.words_to_sim_cache[(_word_1, _word_2, metric)]
+        cache_key = (_word_1, _word_2, metric, frozenset(kwargs.items()))
+
+        if cache_key in self.words_to_sim_cache:
+            return self.words_to_sim_cache[cache_key]
         else:
 
             terms_1 = self.get_terms(_word_1, **kwargs)
@@ -300,7 +302,7 @@ class Ontology:
             else:
                 sim = None
 
-            self.words_to_sim_cache[(_word_1, _word_2, metric)] = sim
+            self.words_to_sim_cache[cache_key] = sim
             return sim
 
     def _check_type(self, term):
@@ -320,13 +322,18 @@ class Ontology:
         else:
             return True
 
-    def get_terms(self, word, sm_function=fuzz.ratio, sm_threshold=60,
+    def get_terms(self, input_word, sm_function=fuzz.ratio, sm_threshold=60,
                   **kwargs):
         '''
         Get ontology terms associated with the input word.
         '''
-        if word in self.word_to_terms_cache:
-            return self.word_to_terms_cache[word]
+        cache_key = (input_word, sm_function.__name__, sm_threshold,
+                     frozenset(kwargs.items()))
+
+        if cache_key in self.word_to_terms_cache:
+            return self.word_to_terms_cache[cache_key]
+
+        word = input_word  # word to be modified
 
         if self.ontology_type == 'GO':
             for prefix in tag_prefixes:
@@ -366,5 +373,5 @@ class Ontology:
                     [t for t in terms_w_max_ratio if t['depth'] == max_depth]
                 terms = [t['term'] for t in final_terms]
 
-        self.word_to_terms_cache[word] = terms
+        self.word_to_terms_cache[cache_key] = terms
         return terms
