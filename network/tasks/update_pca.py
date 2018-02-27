@@ -1,10 +1,12 @@
 import json
+import os
 from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy
 from celery import group
 from celery.decorators import task
+from django.conf import settings
 from django.db.models import Q
 from matplotlib.colors import rgb2hex
 from scipy.spatial.distance import mahalanobis
@@ -590,12 +592,18 @@ def set_pca_plot(pca):
             index = ((j % 2) * (50) + (j // 2) * (5)) / 100
             target_to_color[target] = rgb2hex(cmap(index))
 
-        cell_type_set = set([ds.experiment.cell_type for ds in datasets])
-        cell_type_to_color = dict()
-        for i, cell_type in enumerate(list(cell_type_set)):
-            j = i % 20
-            index = ((j % 2) * (50) + (j // 2) * (5)) / 100
-            cell_type_to_color[cell_type] = rgb2hex(cmap(index))
+        cell_type_color_path = os.path.join(
+            settings.COLOR_KEY_DIR, 'cell_type.json')
+        if os.path.exists(cell_type_color_path):
+            with open(cell_type_color_path) as f:
+                cell_type_to_color = json.load(f)
+        else:
+            cell_type_set = set([ds.experiment.cell_type for ds in datasets])
+            cell_type_to_color = dict()
+            for i, cell_type in enumerate(list(cell_type_set)):
+                j = i % 20
+                index = ((j % 2) * (50) + (j // 2) * (5)) / 100
+                cell_type_to_color[cell_type] = rgb2hex(cmap(index))
 
         vector_categories = defaultdict(list)
         for ds, values in zip(datasets, transformed_values):
@@ -618,19 +626,20 @@ def set_pca_plot(pca):
 
         for ds, values in zip(datasets, transformed_values):
             colors = dict()
-            colors.update({'None': rgb2hex(cmap(0))})
+            colors.update({'None': '#A9A9A9'})
 
             target = ds.experiment.target
             if target in target_to_color:
                 colors.update({'Target': target_to_color[target]})
             else:
-                colors.update({'Target': rgb2hex(cmap(0))})
+                colors.update({'Target': '#A9A9A9'})
 
             cell_type = ds.experiment.cell_type
             if cell_type in cell_type_to_color:
                 colors.update({'Cell type': cell_type_to_color[cell_type]})
             else:
-                colors.update({'Cell type': rgb2hex(cmap(0))})
+                print('Cell type not found: \"{}\"'.format(cell_type))
+                colors.update({'Cell type': '#A9A9A9'})
 
             point = {
                 'experiment_name': ds.experiment.name,

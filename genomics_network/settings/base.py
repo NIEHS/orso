@@ -190,6 +190,8 @@ METAPLOT_BED_DIR = os.path.join(
     PROJECT_PATH, 'data', 'metaplot_bed_files')
 BIGWIG_TEMP_DIR = os.path.join(
     PROJECT_PATH, 'data', 'bigwig_temp')
+COLOR_KEY_DIR = os.path.join(
+    PROJECT_PATH, 'data', 'colors')
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
