@@ -118,15 +118,13 @@ class EncodeExperiment(object):
 
     def _set_target(self, entry):
         if 'target' in entry:
-            self.target = entry['target']
-            self.short_target = '-'.join(
+            self.target = '-'.join(
                 entry['target']
                 .split('/')[2]
                 .split('-')[:-1]
             ).replace('%20', ' ')
         else:
             self.target = None
-            self.short_target = None
 
     def _set_files(self, entry):
         self.files = []
@@ -146,7 +144,7 @@ class EncodeExperiment(object):
         fields = [
             self.id,
             self.short_experiment_type,
-            self.short_target,
+            self.target,
             self.short_cell_type,
         ]
         fields = [x for x in fields if x is not None]
@@ -170,10 +168,10 @@ class EncodeDataset(object):
         for key in [
             'assembly',
             'replicate',
+            'target',
 
             'short_cell_type',
             'short_experiment_type',
-            'short_target',
 
             'plus',
             'minus',
@@ -196,7 +194,7 @@ class EncodeDataset(object):
         fields = [
             self.id,
             self.short_experiment_type,
-            self.short_target,
+            self.target,
             self.short_cell_type,
         ]
         fields = [x for x in fields if x is not None]
@@ -384,7 +382,7 @@ class EncodeProject(object):
                     biological_replicates=replicate,
                     assembly=assembly,
                     short_experiment_type=experiment.short_experiment_type,
-                    short_target=experiment.short_target,
+                    target=experiment.target,
                     short_cell_type=experiment.short_cell_type,
                     plus=strand_files['plus'],
                     minus=strand_files['minus'],
