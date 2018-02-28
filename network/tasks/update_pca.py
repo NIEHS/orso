@@ -585,12 +585,18 @@ def set_pca_plot(pca):
 
         cmap = plt.get_cmap('hsv')
 
-        target_set = set([ds.experiment.target for ds in datasets])
-        target_to_color = dict()
-        for i, target in enumerate(list(target_set)):
-            j = i % 20
-            index = ((j % 2) * (50) + (j // 2) * (5)) / 100
-            target_to_color[target] = rgb2hex(cmap(index))
+        target_color_path = os.path.join(
+            settings.COLOR_KEY_DIR, 'target.json')
+        if os.path.exists(target_color_path):
+            with open(target_color_path) as f:
+                target_to_color = json.load(f)
+        else:
+            target_set = set([ds.experiment.target for ds in datasets])
+            target_to_color = dict()
+            for i, target in enumerate(list(target_set)):
+                j = i % 20
+                index = ((j % 2) * (50) + (j // 2) * (5)) / 100
+                target_to_color[target] = rgb2hex(cmap(index))
 
         cell_type_color_path = os.path.join(
             settings.COLOR_KEY_DIR, 'cell_type.json')
@@ -632,6 +638,7 @@ def set_pca_plot(pca):
             if target in target_to_color:
                 colors.update({'Target': target_to_color[target]})
             else:
+                print('Target not found: \"{}\"'.format(target))
                 colors.update({'Target': '#A9A9A9'})
 
             cell_type = ds.experiment.cell_type
