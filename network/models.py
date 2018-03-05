@@ -656,6 +656,9 @@ class PCA(models.Model):
     covariation_matrix = PickledObjectField(null=True, blank=True)
     inverse_covariation_matrix = PickledObjectField(null=True, blank=True)
 
+    neural_network = PickledObjectField(null=True, blank=True)
+    neural_network_scaler = PickledObjectField(null=True, blank=True)
+
     last_updated = models.DateTimeField(auto_now=True, null=True)
 
     def __str__(self):
