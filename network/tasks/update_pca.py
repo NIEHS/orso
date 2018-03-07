@@ -94,7 +94,6 @@ def add_or_update_pcas(**kwargs):
 
 
 def update_pca(pca, **kwargs):
-    print(pca.pk)
 
     fit_pca(pca, **kwargs)
     transform_pca_datasets(pca.pk)
