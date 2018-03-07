@@ -645,14 +645,15 @@ class PCA(models.Model):
     find pairwise distances between datasets.
     '''
     locus_group = models.ForeignKey('LocusGroup')
+    experiment_type = models.ForeignKey('ExperimentType')
+
     selected_loci = models.ManyToManyField(
         'Locus', through='PCALocusOrder')
-    experiment_type = models.ForeignKey('ExperimentType')
     transformed_datasets = models.ManyToManyField(
         'Dataset', through='PCATransformedValues')
 
-    plot = JSONField()
-    pca = PickledObjectField()
+    plot = JSONField(null=True, blank=True)
+    pca = PickledObjectField(null=True, blank=True)
     covariation_matrix = PickledObjectField(null=True, blank=True)
     inverse_covariation_matrix = PickledObjectField(null=True, blank=True)
 
