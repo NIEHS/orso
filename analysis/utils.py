@@ -33,7 +33,7 @@ def generate_intersection_df(locus_group, experiment_type, datasets=None,
     '''
     For a given LocusGroup, generate a pandas DF with intersection values.
     '''
-    if not datasets:
+    if datasets is None:
         datasets = models.Dataset.objects.all()
 
     d = {}
