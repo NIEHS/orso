@@ -192,6 +192,8 @@ BIGWIG_TEMP_DIR = os.path.join(
     PROJECT_PATH, 'data', 'bigwig_temp')
 COLOR_KEY_DIR = os.path.join(
     PROJECT_PATH, 'data', 'colors')
+ONTOLOGY_DIR = os.path.join(
+    PROJECT_PATH, 'data', 'ontologies')
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 

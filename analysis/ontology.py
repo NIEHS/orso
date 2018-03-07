@@ -1,21 +1,10 @@
 import math
 import re
-import string
 from collections import defaultdict
 
 from fuzzywuzzy import fuzz
 
 tag_prefixes = ['eGFP-', 'FLAG-', 'HA-']
-
-
-def standardize_word(word):
-    '''
-    Standardize the word by removing punctuation and making lowercase.
-    '''
-    for p in string.punctuation:
-        word = word.replace(p, '')
-    word = ' '.join(word.split()).lower()
-    return word
 
 
 class Ontology:
@@ -51,7 +40,6 @@ class Ontology:
                 if self.ontology_type in ['CLO', 'CL', 'BTO']:
                     name = re.sub(' (cell|cells)$', '', name)
 
-                name = standardize_word(name)
                 self.object_to_terms[name].add(term)
                 self.term_to_objects[term].add(name)
 
@@ -61,6 +49,7 @@ class Ontology:
         '''
         self.terms = set()
         self.term_to_name = dict()
+        self.alt_id_to_term = dict()
         self.term_to_parents = defaultdict(set)
         self.term_to_children = defaultdict(set)
 
@@ -74,12 +63,14 @@ class Ontology:
 
                 if line.strip() == '[Term]':
                     term = None
+                    alt_ids = []
                     name = None
                     parents = set()
                     skip = False
 
                 elif line.strip() == '[Typedef]':
                     term = None
+                    alt_ids = []
                     name = None
                     parents = set()
                     skip = True
@@ -87,6 +78,8 @@ class Ontology:
                 else:
                     if line.startswith('id: '):
                         term = line.strip().split('id: ')[1]
+                    elif line.startswith('alt_id: '):
+                        alt_ids.append(line.strip().split('alt_id: ')[1])
                     elif line.startswith('name: '):
                         try:
                             name = line.strip().split('name: ')[1]
@@ -112,6 +105,8 @@ class Ontology:
                 if term and not skip:
                     self.terms.add(term)
                     self.term_to_name[term] = name
+                    for alt_id in alt_ids:
+                        self.alt_id_to_term[alt_id] = term
                     self.term_to_parents[term] |= parents
                     for parent in parents:
                         self.term_to_children[parent].add(term)
@@ -340,7 +335,6 @@ class Ontology:
                 word = re.sub('^{}'.format(prefix), '', word)
         elif self.ontology_type in ['CLO', 'CL', 'BTO']:
             word = re.sub(' (cell|cells)$', '', word)
-        word = standardize_word(word)
 
         terms = []
 
@@ -372,6 +366,11 @@ class Ontology:
                 final_terms = \
                     [t for t in terms_w_max_ratio if t['depth'] == max_depth]
                 terms = [t['term'] for t in final_terms]
+
+        # Check if an alt id is being used
+        for i, term in enumerate(terms):
+            if term in self.alt_id_to_term:
+                terms[i] = self.alt_id_to_term[term]
 
         self.word_to_terms_cache[cache_key] = terms
         return terms

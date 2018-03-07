@@ -27,42 +27,34 @@ def process_dataset_batch(datasets, chunk=100):
         index_2 = min(i + chunk, len(datasets))
         dataset_chunk = datasets[index_1:index_2]
 
-        downloaded_bigwigs = download_dataset_bigwigs(dataset_chunk)
+        download_dataset_bigwigs(dataset_chunk)
 
         tasks = []
         for dataset in dataset_chunk:
-
-            for lg in models.LocusGroup.objects.filter(
-                    assembly=dataset.assembly):
-
-                tasks.append(
-                    update_or_create_dataset_intersection.s(dataset.pk, lg.pk))
-                tasks.append(
-                    update_or_create_dataset_metaplot.s(dataset.pk, lg.pk))
+            tasks.append(process_dataset.s(dataset.pk, download=False))
 
         job = group(tasks)
         results = job.apply_async()
         results.join()
 
-        for dataset in dataset_chunk:
-            dataset.processed = True
-            dataset.save()
 
-        # Remove bigwigs
-        for bigwig_paths in downloaded_bigwigs.values():
-            for path in bigwig_paths.values():
-                if path:
-                    os.remove(path)
+@task
+def process_dataset(dataset_pk, download=True):
+    update_dataset_metadata_scores.si(dataset_pk).delay()
 
-
-def process_dataset(dataset):
-    chain(
-        download_bigwigs.si(dataset.pk),
+    if download:
+        chain(
+            download_bigwigs.si(dataset_pk),
+            chord(
+                process_dataset_intersections(dataset_pk),
+                update_and_clean.si(dataset_pk),
+            ),
+        )()
+    else:
         chord(
-            process_dataset_intersections(dataset.pk),
-            update_and_clean.si(dataset.pk),
-        ),
-    )()
+            process_dataset_intersections(dataset_pk),
+            update_and_clean.si(dataset_pk),
+        )()
 
 
 @task
@@ -96,13 +88,108 @@ def update_and_clean(dataset_pk):
         locus_group__assembly=assembly,
         experiment_type=experiment_type,
     ):
-        set_pca_plot(pca)
+        set_pca_transformed_values(dataset, pca)
         if pca.locus_group.group_type == experiment_type.relevant_regions:
-            update_data_recommendation_scores(pca.pk)
+            set_primary_data_recommendations(dataset, pca)
 
-    update_dataset_metadata_scores([dataset])
+    dataset.processed = True
+    dataset.save()
 
     remove_bigwigs(dataset_pk)
+
+
+def set_pca_transformed_values(dataset, pca):
+
+    dij = models.DatasetIntersectionJson.objects.get(
+        dataset=dataset, locus_group=pca.locus_group)
+
+    order = models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
+    loci = [x.locus for x in order]
+
+    intersection_values = json.loads(dij.intersection_values)
+
+    locus_values = dict()
+    for val, pk in zip(
+        intersection_values['normalized_values'],
+        intersection_values['locus_pks']
+    ):
+        locus_values[pk] = val
+
+    normalized_values = []
+    for locus in loci:
+        try:
+            normalized_values.append(locus_values[locus.pk])
+        except IndexError:
+            normalized_values.append(0)
+
+    transformed_values = pca.pca.transform([normalized_values])[0]
+    models.PCATransformedValues.objects.update_or_create(
+        pca=pca,
+        dataset=dij.dataset,
+        defaults={
+            'transformed_values': transformed_values.tolist(),
+        },
+    )
+
+
+def set_primary_data_recommendations(dataset, pca):
+
+    if all([
+        pca.neural_network is not None,
+        pca.neural_network_scaler is not None,
+    ]):
+
+        other_datasets = models.Dataset.objects.filter(
+            assembly=dataset.assembly,
+            experiment__experiment_type=dataset.experiment.experiment_type,
+        )
+
+        ds_1 = dataset
+        for ds_2 in other_datasets:
+
+            assembly_1 = ds_1.assembly
+            exp_type_1 = ds_1.experiment.experiment_type
+
+            assembly_2 = ds_2.assembly
+            exp_type_2 = ds_2.experiment.experiment_type
+
+            if all([
+                ds_1 != ds_2,
+                assembly_1 == assembly_2,
+                exp_type_1 == exp_type_2,
+            ]):
+
+                try:
+                    vec_1 = models.PCATransformedValues.objects.get(
+                        dataset=ds_1, pca=pca).transformed_values
+                except models.PCATransformedValues.DoesNotExist:
+                    print('Transformed values do not exist for {}.'.format(
+                        ds_1.name))
+                    vec_1 = None
+
+                try:
+                    vec_2 = models.PCATransformedValues.objects.get(
+                        dataset=ds_2, pca=pca).transformed_values
+                except models.PCATransformedValues.DoesNotExist:
+                    print('Transformed values do not exist for {}.'.format(
+                        ds_2.name))
+                    vec_2 = None
+
+                if vec_1 and vec_2:
+                    vec = pca.neural_network_scaler.transform([vec_1 + vec_2])
+                    sim = pca.neural_network.predict(vec)[0]
+
+                    if ds_1.pk < ds_2.pk:
+                        _ds_1, _ds_2 = ds_1, ds_2
+                    else:
+                        _ds_1, _ds_2 = ds_2, ds_1
+                    models.DatasetDataDistance.objects.update_or_create(
+                        dataset_1=_ds_1,
+                        dataset_2=_ds_2,
+                        defaults={
+                            'distance': sim,
+                        },
+                    )
 
 
 @task

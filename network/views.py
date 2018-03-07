@@ -127,7 +127,7 @@ class ExperimentCreate(LoginRequiredMixin, NeverCacheFormMixin, AddMyUserMixin,
 
         # Run through and process each dataset
         for _form in dataset_formset:
-            process_dataset(_form.instance)
+            process_dataset(_form.instance.pk)
 
         return HttpResponseRedirect(self.get_success_url())
 
