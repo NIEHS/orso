@@ -44,17 +44,18 @@ def get_interaction_partners(genes, organism):
 
     interaction_partners = defaultdict(list)
 
-    for interaction in response_json:
+    if 'Error' not in response_json:
+        for interaction in response_json:
 
-        partner_1 = interaction['preferredName_A']
-        if partner_1 in standardized_to_input_names:
-            partner_1 = standardized_to_input_names[partner_1]
+            partner_1 = interaction['preferredName_A']
+            if partner_1 in standardized_to_input_names:
+                partner_1 = standardized_to_input_names[partner_1]
 
-        partner_2 = interaction['preferredName_B']
-        if partner_2 in standardized_to_input_names:
-            partner_2 = standardized_to_input_names[partner_2]
+            partner_2 = interaction['preferredName_B']
+            if partner_2 in standardized_to_input_names:
+                partner_2 = standardized_to_input_names[partner_2]
 
-        interaction_partners[partner_1].append(partner_2)
-        interaction_partners[partner_2].append(partner_1)
+            interaction_partners[partner_1].append(partner_2)
+            interaction_partners[partner_2].append(partner_1)
 
     return interaction_partners
