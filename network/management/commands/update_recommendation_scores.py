@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from network.tasks.data_recommendations import update_data_scores
+from network.tasks.data_recommendations import update_primary_data_scores
 from network.tasks.metadata_recommendations import update_metadata_scores
 from network.tasks.user_recommendations import \
     update_user_based_recommendations
@@ -39,7 +39,7 @@ class Command(BaseCommand):
         else:
             if options['primary']:
                 print('Updating primary data-based dataset recommendations...')
-                update_data_scores()
+                update_primary_data_scores()
             if options['metadata']:
                 print('Updating metadata-based dataset recommendations...')
                 update_metadata_scores()
