@@ -177,11 +177,13 @@ def update_dataset_metadata_scores(dataset_pk):
             else:
                 is_similar = False
 
-            if ds_1.pk > ds_2.pk:
-                ds_1, ds_2 = ds_2, ds_1
+            if ds_1.pk < ds_2.pk:
+                _ds_1, _ds_2 = ds_1, ds_2
+            else:
+                _ds_1, _ds_2 = ds_2, ds_1
             models.DatasetMetadataDistance.objects.update_or_create(
-                dataset_1=ds_1,
-                dataset_2=ds_2,
+                dataset_1=_ds_1,
+                dataset_2=_ds_2,
                 defaults={
                     'distance': int(is_similar),
                 },
