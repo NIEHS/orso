@@ -1,20 +1,12 @@
 import json
-import math
-import os
 
-import numpy as np
-import pandas as pd
 from celery import group, chain, chord
 from celery.decorators import task
-from scipy.spatial.distance import euclidean
 
 from analysis import metaplot, transcript_coverage
 from analysis.normalization import normalize_locus_intersection_values
-from analysis.utils import (download_dataset_bigwigs, remove_dataset_bigwigs,
-                            generate_pca_transformed_df)
+from analysis.utils import download_dataset_bigwigs, remove_dataset_bigwigs
 from network import models
-from network.tasks.update_pca import (
-    _add_or_update_pca_transformed_values_json, set_pca_plot)
 from network.tasks.metadata_recommendations import \
     update_dataset_metadata_scores
 
@@ -193,101 +185,9 @@ def set_primary_data_recommendations(dataset, pca):
 
 
 @task
-def update_data_recommendation_scores(pca_pk):
-
-    pca = models.PCA.objects.get(pk=pca_pk)
-    transformed_df = generate_pca_transformed_df(pca)
-
-    correlation_values = []
-    for name_1, values_1 in transformed_df.iteritems():
-        correlation_values.append([])
-        for name_2, values_2 in transformed_df.iteritems():
-            if name_1 == name_2:
-                correlation_values[-1].append(float('nan'))
-            else:
-                correlation_values[-1].append(euclidean(values_1, values_2))
-
-    correlation_df = pd.DataFrame(
-        data=correlation_values,
-        index=transformed_df.columns.values,
-        columns=transformed_df.columns.values,
-    )
-
-    for pk_1, values_1 in correlation_df.iteritems():
-        dataset_1 = models.Dataset.objects.get(pk=pk_1)
-
-        mean = np.nanmean(values_1)
-        sd = np.nanstd(values_1)
-
-        for pk_2, value in zip(list(correlation_df.index), values_1):
-            if not math.isnan(value):
-
-                dataset_2 = models.Dataset.objects.get(pk=pk_2)
-
-                z_score = (value - mean) / sd
-                models.DatasetDataDistance.objects.update_or_create(
-                    dataset_1=dataset_1,
-                    dataset_2=dataset_2,
-                    defaults={
-                        'distance': z_score,
-                    },
-                )
-
-
-@task
-def get_intersection_group(dataset_pk):
-    dataset = models.Dataset.objects.get(pk=dataset_pk)
-    tasks = []
-
-    for lg in models.LocusGroup.objects.filter(
-            assembly=dataset.assembly):
-
-        tasks.append(
-            update_or_create_dataset_intersection.si(dataset.pk, lg.pk))
-        tasks.append(
-            update_or_create_dataset_metaplot.si(dataset.pk, lg.pk))
-
-    return group(tasks)
-
-
-@task
 def remove_bigwigs(dataset_pk):
     dataset = models.Dataset.objects.get(pk=dataset_pk)
     remove_dataset_bigwigs([dataset])
-
-
-@task
-def set_dataset_as_processed(dataset_pk):
-    dataset = models.Dataset.objects.get(pk=dataset_pk)
-    dataset.processed = True
-    dataset.save()
-
-
-@task
-def get_pca_transform_group(dataset_pk):
-    print('Running get_pca_transform_group with {}'.format(str(dataset_pk)))
-    dataset = models.Dataset.objects.get(pk=dataset_pk)
-    tasks = []
-
-    for pca in models.PCA.objects.filter(
-        experiment_type=dataset.experiment.experiment_type,
-        locus_group__assembly=dataset.assembly,
-    ):
-        for dij in models.DatasetIntersectionJson.objects.filter(
-            dataset=dataset,
-            locus_group=pca.locus_group,
-        ):
-            tasks.append(
-                _add_or_update_pca_transformed_values_json.si(dij.pk, pca.pk))
-
-    print('Adding {} tasks'.format(str(len(tasks))))
-
-    return group(tasks)
-
-
-# @task
-# def update_data_recommendation_scores(dataset_pk):
-#     print('Finished!')
 
 
 @task
@@ -319,18 +219,13 @@ def update_or_create_dataset_intersection(dataset_pk, locus_group_pk):
         intersection_values['normalized_values'].append(
             normalized_values[locus])
 
-    dij = models.DatasetIntersectionJson.objects.update_or_create(
+    models.DatasetIntersectionJson.objects.update_or_create(
         dataset=dataset,
         locus_group=locus_group,
         defaults={
             'intersection_values': json.dumps(intersection_values),
         }
-    )[0]
-    pca = models.PCA.objects.get(
-        locus_group=locus_group,
-        experiment_type=dataset.experiment.experiment_type
     )
-    _add_or_update_pca_transformed_values_json(dij.pk, pca.pk)
 
 
 @task
