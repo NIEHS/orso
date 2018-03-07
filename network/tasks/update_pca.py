@@ -2,7 +2,6 @@ import json
 import os
 import random
 from collections import defaultdict
-from multiprocessing import Pool
 
 import matplotlib.pyplot as plt
 import numpy
@@ -73,9 +72,8 @@ TARGET_VECTORS = HIGHLY_REPRESENTED_MARKS
 
 
 # Due to compatiblity issues between Celery and scikit-learn, update_pca
-# cannot be managed by Celery. add_or_update_pcas uses multiprocessing and is
-# intended to be called from the commandline/shell.
-def add_or_update_pcas(threads=1, **kwargs):
+# cannot be managed by Celery.
+def add_or_update_pcas(**kwargs):
     '''
     Perform PCA analysis observing the datasets.
     '''
@@ -91,14 +89,14 @@ def add_or_update_pcas(threads=1, **kwargs):
                     experiment_type=exp_type,
                 )[0])
 
-    p = Pool(processes=threads)
-    p.map(update_pca, pcas)
+    for pca in pcas:
+        update_pca(pca, **kwargs)
 
 
-def update_pca(pca):
+def update_pca(pca, **kwargs):
     print(pca.pk)
 
-    fit_pca(pca)
+    fit_pca(pca, **kwargs)
     transform_pca_datasets(pca.pk)
     set_pca_plot(pca)
     fit_nn(pca)
