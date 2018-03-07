@@ -7,6 +7,8 @@ from analysis import metaplot, transcript_coverage
 from analysis.normalization import normalize_locus_intersection_values
 from analysis.utils import download_dataset_bigwigs, remove_dataset_bigwigs
 from network import models
+from network.tasks.data_recommendations import \
+    update_dataset_primary_data_scores
 from network.tasks.metadata_recommendations import \
     update_dataset_metadata_scores
 
@@ -81,8 +83,7 @@ def update_and_clean(dataset_pk):
         experiment_type=experiment_type,
     ):
         set_pca_transformed_values(dataset, pca)
-        if pca.locus_group.group_type == experiment_type.relevant_regions:
-            set_primary_data_recommendations(dataset, pca)
+    update_dataset_primary_data_scores(dataset.pk)
 
     dataset.processed = True
     dataset.save()
@@ -122,66 +123,6 @@ def set_pca_transformed_values(dataset, pca):
             'transformed_values': transformed_values.tolist(),
         },
     )
-
-
-def set_primary_data_recommendations(dataset, pca):
-
-    if all([
-        pca.neural_network is not None,
-        pca.neural_network_scaler is not None,
-    ]):
-
-        other_datasets = models.Dataset.objects.filter(
-            assembly=dataset.assembly,
-            experiment__experiment_type=dataset.experiment.experiment_type,
-        )
-
-        ds_1 = dataset
-        for ds_2 in other_datasets:
-
-            assembly_1 = ds_1.assembly
-            exp_type_1 = ds_1.experiment.experiment_type
-
-            assembly_2 = ds_2.assembly
-            exp_type_2 = ds_2.experiment.experiment_type
-
-            if all([
-                ds_1 != ds_2,
-                assembly_1 == assembly_2,
-                exp_type_1 == exp_type_2,
-            ]):
-
-                try:
-                    vec_1 = models.PCATransformedValues.objects.get(
-                        dataset=ds_1, pca=pca).transformed_values
-                except models.PCATransformedValues.DoesNotExist:
-                    print('Transformed values do not exist for {}.'.format(
-                        ds_1.name))
-                    vec_1 = None
-
-                try:
-                    vec_2 = models.PCATransformedValues.objects.get(
-                        dataset=ds_2, pca=pca).transformed_values
-                except models.PCATransformedValues.DoesNotExist:
-                    print('Transformed values do not exist for {}.'.format(
-                        ds_2.name))
-                    vec_2 = None
-
-                if vec_1 and vec_2:
-                    vec = pca.neural_network_scaler.transform([vec_1 + vec_2])
-                    sim = pca.neural_network.predict(vec)[0]
-
-                    if ds_1.pk < ds_2.pk:
-                        _ds_1, _ds_2 = ds_1, ds_2
-                    else:
-                        _ds_1, _ds_2 = ds_2, ds_1
-                    models.DatasetDataDistance.objects.update_or_create(
-                        dataset_1=_ds_1,
-                        dataset_2=_ds_2,
-                        defaults={
-                            'distance': sim,
-                        },
-                    )
 
 
 @task

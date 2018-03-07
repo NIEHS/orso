@@ -1,6 +1,7 @@
 import json
 import os
 
+from celery import group
 from celery.decorators import task
 from django.conf import settings
 
@@ -66,7 +67,14 @@ RELEVANT_CATEGORIES = set([
 
 def update_metadata_scores():
     datasets = models.Dataset.objects.all()
-    update_dataset_metadata_scores(datasets)
+
+    tasks = []
+    for dataset in datasets:
+        tasks.append(update_dataset_metadata_scores.s(dataset.pk))
+
+    job = group(tasks)
+    results = job.apply_async()
+    results.join()
 
 
 @task
