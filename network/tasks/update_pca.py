@@ -427,8 +427,10 @@ def set_pca_plot(pca):
             'vectors': {},
         }
 
-        datasets = \
-            list(models.Dataset.objects.filter(pcatransformedvalues__pca=pca))
+        datasets = list(models.Dataset.objects.filter(
+            pcatransformedvalues__pca=pca,
+            experiment__project__name='ENCODE',
+        ))
         transformed_values = []
         for ds in datasets:
             transformed_values.append(ds.pcatransformedvalues_set
