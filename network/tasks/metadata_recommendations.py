@@ -42,6 +42,8 @@ EXPERIMENT_TYPE_TO_RELEVANT_FIELDS = {
     'CAGE': ['cell_type'],
     'whole-genome shotgun bisulfite sequencing': ['cell_type'],
     'ChIA-PET': ['cell_type', 'target'],
+    'MNase-seq': ['cell_type'],
+    'Other': ['cell_type'],
 }
 RELEVANT_CATEGORIES = set([
     'adult stem cell',
@@ -153,8 +155,12 @@ def update_dataset_metadata_scores(dataset_pk):
             exp_type_1 == exp_type_2,
         ]):
 
-            relevant_fields = \
-                EXPERIMENT_TYPE_TO_RELEVANT_FIELDS[exp_type_1.name]
+            if exp_type_1.name in EXPERIMENT_TYPE_TO_RELEVANT_FIELDS:
+                relevant_fields = \
+                    EXPERIMENT_TYPE_TO_RELEVANT_FIELDS[exp_type_1.name]
+            else:
+                relevant_fields = \
+                    EXPERIMENT_TYPE_TO_RELEVANT_FIELDS['Other']
 
             sim_comparisons = []
 
