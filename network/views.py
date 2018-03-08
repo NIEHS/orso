@@ -140,6 +140,7 @@ class ExperimentCreate(LoginRequiredMixin, NeverCacheFormMixin, AddMyUserMixin,
 
 class ExperimentUpdate(LoginRequiredMixin, NeverCacheFormMixin, AddMyUserMixin,
                        UpdateView):
+    template_name = 'experiments/update.html'
     model = models.Experiment
     form_class = forms.ExperimentForm
     DatasetFormSet = inlineformset_factory(

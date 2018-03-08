@@ -1,0 +1,36 @@
+{% extends 'base_EXPERIMENTS.html' %}
+{% load staticfiles %}
+
+{% block sub-content %}
+<div class="container">
+    <form method="post">
+        {%csrf_token%}
+
+        {% for error in form.non_field_errors %}
+        <div class="form-group has-errors text-danger small">
+            {{error}}
+        </div>
+        {% endfor %}
+
+        {% for field in form %}
+        <div class="form-group has-errors text-danger small">
+            {{field.errors}}
+        </div>
+        {% endfor %}
+
+        <h1>Update experiment</h1>
+        <h2>Experiment</h2>
+            {{ form }}
+        <h2>Datasets</h2>
+        <div class='dataset-formset' style='margin-bottom: 40;'>
+                {{ dataset_formset.management_form }}
+                {{ dataset_formset }}
+        </div>
+        <input type="submit" value="Update experiment" class="btn btn-primary"/>
+    </form>
+</div>
+{% endblock sub-content %}
+
+{% block extra-js %}
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+{% endblock %}
