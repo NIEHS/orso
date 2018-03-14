@@ -66,6 +66,7 @@ def generate_pca_transformed_df(pca, datasets=None):
         series = pd.Series(transformed_values.transformed_values)
         d.update({transformed_values.dataset.pk: series})
     df = pd.DataFrame(d)
+    df.sort_index(axis=1, inplace=True)
 
     return df
 
