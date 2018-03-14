@@ -155,6 +155,7 @@ class Explore extends React.Component {
                     plot={data.pca_plot}
                     explained_variance={data.explained_variance}
                     components={data.components}
+                    user_data={this.props.user_data[pca_pk]}
                 />,
                 this.refs.pca_container,
             );
@@ -210,6 +211,7 @@ Explore.propTypes = {
     available_exp_types: React.PropTypes.object.isRequired,
     available_assemblies: React.PropTypes.object.isRequired,
     available_groups: React.PropTypes.array.isRequired,
+    user_data: React.PropTypes.object,
 };
 
 export default Explore;

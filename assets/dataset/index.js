@@ -201,14 +201,15 @@ let appendPCA = function(el, pca_data, exp_urls) {
         data={pca_data} exp_urls={exp_urls}/>, element[0]);
 };
 
-let appendExplore = function(el, pca_lookup, exp_types, assemblies, groups) {
+let appendExplore = function(el, pca_lookup, exp_types, assemblies, groups, user_data) {
     var element = $('<div></div>').appendTo(el);
 
     ReactDOM.render(<Explore
         pca_lookup={pca_lookup}
         available_exp_types={exp_types}
         available_assemblies={assemblies}
-        available_groups={groups}/>, element[0]);
+        available_groups={groups}
+        user_data={user_data}/>, element[0]);
 };
 
 let appendExpression = function(el, data) {

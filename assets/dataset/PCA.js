@@ -9,20 +9,24 @@ class PCA extends React.Component {
         var color_by_choices = ['None'];
         color_by_choices = color_by_choices.concat(this.props.plot['color_choices'])
 
-        var points_keys = Object.keys(this.props.plot['points']);
-
         var hide_marker_keys = [];
+        var points_to_visibility = {};
+
+        if (this.props.user_data.length > 0) {
+            points_to_visibility['User'] = true;
+            hide_marker_keys.push('User');
+        }
+
+        var points_keys = Object.keys(this.props.plot['points']);
         for (var i = 0; i < points_keys.length; i++) {
             var key = points_keys[i];
-            var number_of_points = Object.keys(this.props.plot['points'][key]).length;
+
+            points_to_visibility[key] = true;
+
+            var number_of_points =this.props.plot['points'][key].length
             if (number_of_points > 0 && key != 'Other') {
                 hide_marker_keys.push(key);
             }
-        }
-
-        var points_to_visibility = {};
-        for (var i = 0; i < points_keys.length; i++) {
-            points_to_visibility[points_keys[i]] = true;
         }
 
         this.state = {
@@ -51,6 +55,15 @@ class PCA extends React.Component {
         var points_keys = Object.keys(this.props.plot['points']);
         var vector_keys = Object.keys(this.props.plot['vectors']);
 
+        var points_data = {};
+        for (var i = 0; i < points_keys.length; i++) {
+            var key = points_keys[i];
+            points_data[key] = this.props.plot['points'][key];
+        }
+
+        points_keys.push('User');
+        points_data['User'] = this.props.user_data;
+
         var points_to_trace_index = {};
         var vector_to_trace_index = {};
 
@@ -58,7 +71,7 @@ class PCA extends React.Component {
         for (var i = 0; i < points_keys.length; i++) {
 
             var key = points_keys[i];
-            var point_data = this.props.plot['points'][key];
+            var point_data = points_data[key];
 
             var x = [], y = [], z = [], colors = [], names = [];
             for (var j = 0; j < point_data.length; j++) {
@@ -72,7 +85,13 @@ class PCA extends React.Component {
                     names.push(`Cell type: ${point['experiment_cell_type']}
                                <br>Target: ${point['experiment_target']}`);
                 }
-                colors.push(point['colors'][this.state.color_by])
+                if (point['colors'].hasOwnProperty(this.state.color_by)) {
+                    colors.push(point['colors'][this.state.color_by]);
+                } else if (point['colors'].hasOwnProperty('Default')) {
+                    colors.push(point['colors']['Default']);
+                } else {
+                    colors.push('#A9A9A9');
+                }
             }
 
             points_to_trace_index[key] = i;
@@ -251,7 +270,7 @@ class PCA extends React.Component {
     }
 
     updateMarkerVisibility() {
-        var points_keys = Object.keys(this.props.plot['points']);
+        var points_keys = Object.keys(this.state.points_to_trace_index);
         for (var i = 0; i < points_keys.length; i++) {
 
             var key = points_keys[i];
@@ -420,6 +439,7 @@ PCA.propTypes = {
     plot: React.PropTypes.object.isRequired,
     explained_variance: React.PropTypes.array.isRequired,
     components: React.PropTypes.array.isRequired,
+    user_data: React.PropTypes.array,
 };
 
 export default PCA;
