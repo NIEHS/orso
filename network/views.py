@@ -665,8 +665,10 @@ class RecommendedExperiments(LoginRequiredMixin, ExperimentList):
 
     def get_queryset(self):
 
-        query = (Q(metadatarec__user=self.my_user) |
-                 Q(primarydatarec__user=self.my_user))
+        query = ~Q(owners=self.my_user) & (
+            Q(metadatarec_recommended__user=self.my_user) |
+            Q(primarydatarec_recommended__user=self.my_user)
+        )
 
         if self.form.is_valid():
             query &= self.form.get_query()
