@@ -35,9 +35,18 @@ ONTOLOGY_TYPES = (
 
 
 class MyUser(models.Model):
-    favorite_users = models.ManyToManyField(
-        'MyUser', symmetrical=False, blank=True)
-    favorite_data = models.ManyToManyField('Dataset', blank=True)
+    followed_users = models.ManyToManyField(
+        'MyUser', symmetrical=False, blank=True, through='Follow')
+
+    favorite_experiments = models.ManyToManyField(
+        'Experiment', blank=True, related_name='favorited',
+        through='Favorite')
+    primary_data_recommedations = models.ManyToManyField(
+        'Experiment', blank=True, related_name='primary_rec',
+        through='PrimaryDataRec')
+    metadata_recommendations = models.ManyToManyField(
+        'Experiment', blank=True, related_name='metadata_rec',
+        through='MetadataRec')
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL)
@@ -63,16 +72,16 @@ class MyUser(models.Model):
         experiments = Experiment.objects.filter(owners__in=[self])
         detail['dataset_number'] = len(experiments)
         detail['data_favorited_by_number'] = 0
-        for exp in experiments:
-            detail['data_favorited_by_number'] += \
-                len(ExperimentFavorite.objects.filter(favorite=exp))
-
-        detail['data_favorite_number'] = \
-            len(ExperimentFavorite.objects.filter(owner=self))
-        detail['user_favorite_number'] = \
-            len(UserFavorite.objects.filter(owner=self))
-        detail['user_favorited_by_number'] = \
-            len(UserFavorite.objects.filter(favorite=self))
+        # for exp in experiments:
+        #     detail['data_favorited_by_number'] += \
+        #         len(ExperimentFavorite.objects.filter(favorite=exp))
+        #
+        # detail['data_favorite_number'] = \
+        #     len(ExperimentFavorite.objects.filter(owner=self))
+        # detail['user_favorite_number'] = \
+        #     len(UserFavorite.objects.filter(owner=self))
+        # detail['user_favorited_by_number'] = \
+        #     len(UserFavorite.objects.filter(favorite=self))
 
         if my_user:
             detail['is_favorite'] = self.is_favorite(my_user)
@@ -106,16 +115,16 @@ class MyUser(models.Model):
 
         return experiment_type_counts
 
-    def get_experiment_counts(self):
-        favorite_experiment_counts = \
-            len(ExperimentFavorite.objects.filter(owner=self))
-        personal_experiment_counts = \
-            len(Experiment.objects.filter(owners__in=[self]))
-
-        return {
-            'favorite_experiment_counts': favorite_experiment_counts,
-            'personal_experiment_counts': personal_experiment_counts,
-        }
+    # def get_experiment_counts(self):
+    #     favorite_experiment_counts = \
+    #         len(ExperimentFavorite.objects.filter(owner=self))
+    #     personal_experiment_counts = \
+    #         len(Experiment.objects.filter(owners__in=[self]))
+    #
+    #     return {
+    #         'favorite_experiment_counts': favorite_experiment_counts,
+    #         'personal_experiment_counts': personal_experiment_counts,
+    #     }
 
     def get_urls(self):
         add_favorite = reverse('api:user-add-favorite', kwargs={'pk': self.pk})
@@ -133,10 +142,11 @@ class MyUser(models.Model):
         }
 
     def is_favorite(self, my_user):
-        if UserFavorite.objects.filter(owner=my_user, favorite=self).exists():
-            return 'true'
-        else:
-            return 'false'
+        # if UserFavorite.objects.filter(owner=my_user, favorite=self).exists():  # noqa
+        #     return 'true'
+        # else:
+        #     return 'false'
+        return 'false'
 
     def get_display_data(self, my_user):
         plot_data = dict()
@@ -173,6 +183,36 @@ class MyUser(models.Model):
             })
 
         return experiments
+
+
+class Follow(models.Model):
+    following = models.ForeignKey('MyUser', related_name='following')
+    followed = models.ForeignKey('MyUser', related_name='followed')
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+
+
+class Favorite(models.Model):
+    user = models.ForeignKey('MyUser')
+    experiment = models.ForeignKey('Experiment')
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+
+
+class PrimaryDataRec(models.Model):
+    user = models.ForeignKey('MyUser')
+    experiment = models.ForeignKey('Experiment')
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
+
+class MetadataRec(models.Model):
+    user = models.ForeignKey('MyUser')
+    experiment = models.ForeignKey('Experiment')
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
 
 
 class Project(models.Model):
@@ -250,9 +290,9 @@ class Experiment(models.Model):
         }
 
     def is_favorite(self, my_user):
-        if ExperimentFavorite.objects.filter(owner=my_user, favorite=self).exists():  # noqa
-            return 'true'
-        else:
+        # if ExperimentFavorite.objects.filter(owner=my_user, favorite=self).exists():  # noqa
+        #     return 'true'
+        # else:
             return 'false'
 
     def get_assemblies(self):
@@ -585,23 +625,6 @@ class Dataset(models.Model):
                 'plus': None,
                 'minus': None,
             }
-
-
-class Favorite(models.Model):
-    owner = models.ForeignKey('MyUser')
-
-    last_updated = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
-
-
-class UserFavorite(Favorite):
-    favorite = models.ForeignKey('MyUser', related_name='favorite')
-
-
-class ExperimentFavorite(Favorite):
-    favorite = models.ForeignKey('Experiment')
 
 
 class Assembly(models.Model):
@@ -949,6 +972,7 @@ class DatasetDataDistance(DatasetDistance):
     Distance between datasets considering data values.
     '''
     distance = models.FloatField()
+    recommended = models.BooleanField()
 
 
 class DatasetMetadataDistance(DatasetDistance):
@@ -956,6 +980,7 @@ class DatasetMetadataDistance(DatasetDistance):
     Distance between datasets considering metadata values.
     '''
     distance = models.FloatField()
+    recommended = models.BooleanField()
 
 
 class ExperimentDistance(models.Model):

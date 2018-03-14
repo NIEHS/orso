@@ -9,7 +9,7 @@ from django.views.generic \
     import View, TemplateView, DetailView, CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.forms.models import inlineformset_factory
-from django.db.models import F, Min, Q
+from django.db.models import Min, Q
 from django.views.generic.base import ContextMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import available_attrs, method_decorator
@@ -667,65 +667,32 @@ class RecommendedExperiments(LoginRequiredMixin, ExperimentList):
 
     def get_queryset(self):
 
-        user_experiments = models.Experiment.objects.filter(
-            owners=self.my_user)
-
-        order = self.form_class.order_choices[0][0]
-        if self.form.is_valid():
-            order = self.form.get_order()
-
-        # Get recommended experiments
-        if order == 'correlation_rank':
-            _query = Q(network_experimentdatadistance_first__experiment_2__in=user_experiments)  # noqa
-            _query &= ~Q(network_experimentdatadistance_second__experiment_1__in=user_experiments)  # noqa
-        elif order == 'metadata_rank':
-            _query = Q(network_experimentmetadatadistance_first__experiment_2__in=user_experiments)  # noqa
-            _query &= ~Q(network_experimentmetadatadistance_second__experiment_1__in=user_experiments)  # noqa
+        query = (Q(metadatarec__user=self.my_user) |
+                 Q(primarydatarec__user=self.my_user))
 
         if self.form.is_valid():
-            _query &= self.form.get_query()
+            query &= self.form.get_query()
 
-        if order == 'correlation_rank':
-            agg = 'network_experimentdatadistance_first__distance'
-        elif order == 'metadata_rank':
-            agg = 'network_experimentmetadatadistance_first__distance'
-        qs = (self.model
-                  .objects
-                  .filter(_query)
-                  .annotate(min_distance=Min(agg))
-                  .order_by('min_distance'))
+        qs = self.model.objects.filter(query).distinct()
+
+        paginator = Paginator(qs, self.get_paginate_by(qs))
+        page = self.request.GET.get('page')
+
+        try:
+            current_objects = paginator.page(page)
+        except PageNotAnInteger:
+            current_objects = paginator.page(1)
+        except EmptyPage:
+            current_objects = paginator.page(paginator.num_pages)
 
         for obj in qs:
-            obj.plot_data = obj.get_average_metaplots()
-            obj.meta_data = obj.get_metadata(self.my_user)
-            obj.urls = obj.get_urls()
+            if obj in current_objects:
+
+                obj.plot_data = obj.get_average_metaplots()
+                obj.meta_data = obj.get_metadata(self.my_user)
+                obj.urls = obj.get_urls()
 
         return qs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        user_experiments = models.Experiment.objects.filter(
-            owners=self.my_user)
-
-        order = self.form_class.order_choices[0][0]
-        if self.form.is_valid():
-            order = self.form.get_order()
-
-        # Get score distribution
-        _query = Q(experiment_2__in=user_experiments)
-        _query &= ~Q(experiment_1__in=user_experiments)
-
-        if order == 'correlation_rank':
-            all_distances = models.ExperimentDataDistance.objects.filter(
-                _query).values_list('distance', flat=True)
-        elif order == 'metadata_rank':
-            all_distances = models.ExperimentMetadataDistance.objects.filter(
-                _query).values_list('distance', flat=True)
-
-        context['all_distances'] = list(all_distances)
-
-        return context
 
 
 class SimilarExperiments(ExperimentList):
