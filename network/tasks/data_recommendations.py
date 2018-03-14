@@ -90,6 +90,9 @@ def update_primary_data_recommendations(experiment_pk):
                                                .objects.get(
                                                    user=owner,
                                                    experiment=ds_2.experiment,
+                                                   dataset=ds_2,
+                                                   personal_experiment=ds_1.experiment,  # noqa
+                                                   personal_dataset=ds_1,
                                                ).delete())
                                     except models.PrimaryDataRec.DoesNotExist:
                                         pass
