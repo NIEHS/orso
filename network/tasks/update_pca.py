@@ -20,7 +20,7 @@ from analysis.utils import (
     generate_intersection_df, generate_pca_transformed_df)
 from network import models
 from network.tasks.metadata_recommendations import \
-    generate_metadata_sims_df
+    generate_metadata_sims_df_for_datasets
 
 TOTAL_HISTONE_MARKS = [
     'H2AFZ',
@@ -122,7 +122,7 @@ def fit_and_set_neural_network(pca):
     datasets = get_datasets(pca)
 
     values = generate_pca_transformed_df(pca, datasets)
-    sims = generate_metadata_sims_df(datasets)
+    sims = generate_metadata_sims_df_for_datasets(datasets)
 
     clf, scaler = fit_nn(values, sims)
     set_nn(pca, clf, scaler)
