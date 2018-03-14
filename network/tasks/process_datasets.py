@@ -8,9 +8,9 @@ from analysis.normalization import normalize_locus_intersection_values
 from analysis.utils import download_dataset_bigwigs, remove_dataset_bigwigs
 from network import models
 from network.tasks.data_recommendations import \
-    update_dataset_primary_data_scores
+    update_primary_data_recommendations
 from network.tasks.metadata_recommendations import \
-    update_dataset_metadata_scores
+    update_metadata_recommendations
 
 
 def process_dataset_batch(datasets, chunk=100):
@@ -34,7 +34,8 @@ def process_dataset_batch(datasets, chunk=100):
 
 @task
 def process_dataset(dataset_pk, download=True):
-    update_dataset_metadata_scores.si(dataset_pk).delay()
+    dataset = models.Dataset.objects.get(pk=dataset_pk)
+    update_metadata_recommendations.si(dataset.experiment.pk).delay()  # Move
 
     if download:
         chain(
@@ -83,7 +84,7 @@ def update_and_clean(dataset_pk):
         experiment_type=experiment_type,
     ):
         set_pca_transformed_values(dataset, pca)
-    update_dataset_primary_data_scores(dataset.pk)
+    update_primary_data_recommendations(dataset.experiment.pk)  # Move
 
     dataset.processed = True
     dataset.save()

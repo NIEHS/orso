@@ -1,6 +1,7 @@
 import json
 import os
 
+import pandas as pd
 from celery import group
 from celery.decorators import task
 from django.conf import settings
@@ -67,27 +68,7 @@ RELEVANT_CATEGORIES = set([
 ])
 
 
-def update_metadata_scores():
-    datasets = models.Dataset.objects.all()
-
-    tasks = []
-    for dataset in datasets:
-        tasks.append(update_dataset_metadata_scores.s(dataset.pk))
-
-    job = group(tasks)
-    results = job.apply_async()
-    results.join()
-
-
-@task
-def update_dataset_metadata_scores(dataset_pk):
-    dataset = models.Dataset.objects.get(pk=dataset_pk)
-
-    # Get relevant datasets
-    other_datasets = models.Dataset.objects.filter(
-        assembly=dataset.assembly,
-        experiment__experiment_type=dataset.experiment.experiment_type,
-    )
+def generate_metadata_sims_df(datasets):
 
     # Get BRENDA ontology object
     brenda_ont = (models.Ontology.objects.get(name='brenda_tissue_ontology')
@@ -104,8 +85,7 @@ def update_dataset_metadata_scores(dataset_pk):
         encode_cell_type_to_brenda_name = dict()
 
     # Get relevant categories for each cell type
-    cell_types = list(set([dataset.experiment.cell_type]) | set(
-        other_datasets.values_list('experiment__cell_type', flat=True)))
+    cell_types = set([ds.experiment.cell_type for ds in datasets])
     cell_type_to_relevant_categories = dict()
     for cell_type in cell_types:
 
@@ -131,33 +111,150 @@ def update_dataset_metadata_scores(dataset_pk):
             cell_type_to_relevant_categories[cell_type] = set()
 
     # Get STRING interaction partners
-    genes = list(set(dataset.experiment.target) | set(
-        other_datasets.values_list('experiment__target', flat=True)))
-    organism = ASSEMBLY_TO_ORGANISM[dataset.assembly.name]
+    genes = set([ds.experiment.target for ds in datasets])
+    organism = ASSEMBLY_TO_ORGANISM[datasets[0].assembly.name]
     interaction_partners = get_interaction_partners(genes, organism)
 
-    ds_1 = dataset
-    for ds_2 in other_datasets:
+    d = {}
+    ds_list = list(datasets)
+    for ds_1 in ds_list:
+        comp_values = []
+        for ds_2 in ds_list:
+            if all([
+                ds_1.assembly == ds_2.assembly,
+                ds_1.experiment.experiment_type ==
+                ds_2.experiment.experiment_type
+            ]):
+                if ds_1 == ds_2:
+                    comp_values.append(True)
+                else:
+                    target_1 = ds_1.experiment.target
+                    target_2 = ds_2.experiment.target
 
-        assembly_1 = ds_1.assembly
-        exp_type_1 = ds_1.experiment.experiment_type
-        target_1 = ds_1.experiment.target
-        cell_type_1 = ds_1.experiment.cell_type
+                    cell_type_1 = ds_1.experiment.cell_type
+                    cell_type_2 = ds_2.experiment.cell_type
 
-        assembly_2 = ds_2.assembly
-        exp_type_2 = ds_2.experiment.experiment_type
-        target_2 = ds_2.experiment.target
-        cell_type_2 = ds_2.experiment.cell_type
+                    exp_type = ds_1.experiment.experiment_type.name
 
-        if all([
-            ds_1 != ds_2,
-            assembly_1 == assembly_2,
-            exp_type_1 == exp_type_2,
-        ]):
+                    if exp_type in EXPERIMENT_TYPE_TO_RELEVANT_FIELDS:
+                        relevant_fields = \
+                            EXPERIMENT_TYPE_TO_RELEVANT_FIELDS[exp_type]
+                    else:
+                        relevant_fields = \
+                            EXPERIMENT_TYPE_TO_RELEVANT_FIELDS['Other']
 
-            if exp_type_1.name in EXPERIMENT_TYPE_TO_RELEVANT_FIELDS:
+                    sim_comparisons = []
+
+                    if 'target' in relevant_fields:
+                        sim_comparisons.append(any([
+                            target_1 == target_2,
+                            target_1 in interaction_partners[target_2],
+                            target_1 in interaction_partners[target_2],
+                        ]))
+
+                    if 'cell_type' in relevant_fields:
+                        sim_comparisons.append(any([
+                            cell_type_1 == cell_type_2,
+                            cell_type_to_relevant_categories[cell_type_1] &
+                            cell_type_to_relevant_categories[cell_type_2],
+                        ]))
+
+                    if sim_comparisons:
+                        is_similar = all(sim_comparisons)
+                    else:
+                        is_similar = False
+
+                    comp_values.append(is_similar)
+            else:
+                comp_values.append(False)
+
+        series = pd.Series(
+            comp_values, index=[ds.pk for ds in ds_list])
+        d.update({ds_1.pk: series})
+
+    return pd.DataFrame(d)
+
+
+def update_all_metadata_recommendations():
+    experiments = models.Experiment.objects.filter(owners=True)
+
+    tasks = []
+    for experiment in experiments:
+        tasks.append(update_metadata_recommendations.si(experiment.pk))
+
+    job = group(tasks)
+    results = job.apply_async()
+    results.join()
+
+
+@task
+def update_metadata_recommendations(experiment_pk):
+    experiment = models.Experiment.objects.get(pk=experiment_pk)
+    owners = models.MyUser.objects.filter(experiment=experiment)
+
+    # Get relevant experiments
+    assemblies = models.Assembly.objects.filter(dataset__experiment=experiment)
+    other_experiments = models.Experiment.objects.filter(
+        dataset__assembly__in=assemblies,
+        experiment_type=experiment.experiment_type,
+    )
+
+    # Get BRENDA ontology object
+    brenda_ont = (models.Ontology.objects.get(name='brenda_tissue_ontology')
+                                         .get_ontology_object())
+
+    # Get ENCODE to BRENDA dict
+    encode_to_brenda_path = os.path.join(
+        settings.ONTOLOGY_DIR, 'encode_to_brenda.json')
+    try:
+        with open(encode_to_brenda_path) as f:
+            encode_cell_type_to_brenda_name = json.load(f)
+    except FileNotFoundError:
+        print('ENCODE to BRENDA file not found.')
+        encode_cell_type_to_brenda_name = dict()
+
+    # Get relevant categories for each cell type
+    cell_types = list(set([experiment.cell_type]) | set(
+        other_experiments.values_list('cell_type', flat=True)))
+    cell_type_to_relevant_categories = dict()
+    for cell_type in cell_types:
+
+        if cell_type in encode_cell_type_to_brenda_name:
+            brenda_term_name = encode_cell_type_to_brenda_name[cell_type]
+            for term, name in brenda_ont.term_to_name.items():
+                if name == brenda_term_name:
+                    brenda_term = term
+        else:
+            terms = brenda_ont.get_terms(cell_type)
+            if terms:
+                brenda_term = sorted(terms)[0]
+            else:
+                brenda_term = None
+
+        if brenda_term:
+            parent_set = set([brenda_term]) \
+                | brenda_ont.get_all_parents(brenda_term)
+            cell_type_to_relevant_categories[cell_type] = \
+                set([brenda_ont.term_to_name[term] for term in parent_set]) \
+                & RELEVANT_CATEGORIES
+        else:
+            cell_type_to_relevant_categories[cell_type] = set()
+
+    # Get STRING interaction partners
+    genes = list(set(experiment.target) | set(
+        other_experiments.values_list('target', flat=True)))
+    organism = ASSEMBLY_TO_ORGANISM[assemblies[0].name]
+    interaction_partners = get_interaction_partners(genes, organism)
+
+    exp_1 = experiment
+    for exp_2 in other_experiments:
+
+        if exp_1 != exp_2:
+
+            exp_type = exp_1.experiment_type.name
+            if exp_type in EXPERIMENT_TYPE_TO_RELEVANT_FIELDS:
                 relevant_fields = \
-                    EXPERIMENT_TYPE_TO_RELEVANT_FIELDS[exp_type_1.name]
+                    EXPERIMENT_TYPE_TO_RELEVANT_FIELDS[exp_type]
             else:
                 relevant_fields = \
                     EXPERIMENT_TYPE_TO_RELEVANT_FIELDS['Other']
@@ -166,16 +263,16 @@ def update_dataset_metadata_scores(dataset_pk):
 
             if 'target' in relevant_fields:
                 sim_comparisons.append(any([
-                    target_1 == target_2,
-                    target_1 in interaction_partners[target_2],
-                    target_2 in interaction_partners[target_1],
+                    exp_1.target == exp_2.target,
+                    exp_1.target in interaction_partners[exp_2.target],
+                    exp_2.target in interaction_partners[exp_1.target],
                 ]))
 
             if 'cell_type' in relevant_fields:
                 sim_comparisons.append(any([
-                    cell_type_1 == cell_type_2,
-                    cell_type_to_relevant_categories[cell_type_1] &
-                    cell_type_to_relevant_categories[cell_type_2],
+                    exp_1.cell_type == exp_2.cell_type,
+                    cell_type_to_relevant_categories[exp_1.cell_type] &
+                    cell_type_to_relevant_categories[exp_2.cell_type],
                 ]))
 
             if sim_comparisons:
@@ -183,14 +280,17 @@ def update_dataset_metadata_scores(dataset_pk):
             else:
                 is_similar = False
 
-            if ds_1.pk < ds_2.pk:
-                _ds_1, _ds_2 = ds_1, ds_2
-            else:
-                _ds_1, _ds_2 = ds_2, ds_1
-            models.DatasetMetadataDistance.objects.update_or_create(
-                dataset_1=_ds_1,
-                dataset_2=_ds_2,
-                defaults={
-                    'distance': int(is_similar),
-                },
-            )
+            for owner in owners:
+                if is_similar:
+                    models.MetadataRec.objects.update_or_create(
+                        user=owner,
+                        experiment=exp_2,
+                    )
+                else:
+                    try:
+                        models.MetadataRec.objects.get(
+                            user=owner,
+                            experiment=exp_2,
+                        ).delete()
+                    except models.MetadataRec.DoesNotExist:
+                        pass
