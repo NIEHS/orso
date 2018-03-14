@@ -43,10 +43,10 @@ class MyUser(models.Model):
         through='Favorite')
     primary_data_recommedations = models.ManyToManyField(
         'Experiment', blank=True, related_name='primary_rec',
-        through='PrimaryDataRec')
+        through='PrimaryDataRec', through_fields=('user', 'experiment'))
     metadata_recommendations = models.ManyToManyField(
         'Experiment', blank=True, related_name='metadata_rec',
-        through='MetadataRec')
+        through='MetadataRec', through_fields=('user', 'experiment'))
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL)
@@ -201,7 +201,15 @@ class Favorite(models.Model):
 
 class PrimaryDataRec(models.Model):
     user = models.ForeignKey('MyUser')
-    experiment = models.ForeignKey('Experiment')
+    experiment = models.ForeignKey(
+        'Experiment', related_name='%(class)s_recommended')
+    dataset = models.ForeignKey(
+        'Dataset', related_name='%(class)s_recommended')
+
+    personal_experiment = models.ForeignKey(
+        'Experiment', related_name='%(class)s_owned')
+    personal_dataset = models.ForeignKey(
+        'Dataset', related_name='%(class)s_owned')
 
     created = models.DateTimeField(auto_now_add=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
@@ -209,7 +217,11 @@ class PrimaryDataRec(models.Model):
 
 class MetadataRec(models.Model):
     user = models.ForeignKey('MyUser')
-    experiment = models.ForeignKey('Experiment')
+    experiment = models.ForeignKey(
+        'Experiment', related_name='%(class)s_recommended')
+
+    personal_experiment = models.ForeignKey(
+        'Experiment', related_name='%(class)s_owned')
 
     created = models.DateTimeField(auto_now_add=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
