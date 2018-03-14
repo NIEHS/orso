@@ -9,8 +9,6 @@ from analysis.utils import download_dataset_bigwigs, remove_dataset_bigwigs
 from network import models
 from network.tasks.data_recommendations import \
     update_primary_data_recommendations
-from network.tasks.metadata_recommendations import \
-    update_metadata_recommendations
 
 
 def process_dataset_batch(datasets, chunk=100):
@@ -33,63 +31,65 @@ def process_dataset_batch(datasets, chunk=100):
 
 
 @task
-def process_dataset(dataset_pk, download=True):
-    dataset = models.Dataset.objects.get(pk=dataset_pk)
-    update_metadata_recommendations.si(dataset.experiment.pk).delay()  # Move
-
+def process_dataset(dataset_pk, experiment_pk=None, download=True):
     if download:
         chain(
-            download_bigwigs.si(dataset_pk),
+            download_bigwigs.si([dataset_pk]),
             chord(
-                process_dataset_intersections(dataset_pk),
-                update_and_clean.si(dataset_pk),
+                process_dataset_intersections([dataset_pk]),
+                update_and_clean.si([dataset_pk]),
             ),
         )()
     else:
         chord(
-            process_dataset_intersections(dataset_pk),
-            update_and_clean.si(dataset_pk),
+            process_dataset_intersections([dataset_pk]),
+            update_and_clean.si([dataset_pk]),
         )()
 
 
 @task
-def download_bigwigs(dataset_pk):
-    dataset = models.Dataset.objects.get(pk=dataset_pk)
-    download_dataset_bigwigs([dataset])
+def download_bigwigs(dataset_pks):
+    datasets = models.Dataset.objects.filter(pk__in=dataset_pks)
+    download_dataset_bigwigs(datasets)
 
 
-def process_dataset_intersections(dataset_pk):
-    dataset = models.Dataset.objects.get(pk=dataset_pk)
+def process_dataset_intersections(dataset_pks):
+    datasets = models.Dataset.objects.filter(pk__in=dataset_pks)
     tasks = []
 
-    for lg in models.LocusGroup.objects.filter(
-            assembly=dataset.assembly):
+    for dataset in datasets:
+        for lg in models.LocusGroup.objects.filter(
+                assembly=dataset.assembly):
 
-        tasks.append(
-            update_or_create_dataset_intersection.si(dataset.pk, lg.pk))
-        tasks.append(
-            update_or_create_dataset_metaplot.si(dataset.pk, lg.pk))
+            tasks.append(
+                update_or_create_dataset_intersection.si(dataset.pk, lg.pk))
+            tasks.append(
+                update_or_create_dataset_metaplot.si(dataset.pk, lg.pk))
 
     return group(tasks)
 
 
 @task
-def update_and_clean(dataset_pk):
-    dataset = models.Dataset.objects.get(pk=dataset_pk)
-    assembly = dataset.assembly
-    experiment_type = dataset.experiment.experiment_type
+def update_and_clean(dataset_pks, experiment_pk=None):
+    datasets = models.Dataset.objects.filter(pk__in=dataset_pks)
 
-    for pca in models.PCA.objects.filter(
-        locus_group__assembly=assembly,
-        experiment_type=experiment_type,
-    ):
-        set_pca_transformed_values(dataset, pca)
-    update_primary_data_recommendations(dataset.experiment.pk)  # Move
+    for dataset in datasets:
+        assembly = dataset.assembly
+        experiment_type = dataset.experiment.experiment_type
 
-    dataset.processed = True
-    dataset.save()
+        for pca in models.PCA.objects.filter(
+            locus_group__assembly=assembly,
+            experiment_type=experiment_type,
+        ):
+            set_pca_transformed_values(dataset, pca)
 
-    remove_bigwigs(dataset_pk)
+        dataset.processed = True
+        dataset.save()
+
+    remove_bigwigs(dataset_pks)
+
+    if experiment_pk:
+        update_primary_data_recommendations(experiment_pk)
 
 
 def set_pca_transformed_values(dataset, pca):
@@ -127,9 +127,9 @@ def set_pca_transformed_values(dataset, pca):
 
 
 @task
-def remove_bigwigs(dataset_pk):
-    dataset = models.Dataset.objects.get(pk=dataset_pk)
-    remove_dataset_bigwigs([dataset])
+def remove_bigwigs(dataset_pks):
+    datasets = models.Dataset.objects.filter(pk__in=dataset_pks)
+    remove_dataset_bigwigs(datasets)
 
 
 @task
