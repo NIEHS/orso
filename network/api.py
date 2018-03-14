@@ -40,9 +40,9 @@ class ExperimentViewset(viewsets.ModelViewSet):
         object = self.get_object()
         my_user = models.MyUser.objects.get(user=self.request.user)
 
-        models.ExperimentFavorite.objects.create(
-            owner=my_user,
-            favorite=object,
+        models.Favorite.objects.update_or_create(
+            user=my_user,
+            experiment=object,
         )
 
         return HttpResponse(status=202)
@@ -52,8 +52,10 @@ class ExperimentViewset(viewsets.ModelViewSet):
         object = self.get_object()
         my_user = models.MyUser.objects.get(user=self.request.user)
 
-        favorite = models.ExperimentFavorite.objects.get(owner=my_user, favorite=object)
-        favorite.delete()
+        models.Favorite.objects.get(
+            user=my_user,
+            experiment=object,
+        ).delete()
 
         return HttpResponse(status=202)
 
@@ -61,7 +63,8 @@ class ExperimentViewset(viewsets.ModelViewSet):
     def hide_experiment_recommendation(self, request, pk=None):
         object = self.get_object()
         my_user = models.MyUser.objects.get(user=self.request.user)
-        recommendation = models.ExperimentRecommendation.objects.get(owner=my_user, recommended=object)
+        recommendation = models.ExperimentRecommendation.objects.get(
+            owner=my_user, recommended=object)
         recommendation.hidden = True
         recommendation.save()
         return HttpResponse(status=202)
@@ -103,7 +106,8 @@ class DatasetViewset(viewsets.ModelViewSet):
         object = self.get_object()
         my_user = models.MyUser.objects.get(user=self.request.user)
 
-        favorite = models.DataFavorite.objects.get(owner=my_user, favorite=object)
+        favorite = models.DataFavorite.objects.get(
+            owner=my_user, favorite=object)
         favorite.delete()
 
         return HttpResponse(status=202)
@@ -112,7 +116,8 @@ class DatasetViewset(viewsets.ModelViewSet):
     def hide_dataset_recommendation(self, request, pk=None):
         object = self.get_object()
         my_user = models.MyUser.objects.get(user=self.request.user)
-        recommendation = models.DataRecommendation.objects.get(owner=my_user, recommended=object)
+        recommendation = models.DataRecommendation.objects.get(
+            owner=my_user, recommended=object)
         recommendation.hidden = True
         recommendation.save()
         return HttpResponse(status=202)
@@ -140,7 +145,8 @@ class UserViewset(viewsets.ModelViewSet):
         object = self.get_object()
         my_user = models.MyUser.objects.get(user=self.request.user)
 
-        favorite = models.UserFavorite.objects.get(owner=my_user, favorite=object)
+        favorite = models.UserFavorite.objects.get(
+            owner=my_user, favorite=object)
         favorite.delete()
 
         return HttpResponse(status=202)
@@ -149,7 +155,8 @@ class UserViewset(viewsets.ModelViewSet):
     def hide_user_recommendation(self, request, pk=None):
         object = self.get_object()
         my_user = models.MyUser.objects.get(user=self.request.user)
-        recommendation = models.UserRecommendation.objects.get(owner=my_user, recommended=object)
+        recommendation = models.UserRecommendation.objects.get(
+            owner=my_user, recommended=object)
         recommendation.hidden = True
         recommendation.save()
         return HttpResponse(status=202)

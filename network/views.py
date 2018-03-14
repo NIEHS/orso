@@ -652,7 +652,7 @@ class FavoriteExperiments(LoginRequiredMixin, ExperimentList):
     form_class = forms.FavoriteExperimentFilterForm
 
     def get_queryset(self):
-        base_query = Q(experimentfavorite__owner=self.my_user)
+        base_query = Q(favorite__user=self.my_user)
         return super().get_queryset(base_query)
 
 
