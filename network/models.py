@@ -227,6 +227,61 @@ class MetadataRec(models.Model):
     last_updated = models.DateTimeField(auto_now=True, null=True)
 
 
+class Recommendation(models.Model):
+    user = models.ForeignKey('MyUser')
+
+    recommended_experiment = models.ForeignKey(
+        'Experiment', related_name='recommended_experiment',
+    )
+    recommended_dataset = models.ForeignKey(
+        'Dataset', related_name='recommended_dataset',
+        null=True, blank=True,
+    )
+
+    referring_experiment = models.ForeignKey(
+        'Experiment', related_name='referring_experiment',
+        null=True, blank=True,
+    )
+    referring_dataset = models.ForeignKey(
+        'Dataset', related_name='referring_dataset',
+        null=True, blank=True,
+    )
+
+    choices = [
+        ('primary', 'primary'),
+        ('metadata', 'metadata'),
+    ]
+    rec_type = models.CharField(choices=choices, max_length=32)
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
+
+class Similarity(models.Model):
+    experiment_1 = models.ForeignKey(
+        'Experiment', related_name='sim_experiment_1')
+    experiment_2 = models.ForeignKey(
+        'Experiment', related_name='sim_experiment_2')
+
+    dataset_1 = models.ForeignKey(
+        'Dataset', related_name='dataset_1',
+        null=True, blank=True,
+    )
+    dataset_2 = models.ForeignKey(
+        'Dataset', related_name='dataset_2',
+        null=True, blank=True,
+    )
+
+    choices = [
+        ('primary', 'primary'),
+        ('metadata', 'metadata'),
+    ]
+    sim_type = models.CharField(choices=choices, max_length=32)
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
+
 class Project(models.Model):
     owners = models.ManyToManyField('MyUser', blank=True)
 

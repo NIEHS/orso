@@ -1,23 +1,17 @@
 import json
 import os
+from collections import defaultdict
 
 import pandas as pd
+from celery import group
 from celery.decorators import task
 from django.conf import settings
+from django.db.models import Q
 
-from analysis.string_db import get_interaction_partners
+from analysis.string_db import (
+    ASSEMBLY_TO_ORGANISM, get_organism_to_interaction_partners_dict)
 from network import models
 
-ASSEMBLY_TO_ORGANISM = {
-    'hg19': 'human',
-    'GRCh38': 'human',
-    'mm9': 'mouse',
-    'mm10': 'mouse',
-    'dm3': 'fly',
-    'dm6': 'fly',
-    'ce10': 'worm',
-    'ce11': 'worm',
-}
 EXPERIMENT_TYPE_TO_RELEVANT_FIELDS = {
     'RNA-PET': ['cell_type'],
     'siRNA knockdown followed by RNA-seq': ['cell_type', 'target'],
@@ -110,11 +104,17 @@ def generate_metadata_sims_df(experiments):
             cell_type_to_relevant_categories[cell_type] = set()
 
     # Get STRING interaction partners
-    genes = set([exp.target for exp in experiments])
-    assembly = \
-        models.Assembly.objects.filter(dataset__experiment__in=experiments)[0]
-    organism = ASSEMBLY_TO_ORGANISM[assembly.name]
-    interaction_partners = get_interaction_partners(genes, organism)
+    gene_dict = defaultdict(set)
+    for exp in experiments:
+        for ds in models.Dataset.objects.filter(experiment=exp):
+            gene_dict[ds.assembly.name].add(exp.target)
+    interaction_partners = get_organism_to_interaction_partners_dict(gene_dict)
+
+    # Get experiment to assemblies
+    experiment_to_assemblies = dict()
+    for exp in experiments:
+        experiment_to_assemblies[exp] = set(
+            models.Assembly.objects.filter(dataset__experiment=exp))
 
     d = {}
     exp_list = list(experiments)
@@ -122,10 +122,10 @@ def generate_metadata_sims_df(experiments):
         comp_values = []
         for exp_2 in exp_list:
             if all([
-                set(models.Assembly.objects.filter(dataset__experiment=exp_1)) &  # noqa
-                set(models.Assembly.objects.filter(dataset__experiment=exp_2)),
+                experiment_to_assemblies[exp_1] &
+                experiment_to_assemblies[exp_2],
                 exp_1.experiment_type ==
-                exp_2.experiment_type
+                exp_2.experiment_type,
             ]):
                 if exp_1 == exp_2:
                     comp_values.append(True)
@@ -137,6 +137,8 @@ def generate_metadata_sims_df(experiments):
                     cell_type_2 = exp_2.cell_type
 
                     exp_type = exp_1.experiment_type.name
+                    _assembly = list(experiment_to_assemblies[exp_1])[0]
+                    organism = ASSEMBLY_TO_ORGANISM[_assembly.name]
 
                     if exp_type in EXPERIMENT_TYPE_TO_RELEVANT_FIELDS:
                         relevant_fields = \
@@ -146,12 +148,13 @@ def generate_metadata_sims_df(experiments):
                             EXPERIMENT_TYPE_TO_RELEVANT_FIELDS['Other']
 
                     sim_comparisons = []
+                    _interaction_partners = interaction_partners[organism]
 
                     if 'target' in relevant_fields:
                         sim_comparisons.append(any([
                             target_1 == target_2,
-                            target_1 in interaction_partners[target_2],
-                            target_1 in interaction_partners[target_2],
+                            target_1 in _interaction_partners[target_2],
+                            target_1 in _interaction_partners[target_2],
                         ]))
 
                     if 'cell_type' in relevant_fields:
@@ -192,64 +195,102 @@ def generate_metadata_sims_df_for_datasets(datasets):
     return ds_sims
 
 
-def update_all_metadata_recommendations():
-    experiments = models.Experiment.objects.all()
-    sims_df = generate_metadata_sims_df(experiments)
+def update_all_metadata_sims_and_recs():
+    all_experiments = models.Experiment.objects.all()
+    update_metadata_similarities([exp.pk for exp in all_experiments])
 
-    owned_experiments = models.Experiment.objects.filter(owners=True)
-    for exp_1 in owned_experiments:
-        owners = models.MyUser.objects.filter(experiment=exp_1)
-        for exp_2 in experiments:
-            if exp_1 != exp_2:
-                for owner in owners:
+    user_experiments = models.Experiment.objects.filter(
+        Q(owners=True) | Q(favorite__user=True))
+
+    tasks = []
+    for experiment in user_experiments:
+        tasks.append(update_metadata_recommendations.si(experiment.pk))
+
+    job = group(tasks)
+    results = job.apply_async()
+    results.join()
+
+
+@task
+def update_metadata_sims_and_recs(experiment_pk):
+    update_metadata_similarities([experiment_pk])
+    update_metadata_recommendations(experiment_pk)
+
+
+@task
+def update_metadata_similarities(experiment_pks):
+    experiments = models.Experiment.objects.filter(pk__in=experiment_pks)
+
+    # Get relevant experiments
+    assemblies = models.Assembly.objects.filter(
+        dataset__experiment__in=experiments)
+    experiment_types = models.ExperimentType.objects.filter(
+        experiment__in=experiments)
+    other_experiments = models.Experiment.objects.filter(
+        dataset__assembly__in=assemblies,
+        experiment_type__in=experiment_types,
+    )
+    total_experiments = set(experiments) | set(other_experiments)
+
+    # Get experiment to assemblies
+    experiment_to_assemblies = dict()
+    for exp in total_experiments:
+        experiment_to_assemblies[exp] = set(
+            models.Assembly.objects.filter(dataset__experiment=exp))
+
+    sims_df = generate_metadata_sims_df(total_experiments)
+
+    for exp_1 in experiments:
+        for exp_2 in other_experiments:
+            if all([
+                exp_1 != exp_2,
+                exp_1.experiment_type == exp_2.experiment_type,
+                experiment_to_assemblies[exp_1] &
+                experiment_to_assemblies[exp_2],
+            ]):
                     if sims_df[exp_1.pk][exp_2.pk]:
-                        models.MetadataRec.objects.update_or_create(
-                            user=owner,
-                            experiment=exp_2,
-                            personal_experiment=exp_1,
+                        models.Similarity.objects.update_or_create(
+                            experiment_1=exp_1,
+                            experiment_2=exp_2,
+                            sim_type='metadata',
                         )
                     else:
                         try:
-                            models.MetadataRec.objects.get(
-                                user=owner,
-                                experiment=exp_2,
-                                personal_experiment=exp_1,
+                            models.Similarity.objects.get(
+                                experiment_1=exp_1,
+                                experiment_2=exp_2,
+                                sim_type='metadata',
                             ).delete()
-                        except models.MetadataRec.DoesNotExist:
+                        except models.Similarity.DoesNotExist:
                             pass
 
 
 @task
 def update_metadata_recommendations(experiment_pk):
     experiment = models.Experiment.objects.get(pk=experiment_pk)
-    owners = models.MyUser.objects.filter(experiment=experiment)
+    users = models.MyUser.objects.filter(
+        Q(favorite__experiment=experiment) |
+        Q(experiment=experiment)
+    ).distinct()
 
-    # Get relevant experiments
-    assemblies = models.Assembly.objects.filter(dataset__experiment=experiment)
-    other_experiments = models.Experiment.objects.filter(
-        dataset__assembly__in=assemblies,
-        experiment_type=experiment.experiment_type,
-    )
-    total_experiments = set([experiment]) | set(other_experiments)
+    # Remove old recs with no associated Similarity
+    for rec in models.Recommendation.objects.filter(
+        referring_experiment=experiment,
+        rec_type='metadata',
+    ):
+        if not models.Similarity.objects.filter(
+            sim_type='metadata',
+            experiment_1=experiment,
+            experiment_2=rec.recommended_experiment,
+        ).exists():
+            rec.delete()
 
-    sims_df = generate_metadata_sims_df(total_experiments)
-
-    exp_1 = experiment
-    for exp_2 in other_experiments:
-        if exp_1 != exp_2:
-            for owner in owners:
-                if sims_df[exp_1.pk][exp_2.pk]:
-                    models.MetadataRec.objects.update_or_create(
-                        user=owner,
-                        experiment=exp_2,
-                        personal_experiment=exp_1,
-                    )
-                else:
-                    try:
-                        models.MetadataRec.objects.get(
-                            user=owner,
-                            experiment=exp_2,
-                            personal_experiment=exp_1,
-                        ).delete()
-                    except models.MetadataRec.DoesNotExist:
-                        pass
+    # Add new recs
+    for user in users:
+        for sim in models.Similarity.objects.filter(experiment_1=experiment):
+            models.Recommendation.objects.update_or_create(
+                user=user,
+                rec_type='metadata',
+                referring_experiment=sim.experiment_1,
+                recommended_experiment=sim.experiment_2,
+            )

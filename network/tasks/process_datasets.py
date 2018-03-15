@@ -8,7 +8,7 @@ from analysis.normalization import normalize_locus_intersection_values
 from analysis.utils import download_dataset_bigwigs, remove_dataset_bigwigs
 from network import models
 from network.tasks.data_recommendations import \
-    update_primary_data_recommendations
+    update_primary_data_sims_and_recs
 
 
 def process_dataset_batch(datasets, chunk=100):
@@ -89,7 +89,7 @@ def update_and_clean(dataset_pks, experiment_pk=None):
     remove_bigwigs(dataset_pks)
 
     if experiment_pk:
-        update_primary_data_recommendations(experiment_pk)
+        update_primary_data_sims_and_recs(experiment_pk)
 
 
 def set_pca_transformed_values(dataset, pca):

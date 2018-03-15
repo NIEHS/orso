@@ -1,14 +1,26 @@
 from celery import group
 from celery.decorators import task
+from django.db.models import Q
 
 from network import models
 
 
-def update_all_primary_data_recommendations():
-    experiments = models.Experiment.objects.filter(owners=True)
+def update_all_primary_data_sims_and_recs():
+    all_experiments = models.Experiment.objects.all()
 
     tasks = []
-    for experiment in experiments:
+    for experiment in all_experiments:
+        tasks.append(update_primary_data_similarities.si(experiment.pk))
+
+    job = group(tasks)
+    results = job.apply_async()
+    results.join()
+
+    user_experiments = models.Experiment.objects.filter(
+        Q(owners=True) | Q(favorite__user=True))
+
+    tasks = []
+    for experiment in user_experiments:
         tasks.append(update_primary_data_recommendations.si(experiment.pk))
 
     job = group(tasks)
@@ -17,9 +29,14 @@ def update_all_primary_data_recommendations():
 
 
 @task
-def update_primary_data_recommendations(experiment_pk):
+def update_primary_data_sims_and_recs(experiment_pk):
+    update_primary_data_similarities(experiment_pk)
+    update_primary_data_recommendations(experiment_pk)
+
+
+@task
+def update_primary_data_similarities(experiment_pk):
     experiment = models.Experiment.objects.get(pk=experiment_pk)
-    owners = models.MyUser.objects.filter(experiment=experiment)
     datasets = models.Dataset.objects.filter(experiment=experiment)
 
     for dataset in datasets:
@@ -73,26 +90,78 @@ def update_primary_data_recommendations(experiment_pk):
                                 [vec_1 + vec_2])
                             sim = pca.neural_network.predict(vec)[0]
 
-                            for owner in owners:
+                            if bool(sim):
+                                (models.Similarity
+                                       .objects.update_or_create(
+                                           experiment_1=ds_1.experiment,
+                                           experiment_2=ds_2.experiment,
+                                           dataset_1=ds_1,
+                                           dataset_2=ds_2,
+                                           sim_type='primary',
+                                       ))
 
-                                if bool(sim):
-                                    (models.PrimaryDataRec
-                                           .objects.update_or_create(
-                                               user=owner,
-                                               experiment=ds_2.experiment,
-                                               dataset=ds_2,
-                                               personal_experiment=ds_1.experiment,  # noqa
-                                               personal_dataset=ds_1,
-                                           ))
-                                else:
-                                    try:
-                                        (models.PrimaryDataRec
-                                               .objects.get(
-                                                   user=owner,
-                                                   experiment=ds_2.experiment,
-                                                   dataset=ds_2,
-                                                   personal_experiment=ds_1.experiment,  # noqa
-                                                   personal_dataset=ds_1,
-                                               ).delete())
-                                    except models.PrimaryDataRec.DoesNotExist:
-                                        pass
+                                (models.Similarity
+                                       .objects.update_or_create(
+                                           experiment_1=ds_2.experiment,
+                                           experiment_2=ds_1.experiment,
+                                           dataset_1=ds_2,
+                                           dataset_2=ds_1,
+                                           sim_type='primary',
+                                       ))
+                            else:
+                                try:
+                                    (models.Similarity
+                                           .objects.get(
+                                               experiment_1=ds_1.experiment,
+                                               experiment_2=ds_2.experiment,
+                                               dataset_1=ds_1,
+                                               dataset_2=ds_2,
+                                               sim_type='primary',
+                                           ).delete())
+                                except models.Similarity.DoesNotExist:
+                                    pass
+
+                                try:
+                                    (models.Similarity
+                                           .objects.get(
+                                               experiment_1=ds_2.experiment,
+                                               experiment_2=ds_1.experiment,
+                                               dataset_1=ds_2,
+                                               dataset_2=ds_1,
+                                               sim_type='primary',
+                                           ).delete())
+                                except models.Similarity.DoesNotExist:
+                                    pass
+
+
+@task
+def update_primary_data_recommendations(experiment_pk):
+    experiment = models.Experiment.objects.get(pk=experiment_pk)
+    users = models.MyUser.objects.filter(
+        Q(favorite__experiment=experiment) |
+        Q(experiment=experiment)
+    ).distinct()
+
+    # Remove old recs with no associated Similarity
+    for rec in models.Recommendation.objects.filter(
+        referring_experiment=experiment,
+        rec_type='primary',
+    ):
+        if not models.Similarity.objects.filter(
+            sim_type='primary',
+            experiment_1=experiment,
+            experiment_2=rec.recommended_experiment,
+        ).exists():
+            rec.delete()
+
+    # Add new recs
+    for user in users:
+        for sim in models.Similarity.objects.filter(experiment_1=experiment):
+            models.Recommendation.objects.update_or_create(
+                user=user,
+                rec_type='primary',
+                referring_experiment=sim.experiment_1,
+                referring_dataset=sim.dataset_1,
+                recommended_experiment=sim.experiment_2,
+                recommended_dataset=sim.dataset_2,
+            )

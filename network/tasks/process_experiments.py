@@ -3,7 +3,7 @@ from celery.decorators import task
 
 from network import models
 from network.tasks.metadata_recommendations import \
-    update_metadata_recommendations
+    update_metadata_sims_and_recs
 from network.tasks.process_datasets import (
     download_bigwigs,
     process_dataset_intersections,
@@ -13,7 +13,7 @@ from network.tasks.process_datasets import (
 
 @task
 def process_experiment(experiment_pk):
-    update_metadata_recommendations.si(experiment_pk).delay()
+    update_metadata_sims_and_recs.si(experiment_pk).delay()
     process_experiment_datasets.si(experiment_pk).delay()
 
 
