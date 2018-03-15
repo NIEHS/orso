@@ -142,6 +142,12 @@ def update_primary_data_recommendations(experiment_pk):
         Q(experiment=experiment)
     ).distinct()
 
+    # Remove old recs with old users
+    models.Recommendation.objects.filter(
+        referring_experiment=experiment,
+        rec_type='primary',
+    ).exclude(user__in=users).delete()
+
     # Remove old recs with no associated Similarity
     for rec in models.Recommendation.objects.filter(
         referring_experiment=experiment,
