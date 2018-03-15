@@ -26,11 +26,11 @@ def process_experiment_datasets(experiment_pk, download=True):
             download_bigwigs.si(dataset_pks),
             chord(
                 process_dataset_intersections(dataset_pks),
-                update_and_clean.si(dataset_pks, experiment_pk),
+                update_and_clean.si(dataset_pks, experiment_pk=experiment_pk),
             ),
         )()
     else:
         chord(
             process_dataset_intersections(dataset_pks),
-            update_and_clean.si(dataset_pks, experiment_pk),
+            update_and_clean.si(dataset_pks, experiment_pk=experiment_pk),
         )()
