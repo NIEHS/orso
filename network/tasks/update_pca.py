@@ -112,9 +112,9 @@ def fit_and_set_pca(pca, df):
 
     fitted_pca_model = fit_pca(df)
     set_fitted_pca_model(pca, fitted_pca_model)
+    set_pca_loci(pca, df)
 
     transform_pca_datasets(pca.pk)
-    set_pca_loci(pca, df)
     set_pca_plot(pca)
 
 
