@@ -1,7 +1,10 @@
 import json
+import os
 import re
 import requests
 from collections import defaultdict
+
+from django.conf import settings
 
 ORGANISM_TO_NCBI_ID = {
     'human': 9606,
@@ -20,6 +23,26 @@ ASSEMBLY_TO_ORGANISM = {
     'ce11': 'worm',
 }
 
+ORGANISM_TO_ALIAS_FILE = dict()
+for organism, path in [
+    ('human', '9606.protein.aliases.v10.5.txt'),
+    ('mouse', '10090.protein.aliases.v10.5.txt'),
+    ('fly', '7227.protein.aliases.v10.5.txt'),
+    ('worm', '6239.protein.aliases.v10.5.txt'),
+]:
+    ORGANISM_TO_ALIAS_FILE[organism] = \
+        os.path.join(settings.STRING_DIR, path)
+
+ORGANISM_TO_LINK_FILE = dict()
+for organism, path in [
+    ('human', '9606.protein.links.v10.5.txt'),
+    ('mouse', '10090.protein.links.v10.5.txt'),
+    ('fly', '7227.protein.links.v10.5.txt'),
+    ('worm', '6239.protein.links.v10.5.txt'),
+]:
+    ORGANISM_TO_LINK_FILE[organism] = \
+        os.path.join(settings.STRING_DIR, path)
+
 
 def standardize_gene_name(gene):
 
@@ -28,10 +51,65 @@ def standardize_gene_name(gene):
     for prefix in tag_prefixes:
         gene = re.sub('^{}'.format(prefix), '', gene)
 
-    return gene
+    return gene.lower()
 
 
 def get_interaction_partners(genes, organism):
+    return get_interaction_partners_local(genes, organism)
+
+
+def get_interaction_partners_local(genes, organism, interaction_threshold=400):
+
+    # Convert to standardized gene names
+    standardized_to_input_names = dict()
+    for gene in genes:
+        standardized_name = standardize_gene_name(gene)
+        standardized_to_input_names[standardized_name] = gene
+    relevant_aliases = set(standardized_to_input_names.keys())
+
+    # Get aliases
+    alias_to_id = dict()
+    id_to_aliases = defaultdict(list)
+    with open(ORGANISM_TO_ALIAS_FILE[organism]) as f:
+        for line in f:
+            if not line.startswith('#'):
+                _id, _alias = line.strip().split('\t')[:2]
+                _alias = standardize_gene_name(_alias)
+
+                if _alias in relevant_aliases:
+                    alias_to_id[_alias] = _id
+                    id_to_aliases[_id].append(_alias)
+
+    # Get links
+    db_partners = defaultdict(list)
+    with open(ORGANISM_TO_LINK_FILE[organism]) as f:
+        next(f)
+        for line in f:
+            id_1, id_2, score = line.strip().split()
+
+            if all([
+                id_1 in id_to_aliases,
+                id_2 in id_to_aliases,
+                int(score) >= interaction_threshold,
+            ]):
+                db_partners[id_1].append(id_2)
+                db_partners[id_2].append(id_1)
+
+    # Create output dict
+    interaction_partners = defaultdict(set)
+    for alias in relevant_aliases:
+        input_name = standardized_to_input_names[alias]
+        if alias in alias_to_id:
+            alias_id = alias_to_id[alias]
+            for interaction_partner in db_partners[alias_id]:
+                for interacting_alias in id_to_aliases[interaction_partner]:
+                    interaction_partners[input_name].add(
+                        standardized_to_input_names[interacting_alias])
+
+    return interaction_partners
+
+
+def get_interaction_partners_network(genes, organism):
 
     string_api_url = 'https://string-db.org/api'
     output_format = 'json'
@@ -54,12 +132,7 @@ def get_interaction_partners(genes, organism):
     try:
         response_json = json.loads(response.text)
     except json.JSONDecodeError:
-        if '414 Request-URI Too Large' in response.text:
-            print('414 Request-URI Too Large')
-        elif '414 Request-URI Too Long' in response.text:
-            print('414 Request-URI Too Long')
-        else:
-            print(response.text)
+        print(response.text)
         raise
 
     interaction_partners = defaultdict(list)

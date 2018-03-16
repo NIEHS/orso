@@ -184,6 +184,7 @@ CACHES = {
 }
 
 DATA_PATH = '/Users/lavenderca/genomics_network/data'
+
 INTERSECTION_BED_DIR = os.path.join(
     PROJECT_PATH, 'data', 'intersection_bed_files')
 METAPLOT_BED_DIR = os.path.join(
@@ -194,6 +195,8 @@ COLOR_KEY_DIR = os.path.join(
     PROJECT_PATH, 'data', 'colors')
 ONTOLOGY_DIR = os.path.join(
     PROJECT_PATH, 'data', 'ontologies')
+STRING_DIR = os.path.join(
+    PROJECT_PATH, 'data', 'string')
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
