@@ -89,6 +89,17 @@ RUN mkdir -p /network/data/bigwig_temp
 COPY ontologies.tar.gz /network/data
 RUN tar -xzf /network/data/ontologies.tar.gz -C /network/data/
 
+RUN mkdir -p /network/data/string && \
+    wget -P /network/data/string https://stringdb-static.org/download/protein.links.v10.5/9606.protein.links.v10.5.txt.gz && \
+    wget -P /network/data/string https://stringdb-static.org/download/protein.links.v10.5/10090.protein.links.v10.5.txt.gz && \
+    wget -P /network/data/string https://stringdb-static.org/download/protein.links.v10.5/7227.protein.links.v10.5.txt.gz && \
+    wget -P /network/data/string https://stringdb-static.org/download/protein.links.v10.5/6239.protein.links.v10.5.txt.gz && \
+    wget -P /network/data/string https://stringdb-static.org/download/protein.links.v10.5/9606.protein.aliases.v10.5.txt.gz && \
+    wget -P /network/data/string https://stringdb-static.org/download/protein.links.v10.5/10090.protein.aliases.v10.5.txt.gz && \
+    wget -P /network/data/string https://stringdb-static.org/download/protein.links.v10.5/7227.protein.aliases.v10.5.txt.gz && \
+    wget -P /network/data/string https://stringdb-static.org/download/protein.links.v10.5/6239.protein.aliases.v10.5.txt.gz && \
+    gzip -d /network/data/string/*gz
+
 RUN chown -R django /network
 RUN chown -R django /app
 
