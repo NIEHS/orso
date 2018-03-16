@@ -50,7 +50,17 @@ def get_interaction_partners(genes, organism):
     request_url += "&" + "species=" + str(species)
 
     response = requests.get(request_url)
-    response_json = json.loads(response.text)
+
+    try:
+        response_json = json.loads(response.text)
+    except json.JSONDecodeError:
+        if '414 Request-URI Too Large' in response.text:
+            print('414 Request-URI Too Large')
+        elif '414 Request-URI Too Long' in response.text:
+            print('414 Request-URI Too Long')
+        else:
+            print(response.text)
+        raise
 
     interaction_partners = defaultdict(list)
 
