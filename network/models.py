@@ -199,6 +199,31 @@ class Favorite(models.Model):
     created = models.DateTimeField(auto_now_add=True, null=True)
 
 
+class Access(models.Model):
+    user = models.ForeignKey('MyUser')
+    access_count = models.PositiveIntegerField(default=0)
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
+    class Meta:
+        abstract = True
+
+
+class ExperimentAccess(Access):
+    experiment = models.ForeignKey('Experiment')
+
+    class Meta:
+        unique_together = ('user', 'experiment')
+
+
+class DatasetAccess(Access):
+    dataset = models.ForeignKey('Dataset')
+
+    class Meta:
+        unique_together = ('user', 'dataset')
+
+
 class PrimaryDataRec(models.Model):
     user = models.ForeignKey('MyUser')
     experiment = models.ForeignKey(
