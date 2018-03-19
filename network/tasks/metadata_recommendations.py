@@ -11,6 +11,7 @@ from django.db.models import Q
 from analysis.string_db import (
     ASSEMBLY_TO_ORGANISM, get_organism_to_interaction_partners_dict)
 from network import models
+from network.tasks.recommendations import update_recommendations
 
 EXPERIMENT_TYPE_TO_RELEVANT_FIELDS = {
     'RNA-PET': ['cell_type'],
@@ -204,7 +205,8 @@ def update_all_metadata_sims_and_recs():
 
     tasks = []
     for experiment in user_experiments:
-        tasks.append(update_metadata_recommendations.si(experiment.pk))
+        tasks.append(update_recommendations.si(
+            experiment.pk, sim_types=['metadata']))
 
     job = group(tasks)
     results = job.apply_async()
@@ -214,7 +216,7 @@ def update_all_metadata_sims_and_recs():
 @task
 def update_metadata_sims_and_recs(experiment_pk):
     update_metadata_similarities([experiment_pk])
-    update_metadata_recommendations(experiment_pk)
+    update_recommendations(experiment_pk, sim_types=['metadata'], lock=False)
 
 
 @task
@@ -263,40 +265,3 @@ def update_metadata_similarities(experiment_pks):
                             ).delete()
                         except models.Similarity.DoesNotExist:
                             pass
-
-
-@task
-def update_metadata_recommendations(experiment_pk):
-    experiment = models.Experiment.objects.get(pk=experiment_pk)
-    users = models.MyUser.objects.filter(
-        Q(favorite__experiment=experiment) |
-        Q(experiment=experiment)
-    ).distinct()
-
-    # Remove old recs with old users
-    models.Recommendation.objects.filter(
-        referring_experiment=experiment,
-        rec_type='metadata',
-    ).exclude(user__in=users).delete()
-
-    # Remove old recs with no associated Similarity
-    for rec in models.Recommendation.objects.filter(
-        referring_experiment=experiment,
-        rec_type='metadata',
-    ):
-        if not models.Similarity.objects.filter(
-            sim_type='metadata',
-            experiment_1=experiment,
-            experiment_2=rec.recommended_experiment,
-        ).exists():
-            rec.delete()
-
-    # Add new recs
-    for user in users:
-        for sim in models.Similarity.objects.filter(experiment_1=experiment):
-            models.Recommendation.objects.update_or_create(
-                user=user,
-                rec_type='metadata',
-                referring_experiment=sim.experiment_1,
-                recommended_experiment=sim.experiment_2,
-            )

@@ -7,9 +7,11 @@ from network import models
 from network.tasks.locks import ExpRecUpdateExecuteLock as ExecuteLock
 from network.tasks.locks import ExpRecUpdateQueueLock as QueueLock
 
+SIM_TYPES = models.Similarity._meta.get_field('sim_type').choices
+
 
 @task
-def update_recommendations(experiment_pk, lock=True):
+def update_recommendations(experiment_pk, lock=True, sim_types=SIM_TYPES):
 
     experiment = models.Experiment.objects.get(pk=experiment_pk)
     users = models.MyUser.objects.filter(
@@ -33,7 +35,7 @@ def update_recommendations(experiment_pk, lock=True):
     ).exclude(user__in=users).delete()
 
     # Remove old recs with no associated Similarity
-    for rec_type in ['primary', 'metadata']:
+    for rec_type in sim_types:
         for rec in models.Recommendation.objects.filter(
             referring_experiment=experiment,
             rec_type=rec_type,
@@ -47,7 +49,10 @@ def update_recommendations(experiment_pk, lock=True):
 
     # Add new recs
     for user in users:
-        for sim in models.Similarity.objects.filter(experiment_1=experiment):
+        for sim in models.Similarity.objects.filter(
+            experiment_1=experiment,
+            sim_type__in=sim_types,
+        ):
             models.Recommendation.objects.update_or_create(
                 user=user,
                 rec_type=sim.sim_type,

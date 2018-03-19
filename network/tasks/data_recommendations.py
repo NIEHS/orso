@@ -3,6 +3,7 @@ from celery.decorators import task
 from django.db.models import Q
 
 from network import models
+from network.tasks.recommendations import update_recommendations
 
 
 def update_all_primary_data_sims_and_recs():
@@ -21,7 +22,8 @@ def update_all_primary_data_sims_and_recs():
 
     tasks = []
     for experiment in user_experiments:
-        tasks.append(update_primary_data_recommendations.si(experiment.pk))
+        tasks.append(update_recommendations.si(
+            experiment.pk, sim_types=['primary']))
 
     job = group(tasks)
     results = job.apply_async()
@@ -31,7 +33,7 @@ def update_all_primary_data_sims_and_recs():
 @task
 def update_primary_data_sims_and_recs(experiment_pk):
     update_primary_data_similarities(experiment_pk)
-    update_primary_data_recommendations(experiment_pk)
+    update_recommendations(experiment_pk, sim_types=['primary'], lock=False)
 
 
 @task
@@ -132,42 +134,3 @@ def update_primary_data_similarities(experiment_pk):
                                            ).delete())
                                 except models.Similarity.DoesNotExist:
                                     pass
-
-
-@task
-def update_primary_data_recommendations(experiment_pk):
-    experiment = models.Experiment.objects.get(pk=experiment_pk)
-    users = models.MyUser.objects.filter(
-        Q(favorite__experiment=experiment) |
-        Q(experiment=experiment)
-    ).distinct()
-
-    # Remove old recs with old users
-    models.Recommendation.objects.filter(
-        referring_experiment=experiment,
-        rec_type='primary',
-    ).exclude(user__in=users).delete()
-
-    # Remove old recs with no associated Similarity
-    for rec in models.Recommendation.objects.filter(
-        referring_experiment=experiment,
-        rec_type='primary',
-    ):
-        if not models.Similarity.objects.filter(
-            sim_type='primary',
-            experiment_1=experiment,
-            experiment_2=rec.recommended_experiment,
-        ).exists():
-            rec.delete()
-
-    # Add new recs
-    for user in users:
-        for sim in models.Similarity.objects.filter(experiment_1=experiment):
-            models.Recommendation.objects.update_or_create(
-                user=user,
-                rec_type='primary',
-                referring_experiment=sim.experiment_1,
-                referring_dataset=sim.dataset_1,
-                recommended_experiment=sim.experiment_2,
-                recommended_dataset=sim.dataset_2,
-            )
