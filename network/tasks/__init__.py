@@ -3,6 +3,7 @@ from .metadata_recommendations import *
 from .normalize import *
 from .process_datasets import *
 from .process_experiments import *
+from .recommendations import *
 from .select_transcripts import *
 from .update_encode import *
 from .update_pca import *
