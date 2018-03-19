@@ -87,7 +87,8 @@ COPY /data/colors /network/data/colors
 RUN mkdir -p /network/data/bigwig_temp
 
 COPY ontologies.tar.gz /network/data
-RUN tar -xzf /network/data/ontologies.tar.gz -C /network/
+RUN tar -xzf /network/data/ontologies.tar.gz -C /network/ && \
+    rm /network/data/ontologies.tar.gz
 
 RUN mkdir -p /network/data/string && \
     wget -P /network/data/string https://stringdb-static.org/download/protein.links.v10.5/9606.protein.links.v10.5.txt.gz && \
