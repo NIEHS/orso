@@ -775,6 +775,76 @@ class PCA(AddMyUserMixin, DetailView):
         return context
 
 
+class UserList(AddMyUserMixin, ListView):
+    model = models.MyUser
+
+    def dispatch(self, request, *args, **kwargs):
+        if self.request.user.is_authenticated():
+            self.my_user = models.MyUser.objects.get(user=self.request.user)
+        else:
+            self.my_user = None
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_paginate_by(self, qs):
+        val = 10
+        try:
+            val = int(self.request.GET.get('paginate_by', val))
+        except ValueError:
+            pass
+        return val
+
+    def get_page_objs(self, qs):
+        paginator = Paginator(qs, self.get_paginate_by(qs))
+        page = self.request.GET.get('page')
+
+        try:
+            current_objects = paginator.page(page)
+        except PageNotAnInteger:
+            current_objects = paginator.page(1)
+        except EmptyPage:
+            current_objects = paginator.page(paginator.num_pages)
+
+        return current_objects
+
+    def get_queryset(self, base_query):
+
+        query = base_query
+
+        # if self.form.is_valid():
+        #     query &= self.form.get_query()
+
+        qs = self.model.objects.filter(query).distinct()
+
+        paginator = Paginator(qs, self.get_paginate_by(qs))
+        page = self.request.GET.get('page')
+
+        try:
+            current_objects = paginator.page(page)
+        except PageNotAnInteger:
+            current_objects = paginator.page(1)
+        except EmptyPage:
+            current_objects = paginator.page(paginator.num_pages)
+
+        for obj in qs:
+            if obj in current_objects:
+
+                display_data = obj.get_display_data(self.my_user)
+
+                obj.plot_data = display_data['plot_data']
+                obj.meta_data = display_data['meta_data']
+                obj.urls = display_data['urls']
+
+        return qs
+
+
+class AllUsers(UserList):
+    template_name = 'users/all_users.html'
+
+    def get_queryset(self):
+        base_query = Q()
+        return super().get_queryset(base_query)
+
+
 class FavoriteUsers(LoginRequiredMixin, TemplateView, AddMyUserMixin):
     template_name = 'network/favorite_users.html'
 

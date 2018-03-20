@@ -50,10 +50,13 @@ urlpatterns = [
     url(r'^recommended_experiments/$', views.RecommendedExperiments.as_view(),
         name='recommended_experiments'),
 
+    url(r'^users/$', views.AllUsers.as_view(),
+        name='all_users'),
     url(r'^favorite_users/$', views.FavoriteUsers.as_view(),
         name='favorite_users'),
     url(r'^recommended_users/$', views.RecommendedUsers.as_view(),
         name='recommended_users'),
+
     url(r'^dataset-comparison/(?P<x>\d+)-(?P<y>\d+)/$',
         views.DatasetComparison.as_view(), name='dataset-comparison'),
     url(r'^experiment-comparison/(?P<x>\d+)-(?P<y>\d+)/$',

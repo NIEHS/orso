@@ -45,7 +45,7 @@ class PieChart extends React.Component {
     }
 
     pieId(){
-        return '_pie_' + this.props.index;
+        return '_pie_' + this.props.id;
     }
 
     render(){
@@ -59,7 +59,7 @@ PieChart.defaultProps = {
 
 PieChart.propTypes = {
     data: React.PropTypes.object.isRequired,
-    index: React.PropTypes.number.isRequired,
+    id: React.PropTypes.string.isRequired,
 };
 
 export default PieChart;

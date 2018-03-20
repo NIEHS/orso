@@ -1,18 +1,36 @@
 {% extends 'base.html' %}
+{% load url_replace %}
 
 {% block content %}
 
 <nav class="navbar navbar-sub">
     <div class="container">
         <ul class="nav navbar-nav">
-            <li><a href="{% url 'recommended_users' %}">Recommended users <span id="recommended_counts" class="badge">{{user_counts.recommendations}}</span></a></li>
-            <li><a href="{% url 'favorite_users' %}">Favorite users <span id="favorite_counts" class="badge">{{user_counts.favorites}}</span></a></li>
+            <li><a href="{% url 'all_users' %}">All users</a></li>
+            <!-- <li><a href="{% url 'recommended_users' %}">Recommended users <span id="recommended_counts" class="badge">{{user_counts.recommendations}}</span></a></li>
+            <li><a href="{% url 'favorite_users' %}">Favorite users <span id="favorite_counts" class="badge">{{user_counts.favorites}}</span></a></li> -->
         </ul>
     </div>
 </nav>
 
 <div class="container container-fluid">
     <div id="user_container"></div>
+
+    {% if is_paginated %}
+        <div class="pagination">
+            <span class="page-links">
+                {% if page_obj.has_previous %}
+                    <a href="?{% url_replace request 'page' page_obj.previous_page_number %}">previous</a>
+                {% endif %}
+                <span class="page-current">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                </span>
+                {% if page_obj.has_next %}
+                    <a href="?{% url_replace request 'page' page_obj.next_page_number %}">next</a>
+                {% endif %}
+            </span>
+        </div>
+    {% endif %}
 </div>
 
 {% endblock content %}

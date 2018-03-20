@@ -62,6 +62,9 @@ class SmallUserView extends React.Component {
         var id_select = 'panel_' + this.props.meta_data['id'];
         var id_css_select = '#' + id_select;
 
+        var pie_id_1 = '' + this.props.meta_data['pk'] + '_0';
+        var pie_id_2 = '' + this.props.meta_data['pk'] + '_1';
+
         return <div className="panel panel-default" id={id_select}>
             <div className="panel-heading">
                 <div className="panel-title pull-left">
@@ -98,24 +101,30 @@ class SmallUserView extends React.Component {
                     <div style={{height:"200px"}} className="col-sm-6">
                         <ul>
                             <li>{this.props.meta_data['dataset_number']} datasets</li>
-                            <li>{this.props.meta_data['user_favorite_number']} favorite users</li>
-                            <li>Favorited by {this.props.meta_data['user_favorited_by_number']} users</li>
+                            <li>Following {this.props.meta_data['user_following_number']} users</li>
+                            <li>Followed by {this.props.meta_data['user_followed_by_number']} users</li>
                             <li>{this.props.meta_data['data_favorite_number']} favorite datasets</li>
                             <li>Datasets favorited {this.props.meta_data['data_favorited_by_number']} times</li>
                         </ul>
                     </div>
-                    <div style={{height:"150px"}} className="col-sm-3">
-                        <h4 style={{textAlign:"center"}}>Assembly</h4>
-                        <PieChart
-                            data={this.props.plot_data['assembly_counts']}
-                        />
-                    </div>
-                    <div style={{height:"150px"}} className="col-sm-3">
-                        <h4 style={{textAlign:"center"}}>Experiment types</h4>
-                        <PieChart
-                            data={this.props.plot_data['experiment_counts']}
-                        />
-                    </div>
+                    {Object.keys(this.props.plot_data['assembly_counts']).length > 0 &&
+                        <div className="col-sm-3">
+                            <h4 style={{textAlign:"center"}}>Assembly</h4>
+                            <PieChart
+                                data={this.props.plot_data['assembly_counts']}
+                                id={pie_id_1}
+                            />
+                        </div>
+                    }
+                    {Object.keys(this.props.plot_data['experiment_counts']).length > 0 &&
+                        <div className="col-sm-3">
+                            <h4 style={{textAlign:"center"}}>Experiment types</h4>
+                            <PieChart
+                                data={this.props.plot_data['experiment_counts']}
+                                id={pie_id_2}
+                            />
+                        </div>
+                    }
                 </div>
             </div>
         </div>;

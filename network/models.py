@@ -69,19 +69,15 @@ class MyUser(models.Model):
         detail['username'] = self.user.username
         detail['pk'] = self.pk
 
-        experiments = Experiment.objects.filter(owners__in=[self])
-        detail['dataset_number'] = len(experiments)
-        detail['data_favorited_by_number'] = 0
-        # for exp in experiments:
-        #     detail['data_favorited_by_number'] += \
-        #         len(ExperimentFavorite.objects.filter(favorite=exp))
-        #
-        # detail['data_favorite_number'] = \
-        #     len(ExperimentFavorite.objects.filter(owner=self))
-        # detail['user_favorite_number'] = \
-        #     len(UserFavorite.objects.filter(owner=self))
-        # detail['user_favorited_by_number'] = \
-        #     len(UserFavorite.objects.filter(favorite=self))
+        detail['dataset_number'] = \
+            Experiment.objects.filter(owners=self).distinct().count()
+        detail['data_favorited_by_number'] = \
+            Favorite.objects.filter(experiment__owners=self).distinct().count()
+        detail['data_favorite_number'] = \
+            Favorite.objects.filter(user=self).count()
+
+        detail['user_followed_by_number'] = 0
+        detail['user_following_number'] = 0
 
         if my_user:
             detail['is_favorite'] = self.is_favorite(my_user)
