@@ -872,7 +872,7 @@ class AllUsers(UserList):
     template_name = 'users/all_users.html'
 
     def get_queryset(self):
-        base_query = Q()
+        base_query = ~Q(pk=self.my_user.pk)
         return super().get_queryset(base_query)
 
 
