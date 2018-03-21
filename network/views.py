@@ -777,6 +777,7 @@ class PCA(AddMyUserMixin, DetailView):
 
 class UserList(AddMyUserMixin, ListView):
     model = models.MyUser
+    form_class = forms.UserFilterForm
 
     def dispatch(self, request, *args, **kwargs):
         if self.request.user.is_authenticated():
@@ -784,6 +785,24 @@ class UserList(AddMyUserMixin, ListView):
         else:
             self.my_user = None
         return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            pk = self.kwargs['pk']
+            if self.request.GET:
+                self.form = self.form_class(
+                    self.request.GET, pk=pk,
+                )
+            else:
+                self.form = self.form_class(pk=pk)
+        except:
+            if self.request.GET:
+                self.form = self.form_class(
+                    self.request.GET
+                )
+            else:
+                self.form = self.form_class()
+        return super().get(request, *args, **kwargs)
 
     def get_paginate_by(self, qs):
         val = 10
@@ -810,8 +829,8 @@ class UserList(AddMyUserMixin, ListView):
 
         query = base_query
 
-        # if self.form.is_valid():
-        #     query &= self.form.get_query()
+        if self.form.is_valid():
+            query &= self.form.get_query()
 
         qs = self.model.objects.filter(query).distinct()
 
@@ -836,12 +855,40 @@ class UserList(AddMyUserMixin, ListView):
 
         return qs
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['form'] = self.form
+        context['search_field'] = self.form['search']
+        context['other_fields'] = []
+        for field in self.form:
+            if field.name != 'search':
+                context['other_fields'].append(field)
+
+        return context
+
 
 class AllUsers(UserList):
     template_name = 'users/all_users.html'
 
     def get_queryset(self):
         base_query = Q()
+        return super().get_queryset(base_query)
+
+
+class FollowedUsers(LoginRequiredMixin, UserList):
+    template_name = 'users/all_users.html'
+
+    def get_queryset(self):
+        base_query = Q(followed__following=self.my_user)
+        return super().get_queryset(base_query)
+
+
+class Followers(LoginRequiredMixin, UserList):
+    template_name = 'users/all_users.html'
+
+    def get_queryset(self):
+        base_query = Q(following__followed=self.my_user)
         return super().get_queryset(base_query)
 
 

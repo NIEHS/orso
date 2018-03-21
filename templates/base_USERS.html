@@ -7,11 +7,62 @@
     <div class="container">
         <ul class="nav navbar-nav">
             <li><a href="{% url 'all_users' %}">All users</a></li>
-            <!-- <li><a href="{% url 'recommended_users' %}">Recommended users <span id="recommended_counts" class="badge">{{user_counts.recommendations}}</span></a></li>
-            <li><a href="{% url 'favorite_users' %}">Favorite users <span id="favorite_counts" class="badge">{{user_counts.favorites}}</span></a></li> -->
+            <li><a href="{% url 'followed_users' %}">Following</a></li>
+            <li><a href="{% url 'followers' %}">Followers</a></li>
+            <!-- <li><a href="{% url 'followed_users' %}">Following <span id="followed_counts" class="badge">{{user_counts.followed_counts}}</span></a></li> -->
         </ul>
     </div>
 </nav>
+
+{% endblock content %}
+
+{% block sub-content %}
+
+<form action="." method="get">
+<fieldset>
+<div class="container">
+    <!-- <div class="accordion" id="filterForm">
+        <div class="accordion-group"> -->
+            <div>{{search_field.label_tag}}</div>
+            <div class="row">
+                <div class="col-sm-10 col-extend">
+                    {{search_field}}
+                </div>
+                <div class="col-sm-2">
+                    <button type="submit" class="btn btn-primary btn-block">Go</button>
+                </div>
+            </div>
+            <!-- <div class="accordion-heading">
+                <a class="accordion-toggle" data-toggle="collapse" data-parent="#filterForm" href="#EndpointForm" title="Filter endpoints">
+                Advanced search options
+                </a>
+            </div> -->
+            <!-- <div id="EndpointForm" class="accordion-body collapse">
+                <div class="accordion-inner container">
+                    {{ form.non_field_errors}}
+                    {% for field in other_fields %}
+                        {% if forloop.counter0|divisibleby:4 %}
+                        <div class="row">
+                        {% endif %}
+                            <div class="col-sm-3">
+                                {{field.label_tag}}
+                                <div class="controls">
+                                    {{field}}<br>
+                                    <span class='help-inline'>{{field.help_text}}</span>
+                                </div>
+                                {{field.errors}}
+                            </div>
+                        {% if forloop.counter0|add:1|divisibleby:4 %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div> -->
+        </div>
+    </div>
+</div>
+</fieldset>
+</form>
 
 <div class="container container-fluid">
     <div id="user_container"></div>
@@ -33,4 +84,4 @@
     {% endif %}
 </div>
 
-{% endblock content %}
+{% endblock sub-content %}

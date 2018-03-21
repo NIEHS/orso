@@ -392,6 +392,20 @@ class SimExpSearchLookup(ExperimentSearchLookup):
             .order_by('name')\
             .distinct()
 
+
+class UserNameLookup(DistinctStringLookup):
+    model = models.MyUser
+    distinct_field = 'user__username'
+
+    def get_query(self, request, term):
+        return self.get_queryset() \
+            .filter(**{self.distinct_field + '__icontains': term}) \
+            .order_by(self.distinct_field) \
+            .distinct(self.distinct_field)
+
+    def get_item_value(self, item):
+        return getattr(getattr(item, 'user'), 'username')
+
 registry.register(AllExpNameLookup)
 registry.register(AllExpDescriptionLookup)
 registry.register(AllExpTypeLookup)
@@ -431,3 +445,5 @@ registry.register(SimExpCellTypeLookup)
 registry.register(SimExpTargetLookup)
 registry.register(SimExpAssemblyLookup)
 registry.register(SimExpSearchLookup)
+
+registry.register(UserNameLookup)

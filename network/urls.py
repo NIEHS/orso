@@ -52,10 +52,10 @@ urlpatterns = [
 
     url(r'^users/$', views.AllUsers.as_view(),
         name='all_users'),
-    url(r'^favorite_users/$', views.FavoriteUsers.as_view(),
-        name='favorite_users'),
-    url(r'^recommended_users/$', views.RecommendedUsers.as_view(),
-        name='recommended_users'),
+    url(r'^followed_users/$', views.FollowedUsers.as_view(),
+        name='followed_users'),
+    url(r'^followers/$', views.Followers.as_view(),
+        name='followers'),
 
     url(r'^dataset-comparison/(?P<x>\d+)-(?P<y>\d+)/$',
         views.DatasetComparison.as_view(), name='dataset-comparison'),

@@ -128,26 +128,31 @@ class UserViewset(viewsets.ModelViewSet):
     def get_queryset(self):
         return models.MyUser.objects.all()
 
-    @detail_route(methods=['get'], url_path='add-favorite')
+    @detail_route(methods=['get'], url_path='follow')
     def add_user_to_favorites(self, request, pk=None):
         object = self.get_object()
         my_user = models.MyUser.objects.get(user=self.request.user)
 
-        models.UserFavorite.objects.create(
-            owner=my_user,
-            favorite=object,
+        models.Follow.objects.update_or_create(
+            followed=object,
+            following=my_user,
         )
 
         return HttpResponse(status=202)
 
-    @detail_route(methods=['get'], url_path='remove-favorite')
+    @detail_route(methods=['get'], url_path='stop-following')
     def remove_user_from_favorites(self, request, pk=None):
         object = self.get_object()
         my_user = models.MyUser.objects.get(user=self.request.user)
 
-        favorite = models.UserFavorite.objects.get(
-            owner=my_user, favorite=object)
-        favorite.delete()
+        try:
+            follow = models.Follow.objects.get(
+                followed=object,
+                following=my_user,
+            )
+            follow.delete()
+        except models.Follow.DoesNotExist:
+            pass
 
         return HttpResponse(status=202)
 

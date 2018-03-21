@@ -6,7 +6,7 @@ class SmallUserView extends React.Component {
 
     constructor(props) {
         super(props);
-        this.state = {is_favorite: (props.meta_data['is_favorite'] === 'true')};
+        this.state = {is_followed: (props.meta_data['is_followed'] === 'true')};
     }
 
     componentDidMount(){
@@ -17,9 +17,9 @@ class SmallUserView extends React.Component {
         let self = this;
 
         $(this.refs.favorite_button).on('click', function () {
-            if (self.state.is_favorite) {
+            if (self.state.is_followed) {
                 self.setState({
-                    is_favorite: false
+                    is_followed: false
                 });
 
                 let favorite_count = parseInt($('#favorite_counts').html());
@@ -30,7 +30,7 @@ class SmallUserView extends React.Component {
 
             } else {
                 self.setState({
-                    is_favorite: true
+                    is_followed: true
                 });
 
                 let favorite_count = parseInt($('#favorite_counts').html());
@@ -74,7 +74,7 @@ class SmallUserView extends React.Component {
                     {this.props.display_favorite &&
                         <button type="button" ref="favorite_button" className="panel-close-button">
                             &nbsp;
-                            {this.state.is_favorite ? (
+                            {this.state.is_followed ? (
                                 <span className="glyphicon glyphicon-star"></span>
                             ) : (
                                 <span className="glyphicon glyphicon-star-empty"></span>

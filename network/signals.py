@@ -5,8 +5,26 @@ from django.dispatch import receiver
 from . import tasks, models
 
 
-# TODO: add a lock for favorite recommendation updates; can be queued/fired
-# multiple times
+@receiver(post_save, sender=models.Follow)
+def follow_post_save_update(sender, instance, created, **kwargs):
+    if created:
+        lock = tasks.locks.UserRecUpdateQueueLock(
+            instance.following, instance.followed)
+        if lock.add():
+            (tasks.recommendations
+                  .update_user_recommendations
+                  .si(instance.following.pk, instance.followed.pk).delay())
+
+
+@receiver(pre_delete, sender=models.Follow)
+def follow_pre_delete_update(sender, instance, **kwargs):
+    lock = tasks.locks.UserRecUpdateQueueLock(
+        instance.following, instance.followed)
+    if lock.add():
+        (tasks.recommendations
+              .update_user_recommendations
+              .si(instance.following.pk, instance.followed.pk).delay())
+
 
 @receiver(post_save, sender=models.Favorite)
 def favorite_post_save_update(sender, instance, created, **kwargs):

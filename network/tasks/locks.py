@@ -45,3 +45,29 @@ class ExpRecUpdateExecuteLock(Lock):
             'experiment-recommendation-update-execute',
             str(experiment.pk),
         ])
+
+
+class UserRecUpdateQueueLock(Lock):
+    def __init__(self, following, followed):
+        lock_key = self.create_lock_key(following, followed)
+        super().__init__(lock_key)
+
+    def create_lock_key(self, following, followed):
+        return '-'.join([
+            'user-recommendation-update-queue',
+            str(following.pk),
+            str(followed.pk),
+        ])
+
+
+class UserRecUpdateExecuteLock(Lock):
+    def __init__(self, following, followed):
+        lock_key = self.create_lock_key(following, followed)
+        super().__init__(lock_key)
+
+    def create_lock_key(self, following, followed):
+        return '-'.join([
+            'user-recommendation-update-execute',
+            str(following.pk),
+            str(followed.pk),
+        ])

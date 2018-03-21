@@ -53,6 +53,9 @@ class MyUser(models.Model):
     slug = models.CharField(
         max_length=128)
 
+    def __str__(self):
+        return self.user.username
+
     class Meta:
         verbose_name = 'MyUser'
         verbose_name_plural = 'MyUsers'
@@ -80,7 +83,7 @@ class MyUser(models.Model):
         detail['user_following_number'] = 0
 
         if my_user:
-            detail['is_favorite'] = self.is_favorite(my_user)
+            detail['is_followed'] = self.is_followed(my_user)
 
         return detail
 
@@ -123,9 +126,9 @@ class MyUser(models.Model):
     #     }
 
     def get_urls(self):
-        add_favorite = reverse('api:user-add-favorite', kwargs={'pk': self.pk})
+        add_favorite = reverse('api:user-follow', kwargs={'pk': self.pk})
         remove_favorite = \
-            reverse('api:user-remove-favorite', kwargs={'pk': self.pk})
+            reverse('api:user-stop-following', kwargs={'pk': self.pk})
         hide_recommendation = \
             reverse('api:user-hide-recommendation', kwargs={'pk': self.pk})
         detail = reverse('user', kwargs={'pk': self.pk})
@@ -137,12 +140,11 @@ class MyUser(models.Model):
             'detail': detail,
         }
 
-    def is_favorite(self, my_user):
-        # if UserFavorite.objects.filter(owner=my_user, favorite=self).exists():  # noqa
-        #     return 'true'
-        # else:
-        #     return 'false'
-        return 'false'
+    def is_followed(self, my_user):
+        if Follow.objects.filter(following=my_user, followed=self).exists():
+            return 'true'
+        else:
+            return 'false'
 
     def get_display_data(self, my_user):
         plot_data = dict()
@@ -267,10 +269,15 @@ class Recommendation(models.Model):
         'Dataset', related_name='referring_dataset',
         null=True, blank=True,
     )
+    referring_user = models.ForeignKey(
+        'MyUser', related_name='referring_user',
+        null=True, blank=True,
+    )
 
     choices = [
         ('primary', 'primary'),
         ('metadata', 'metadata'),
+        ('user', 'user'),
     ]
     rec_type = models.CharField(choices=choices, max_length=32)
 

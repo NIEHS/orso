@@ -4,14 +4,12 @@ from celery.decorators import task
 from django.db.models import Q
 
 from network import models
-from network.tasks.locks import ExpRecUpdateExecuteLock as ExecuteLock
-from network.tasks.locks import ExpRecUpdateQueueLock as QueueLock
-
-SIM_TYPES = models.Similarity._meta.get_field('sim_type').choices
+from network.tasks import locks
 
 
 @task
-def update_recommendations(experiment_pk, lock=True, sim_types=SIM_TYPES):
+def update_recommendations(experiment_pk, lock=True,
+                           sim_types=['metadata', 'primary']):
 
     experiment = models.Experiment.objects.get(pk=experiment_pk)
     users = models.MyUser.objects.filter(
@@ -20,8 +18,8 @@ def update_recommendations(experiment_pk, lock=True, sim_types=SIM_TYPES):
     ).distinct()
 
     if lock:
-        execute_lock = ExecuteLock(experiment)
-        queue_lock = QueueLock(experiment)
+        execute_lock = locks.ExpRecUpdateExecuteLock(experiment)
+        queue_lock = locks.ExpRecUpdateQueueLock(experiment)
 
         while execute_lock.exists():
             time.sleep(10)
@@ -61,6 +59,48 @@ def update_recommendations(experiment_pk, lock=True, sim_types=SIM_TYPES):
                 recommended_experiment=sim.experiment_2,
                 recommended_dataset=sim.dataset_2,
             )
+
+    if lock:
+        execute_lock.delete()
+
+
+@task
+def update_user_recommendations(following_user_pk, followed_user_pk,
+                                lock=True):
+
+    following = models.MyUser.objects.get(pk=following_user_pk)
+    followed = models.MyUser.objects.get(pk=followed_user_pk)
+
+    if lock:
+        execute_lock = locks.UserRecUpdateExecuteLock(following, followed)
+        queue_lock = locks.UserRecUpdateQueueLock(following, followed)
+
+        while execute_lock.exists():
+            time.sleep(10)
+
+        execute_lock.add()
+        queue_lock.delete()
+
+    if models.Follow.objects.filter(
+        following=following,
+        followed=followed,
+    ).exists():
+        for exp in models.Experiment.objects.filter(owners=followed):
+            models.Recommendation.objects.update_or_create(
+                user=following,
+                recommended_experiment=exp,
+                referring_user=followed,
+                rec_type='user',
+            )
+    else:
+        try:
+            models.Recommendation.objects.filter(
+                user=following,
+                referring_user=followed,
+                rec_type='user',
+            ).delete()
+        except models.Recommendation.DoesNotExist:
+            pass
 
     if lock:
         execute_lock.delete()

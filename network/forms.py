@@ -7,6 +7,33 @@ from . import lookups
 from . import models
 
 
+class UserFilterForm(forms.Form):
+
+    search = forms.CharField(
+        label='Search',
+        required=False)
+
+    paginate_by = forms.IntegerField(
+        label='Items per page',
+        min_value=1,
+        initial=10,
+        max_value=10000,
+        required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['search'].widget = \
+            AutoCompleteWidget(lookups.UserNameLookup)
+
+    def get_query(self):
+
+        search = self.cleaned_data.get('search')
+        search_query = Q(user__username__contains=search)
+
+        return search_query
+
+
 class ExperimentFilterForm(forms.Form):
 
     search = forms.CharField(
