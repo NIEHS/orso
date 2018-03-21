@@ -79,8 +79,10 @@ class MyUser(models.Model):
         detail['data_favorite_number'] = \
             Favorite.objects.filter(user=self).count()
 
-        detail['user_followed_by_number'] = 0
-        detail['user_following_number'] = 0
+        detail['user_followed_by_number'] = \
+            Follow.objects.filter(followed=self).count()
+        detail['user_following_number'] = \
+            Follow.objects.filter(following=self).count()
 
         if my_user:
             detail['is_followed'] = self.is_followed(my_user)
