@@ -127,6 +127,11 @@ class ExperimentCreate(LoginRequiredMixin, NeverCacheFormMixin, AddMyUserMixin,
 
         process_experiment(self.object.pk)
 
+        models.Activity.objects.create(
+            user=login_user,
+            created_experiment=self.object,
+        )
+
         return HttpResponseRedirect(self.get_success_url())
 
     def form_invalid(self, form, dataset_formset):
