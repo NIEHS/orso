@@ -1167,19 +1167,19 @@ class AdminNotification(models.Model):
 
 
 class Activity(models.Model):
-    owner = models.ForeignKey('MyUser', related_name='owner', blank=True)
-    admin_action = models.BooleanField(default=False)
+    user = models.ForeignKey('MyUser', blank=True, null=True)
 
-    POSSIBLE_ACTIONS = [
-        ('added', 'added'),
-        ('created', 'created'),
-        ('favorited', 'favorited'),
-    ]
+    created_experiment = models.ForeignKey(
+        'Experiment', related_name='created_experiment',
+        blank=True, null=True)
+    favorited_experiment = models.ForeignKey(
+        'Experiment', related_name='favorited_experiment',
+        blank=True, null=True)
+    followed_user = models.ForeignKey(
+        'MyUser', related_name='followed_user',
+        blank=True, null=True)
 
-    action = models.CharField(choices=POSSIBLE_ACTIONS, max_length=64)
-
-    dataset = models.ForeignKey('Dataset')
-    experiment = models.ForeignKey('Experiment')
-    user = models.ForeignKey('MyUser', related_name='target_user')
+    administrative_action = models.BooleanField(default=False)
 
     created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)

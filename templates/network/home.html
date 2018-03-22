@@ -2,8 +2,47 @@
 
 {% block content %}
 <div class="container container-fluid">
-    <div>{{user.username}}</div>
+
+    <h1>Welcome back, <b>{{user.username}}</b>!</h1>
+    <h2>Recent activity</h2>
+    {% for activity in object_list %}
+        {% if activity.followed_user %}
+            {% if activity.followed_user.user == user %}
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <a href="{% url 'user' pk=activity.user.pk %}">{{activity.user}}</a>
+                        followed you.
+                    </div>
+                </div>
+            {% else %}
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <a href="{% url 'user' pk=activity.user.pk %}">{{activity.user}}</a>
+                        followed
+                        <a href="{% url 'user' pk=activity.followed_user.pk %}">{{activity.followed_user}}</a> .
+                    </div>
+                </div>
+            {% endif %}
+        {% elif activity.created_experiment %}
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <a href="{% url 'user' pk=activity.user.pk %}">{{activity.user}}</a>
+                    created experiment
+                    <a href="{% url 'experiment' pk=activity.created_experiment.pk %}">{{activity.created_experiment}}</a>.
+                </div>
+            </div>
+        {% elif activity.favorited_experiment %}
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <a href="{% url 'user' pk=activity.user.pk %}">{{activity.user}}</a>
+                    favorited experiment
+                    <a href="{% url 'experiment' pk=activity.favorited_experiment.pk %}">{{activity.favorited_experiment}}</a>.
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
 </div>
+
 {% endblock content %}
 
 {% block extra-js %}
