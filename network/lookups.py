@@ -398,8 +398,10 @@ class UserNameLookup(DistinctStringLookup):
     distinct_field = 'user__username'
 
     def get_query(self, request, term):
+        my_user = models.MyUser.objects.get(user=request.user)
         return self.get_queryset() \
             .filter(**{self.distinct_field + '__icontains': term}) \
+            .exclude(pk=my_user.pk) \
             .order_by(self.distinct_field) \
             .distinct(self.distinct_field)
 
