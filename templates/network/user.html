@@ -43,14 +43,14 @@ $(document).ready(function(){
             star_glyph.removeClass('glyphicon-star-empty')
             star_glyph.addClass('glyphicon-star')
 
-            $.ajax({url: '{% url 'api:user-add-favorite' myuser.pk %}'});
+            $.ajax({url: '{% url 'api:user-follow' myuser.pk %}'});
         }
 
         else if (star_glyph.hasClass('glyphicon-star')) {
             star_glyph.removeClass('glyphicon-star')
             star_glyph.addClass('glyphicon-star-empty')
 
-            $.ajax({url: '{% url 'api:user-remove-favorite' myuser.pk %}'});
+            $.ajax({url: '{% url 'api:user-stop-following' myuser.pk %}'});
         }
     });
 
