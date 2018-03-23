@@ -756,6 +756,14 @@ class SimilarExperiments(ExperimentList):
 
         return qs
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['ref_experiment'] = \
+            models.Experiment.objects.get(pk=self.kwargs['pk'])
+
+        return context
+
 
 class PCA(AddMyUserMixin, DetailView):
     template_name = 'network/pca.html'
