@@ -117,12 +117,12 @@ class AllExperimentFilterForm(ExperimentFilterForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields['search'].widget = \
-            AutoCompleteWidget(lookups.AllExpSearchLookup)
+        # self.fields['search'].widget = \
+        #     AutoCompleteWidget(lookups.AllExpSearchLookup)
         self.fields['name'].widget = \
             AutoCompleteWidget(lookups.AllExpNameLookup)
-        self.fields['description'].widget = \
-            AutoCompleteWidget(lookups.AllExpDescriptionLookup)
+        # self.fields['description'].widget = \
+        #     AutoCompleteWidget(lookups.AllExpDescriptionLookup)
         self.fields['data_type'].widget = \
             AutoCompleteWidget(lookups.AllExpTypeLookup)
         self.fields['cell_type'].widget = \
@@ -153,12 +153,12 @@ class RecommendedExperimentFilterForm(ExperimentFilterForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields['search'].widget = \
-            AutoCompleteWidget(lookups.RecExpSearchLookup)
+        # self.fields['search'].widget = \
+        #     AutoCompleteWidget(lookups.RecExpSearchLookup)
         self.fields['name'].widget = \
             AutoCompleteWidget(lookups.RecExpNameLookup)
-        self.fields['description'].widget = \
-            AutoCompleteWidget(lookups.RecExpDescriptionLookup)
+        # self.fields['description'].widget = \
+        #     AutoCompleteWidget(lookups.RecExpDescriptionLookup)
         self.fields['data_type'].widget = \
             AutoCompleteWidget(lookups.RecExpTypeLookup)
         self.fields['cell_type'].widget = \
@@ -177,12 +177,12 @@ class PersonalExperimentFilterForm(ExperimentFilterForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields['search'].widget = \
-            AutoCompleteWidget(lookups.PerExpSearchLookup)
+        # self.fields['search'].widget = \
+        #     AutoCompleteWidget(lookups.PerExpSearchLookup)
         self.fields['name'].widget = \
             AutoCompleteWidget(lookups.PerExpNameLookup)
-        self.fields['description'].widget = \
-            AutoCompleteWidget(lookups.PerExpDescriptionLookup)
+        # self.fields['description'].widget = \
+        #     AutoCompleteWidget(lookups.PerExpDescriptionLookup)
         self.fields['data_type'].widget = \
             AutoCompleteWidget(lookups.PerExpTypeLookup)
         self.fields['cell_type'].widget = \
@@ -198,12 +198,12 @@ class FavoriteExperimentFilterForm(ExperimentFilterForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields['search'].widget = \
-            AutoCompleteWidget(lookups.FavExpSearchLookup)
+        # self.fields['search'].widget = \
+        #     AutoCompleteWidget(lookups.FavExpSearchLookup)
         self.fields['name'].widget = \
             AutoCompleteWidget(lookups.FavExpNameLookup)
-        self.fields['description'].widget = \
-            AutoCompleteWidget(lookups.FavExpDescriptionLookup)
+        # self.fields['description'].widget = \
+        #     AutoCompleteWidget(lookups.FavExpDescriptionLookup)
         self.fields['data_type'].widget = \
             AutoCompleteWidget(lookups.FavExpTypeLookup)
         self.fields['cell_type'].widget = \
@@ -221,12 +221,12 @@ class SimilarExperimentFilterForm(ExperimentFilterForm):
         print('form', pk)
         super().__init__(*args, **kwargs)
 
-        self.fields['search'].widget = \
-            AutoCompleteWidget(lookups.SimExpSearchLookup)
+        # self.fields['search'].widget = \
+        #     AutoCompleteWidget(lookups.SimExpSearchLookup)
         self.fields['name'].widget = \
             AutoCompleteWidget(lookups.SimExpNameLookup)
-        self.fields['description'].widget = \
-            AutoCompleteWidget(lookups.SimExpDescriptionLookup)
+        # self.fields['description'].widget = \
+        #     AutoCompleteWidget(lookups.SimExpDescriptionLookup)
         self.fields['data_type'].widget = \
             AutoCompleteWidget(lookups.SimExpDataTypeLookup)
         self.fields['cell_type'].widget = \
