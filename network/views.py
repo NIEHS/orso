@@ -651,7 +651,7 @@ class ExperimentList(AddMyUserMixin, ListView):
 
 class AllExperiments(ExperimentList):
     model = models.Experiment
-    template_name = 'network/all_experiments.html'
+    template_name = 'experiments/all_experiments.html'
     form_class = forms.AllExperimentFilterForm
 
     def get_queryset(self):
@@ -661,7 +661,7 @@ class AllExperiments(ExperimentList):
 
 class PersonalExperiments(LoginRequiredMixin, ExperimentList):
     model = models.Experiment
-    template_name = 'network/personal_experiments.html'
+    template_name = 'experiments/personal_experiments.html'
     form_class = forms.PersonalExperimentFilterForm
 
     def get_queryset(self):
@@ -671,7 +671,7 @@ class PersonalExperiments(LoginRequiredMixin, ExperimentList):
 
 class FavoriteExperiments(LoginRequiredMixin, ExperimentList):
     model = models.Experiment
-    template_name = 'network/favorite_experiments.html'
+    template_name = 'experiments/favorite_experiments.html'
     form_class = forms.FavoriteExperimentFilterForm
 
     def get_queryset(self):
@@ -683,7 +683,7 @@ class FavoriteExperiments(LoginRequiredMixin, ExperimentList):
 # same class
 class RecommendedExperiments(LoginRequiredMixin, ExperimentList):
     model = models.Experiment
-    template_name = 'network/recommended_experiments.html'
+    template_name = 'experiments/recommended_experiments.html'
     form_class = forms.RecommendedExperimentFilterForm
 
     def get_queryset(self):
@@ -720,7 +720,7 @@ class RecommendedExperiments(LoginRequiredMixin, ExperimentList):
 
 class SimilarExperiments(ExperimentList):
     model = models.Experiment
-    template_name = 'network/similar_experiments.html'
+    template_name = 'experiments/similar_experiments.html'
     form_class = forms.SimilarExperimentFilterForm
 
     def get_queryset(self):
