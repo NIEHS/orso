@@ -724,63 +724,39 @@ class SimilarExperiments(ExperimentList):
     form_class = forms.SimilarExperimentFilterForm
 
     def get_queryset(self):
+
         exp = models.Experiment.objects.get(pk=self.kwargs['pk'])
 
-        order = self.form_class.order_choices[0][0]
-        if self.form.is_valid():
-            order = self.form.get_order()
-
-        # Get recommended experiments
-        if order == 'correlation_rank':
-            _query = Q(network_experimentdatadistance_first__experiment_2=exp)  # noqa
-            _query &= ~Q(network_experimentdatadistance_second__experiment_1=exp)  # noqa
-        elif order == 'metadata_rank':
-            _query = Q(network_experimentmetadatadistance_first__experiment_2=exp)  # noqa
-            _query &= ~Q(network_experimentmetadatadistance_second__experiment_1__in=exp)  # noqa
+        query = (
+            Q(sim_experiment_1__experiment_2=exp) |
+            Q(sim_experiment_2__experiment_1=exp)
+        )
 
         if self.form.is_valid():
-            _query &= self.form.get_query()
+            query &= self.form.get_query()
 
-        if order == 'correlation_rank':
-            agg = 'network_experimentdatadistance_first__distance'
-        elif order == 'metadata_rank':
-            agg = 'network_experimentmetadatadistance_first__distance'
-        qs = (self.model
-                  .objects
-                  .filter(_query)
-                  .annotate(min_distance=Min(agg))
-                  .order_by('min_distance'))
+        qs = self.model.objects.filter(query).distinct()
+
+        print(qs)
+
+        paginator = Paginator(qs, self.get_paginate_by(qs))
+        page = self.request.GET.get('page')
+
+        try:
+            current_objects = paginator.page(page)
+        except PageNotAnInteger:
+            current_objects = paginator.page(1)
+        except EmptyPage:
+            current_objects = paginator.page(paginator.num_pages)
 
         for obj in qs:
-            obj.plot_data = obj.get_average_metaplots()
-            obj.meta_data = obj.get_metadata(self.my_user)
-            obj.urls = obj.get_urls()
+            if obj in current_objects:
+
+                obj.plot_data = obj.get_average_metaplots()
+                obj.meta_data = obj.get_metadata(self.my_user)
+                obj.urls = obj.get_urls()
 
         return qs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        exp = models.Experiment.objects.get(pk=self.kwargs['pk'])
-
-        order = self.form_class.order_choices[0][0]
-        if self.form.is_valid():
-            order = self.form.get_order()
-
-        # Get score distribution
-        _query = Q(experiment_2=exp)
-        _query &= ~Q(experiment_1=exp)
-
-        if order == 'correlation_rank':
-            all_distances = models.ExperimentDataDistance.objects.filter(
-                _query).values_list('distance', flat=True)
-        elif order == 'metadata_rank':
-            all_distances = models.ExperimentMetadataDistance.objects.filter(
-                _query).values_list('distance', flat=True)
-
-        context['all_distances'] = list(all_distances)
-
-        return context
 
 
 class PCA(AddMyUserMixin, DetailView):
