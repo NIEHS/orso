@@ -338,8 +338,10 @@ class ExperimentSearchLookup(ModelLookup):
 
 class AllExpSearchLookup(ExperimentSearchLookup):
     def get_query(self, request, term):
-        return self.get_queryset()\
-            .order_by('name')\
+        query = self.get_base_query(request, term)
+        return self.get_queryset() \
+            .filter(query) \
+            .order_by('name') \
             .distinct()
 
 
