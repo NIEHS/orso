@@ -737,8 +737,6 @@ class SimilarExperiments(ExperimentList):
 
         qs = self.model.objects.filter(query).distinct()
 
-        print(qs)
-
         paginator = Paginator(qs, self.get_paginate_by(qs))
         page = self.request.GET.get('page')
 
