@@ -20,8 +20,8 @@ import GeneScatter from './GeneScatter';
 import GeneFoldChange from './GeneFoldChange';
 import MetaPlotCarousel from './MetaPlotCarousel';
 import GeneValues from './GeneValues';
-
 import RecommendationScatter from './RecommendationScatter';
+import ExperimentDataView from './ExperimentDataView';
 
 
 let createMetaPlot = function(el, metaplot) {
@@ -254,6 +254,13 @@ let appendRecommendationScatter = function(el, data) {
         data={data}/>, element[0]);
 }
 
+let appendExperimentDataView = function(el, data_lookup) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<ExperimentDataView
+        data_lookup={data_lookup}/>, element[0]);
+}
+
 export {
     createMetaPlot,
     createBrowser,
@@ -278,6 +285,6 @@ export {
     appendGeneFoldChange,
     appendMetaPlotCarousel,
     appendGeneValues,
-
     appendRecommendationScatter,
+    appendExperimentDataView,
 };

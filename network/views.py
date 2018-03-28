@@ -478,32 +478,18 @@ class Experiment(DetailView, AddMyUserMixin):
         context = super().get_context_data(**kwargs)
         exp = self.get_object()
 
-        context['display_data'] = exp.get_display_data(context['login_user'])
-        context['plot_data'] = exp.get_average_metaplots()
+        data_lookup = defaultdict(dict)
+        for mp in models.MetaPlot.objects.filter(
+                dataset__experiment=exp):
+            key = '{}:{}'.format(mp.dataset.name, mp.locus_group.group_type)
+            data_lookup[key].update({'metaplot': mp.pk})
+        for fv in models.FeatureValues.objects.filter(
+                dataset__experiment=exp):
+            key = '{}:{}'.format(fv.dataset.name, fv.locus_group.group_type)
+            data_lookup[key].update({'feature_values': fv.pk})
+
         context['datasets'] = models.Dataset.objects.filter(experiment=exp)
-
-        gene_values = []
-        gene_set = set()
-
-        for intersection in models.ExperimentIntersection.objects.filter(
-            experiment=self.get_object(),
-            locus__group__group_type='genebody'
-        ).order_by('-average_value'):
-
-            transcript = intersection.locus.transcript
-            if all([
-                transcript.end - transcript.start >= 200,
-                transcript.gene.name not in gene_set,
-            ]):
-                gene_values.append([
-                    transcript.gene.name,
-                    intersection.average_value,
-                ])
-                gene_set.add(transcript.gene.name)
-            if len(gene_values) >= 20:
-                break
-
-        context['gene_values'] = gene_values
+        context['data_lookup'] = dict(data_lookup)
 
         return context
 
