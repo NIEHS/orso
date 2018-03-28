@@ -25,10 +25,7 @@
     {% if experiment.description %}
     <p><b>Description:</b> {{experiment.description|linebreaks}}</p>
     {% endif %}
-    <h2>Top 20 genes</h2>
-    <div id='gene_values'></div>
-    <h2>Metagene plots</h2>
-    <div id='metaplot_carousel'></div>
+    <div id='data_view'></div>
 </div>
 
 {% endblock content %}
@@ -36,14 +33,18 @@
 {% block extra-js %}
 <script type='text/javascript'>
 $(document).ready(function(){
-    window.apps.appendMetaPlotCarousel(
-        $('#metaplot_carousel')[0],
-        {{plot_data|safe}},
+    window.apps.appendExperimentDataView(
+        $('#data_view')[0],
+        {{data_lookup|safe}},
     );
-    window.apps.appendGeneValues(
-        $('#gene_values')[0],
-        {{gene_values|safe}},
-    );
+    // window.apps.appendMetaPlotCarousel(
+    //     $('#metaplot_carousel')[0],
+    //     {{plot_data|safe}},
+    // );
+    // window.apps.appendGeneValues(
+    //     $('#gene_values')[0],
+    //     {{gene_values|safe}},
+    // );
 });
 </script>
 {% endblock %}

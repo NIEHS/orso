@@ -471,7 +471,7 @@ class Transcript(DetailView, AddMyUserMixin):
 
 
 class Experiment(DetailView, AddMyUserMixin):
-    template_name = 'network/experiment.html'
+    template_name = 'experiments/experiment.html'
     model = models.Experiment
 
     def get_context_data(self, **kwargs):
