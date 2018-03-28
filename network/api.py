@@ -170,3 +170,13 @@ class UserViewset(viewsets.ModelViewSet):
 class PCAPlotViewset(viewsets.ModelViewSet):
     queryset = models.PCA.objects.all()
     serializer_class = serializers.PCAPlotSerializer
+
+
+class MetaPlotViewset(viewsets.ModelViewSet):
+    queryset = models.MetaPlot.objects.all()
+    serializer_class = serializers.MetaPlotSerializer
+
+
+class FeatureValuesViewset(viewsets.ModelViewSet):
+    queryset = models.FeatureValues.objects.all()
+    serializer_class = serializers.FeatureValuesSerializer

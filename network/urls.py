@@ -16,6 +16,12 @@ router.register('browser',
 router.register('pca-plot',
                 api.PCAPlotViewset,
                 base_name='pca-plot')
+router.register('metaplot',
+                api.MetaPlotViewset,
+                base_name='metaplot')
+router.register('feature-values',
+                api.FeatureValuesViewset,
+                base_name='feature-values')
 
 urlpatterns = [
 
