@@ -866,6 +866,16 @@ class Locus(models.Model):
             return None
 
 
+class FeatureAttributes(models.Model):
+    locus_group = models.ForeignKey('LocusGroup')
+    experiment_type = models.ForeignKey('ExperimentType')
+
+    feature_attributes = JSONField()
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
+
 class LocusGroup(models.Model):
     assembly = models.ForeignKey('Assembly')
     group_type = models.CharField(choices=LOCUS_GROUP_TYPES, max_length=32)
@@ -1128,6 +1138,26 @@ class MetaPlot(models.Model):
         )
         verbose_name = 'Metaplot'
         verbose_name_plural = 'Metaplots'
+
+
+class FeatureValues(models.Model):
+    locus_group = models.ForeignKey('LocusGroup')
+    dataset = models.ForeignKey('Dataset')
+
+    feature_values = JSONField()
+
+    created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
+    def __str__(self):
+        return str(self.pk)
+
+    class Meta:
+        unique_together = (
+            ('locus_group', 'dataset',),
+        )
+        verbose_name = 'FeatureValues'
+        verbose_name_plural = 'FeatureValues'
 
 
 class Ontology(models.Model):

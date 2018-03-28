@@ -1,11 +1,15 @@
 import json
 
+import numpy as np
 from celery import group, chain, chord
 from celery.decorators import task
+from django.core.cache import cache
+from django.db.models import Q
 
 from analysis import metaplot, transcript_coverage
 from analysis.normalization import normalize_locus_intersection_values
-from analysis.utils import download_dataset_bigwigs, remove_dataset_bigwigs
+from analysis.utils import \
+    download_dataset_bigwigs, generate_intersection_df, remove_dataset_bigwigs
 from network import models
 from network.tasks.data_recommendations import \
     update_primary_data_sims_and_recs
@@ -191,5 +195,111 @@ def update_or_create_dataset_metaplot(dataset_pk, locus_group_pk):
         locus_group=locus_group,
         defaults={
             'metaplot': json.dumps(metaplot_out),
+        },
+    )
+
+
+def update_all_feature_attributes():
+    for locus_group in models.LocusGroup.objects.all():
+        for experiment_type in models.ExperimentType.objects.all():
+            if models.Dataset.objects.filter(
+                assembly=locus_group.assembly,
+                experiment__experiment_type=experiment_type,
+                experiment__project__isnull=False,
+            ).exists():
+                update_or_create_feature_attributes.si(
+                    locus_group.pk, experiment_type.pk).delay()
+
+
+@task
+def update_or_create_feature_attributes(locus_group_pk, experiment_type_pk):
+    locus_group = models.LocusGroup.objects.get(pk=locus_group_pk)
+    experiment_type = models.ExperimentType.objects.get(pk=experiment_type_pk)
+
+    datasets = models.Dataset.objects.filter(experiment__project__isnull=False)
+    loci = models.Locus.objects.filter(Q(group=locus_group) & (
+        Q(transcript__selecting__isnull=False) | Q(enhancer__isnull=False)))
+
+    df = generate_intersection_df(
+        locus_group, experiment_type, datasets=datasets, loci=loci)
+
+    feature_attributes = dict()
+    for locus in loci:
+        values = df.loc[locus.pk]
+        feature_attributes[locus.pk] = {
+            'name': locus.get_name(),
+            'maximum': max(values),
+            'minimum': min(values),
+            'mean': np.mean(values),
+            'median': np.median(values),
+            'standard_deviation': np.std(values),
+        }
+
+    models.FeatureAttributes.objects.update_or_create(
+        locus_group=locus_group,
+        experiment_type=experiment_type,
+        defaults={
+            'feature_attributes': json.dumps(feature_attributes),
+        },
+    )
+
+
+def update_all_feature_values():
+    for dataset in models.Dataset.objects.all():
+        for locus_group in models.LocusGroup.objects.filter(
+                assembly=dataset.assembly):
+            update_or_create_feature_values.si(
+                dataset.pk, locus_group.pk).delay()
+
+
+@task
+def update_or_create_feature_values(dataset_pk, locus_group_pk):
+    dataset = models.Dataset.objects.get(pk=dataset_pk)
+    locus_group = models.LocusGroup.objects.get(pk=locus_group_pk)
+
+    feature_values = {
+        'locus_pks': [],
+        'names': [],
+        'values': [],
+        'max_values': [],
+        'min_values': [],
+        'medians': [],
+        'means': [],
+        'standard_deviations': [],
+    }
+
+    feature_attributes = models.FeatureAttributes.objects.get(
+        locus_group=locus_group,
+        experiment_type=dataset.experiment.experiment_type,
+    )
+    feature_attributes = json.loads(feature_attributes.feature_attributes)
+
+    dij = models.DatasetIntersectionJson.objects.get(
+        dataset=dataset, locus_group=locus_group)
+    intersection_values = json.loads(dij.intersection_values)
+
+    for locus_pk, value in zip(
+        intersection_values['locus_pks'],
+        intersection_values['normalized_values'],
+    ):
+        if str(locus_pk) in feature_attributes:
+            attributes = feature_attributes[str(locus_pk)]
+
+            feature_values['locus_pks'].append(locus_pk)
+            feature_values['values'].append(value)
+
+            feature_values['names'].append(attributes['name'])
+            feature_values['min_values'].append(attributes['minimum'])
+            feature_values['max_values'].append(attributes['maximum'])
+            feature_values['medians'].append(attributes['median'])
+            feature_values['means'].append(attributes['mean'])
+            feature_values['standard_deviations'].append(
+                attributes['standard_deviation'])
+
+    models.FeatureValues.objects.update_or_create(
+        dataset=dataset,
+        locus_group=locus_group,
+        defaults={
+            'feature_values': json.dumps(feature_values),
         },
     )
