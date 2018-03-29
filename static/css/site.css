@@ -8,31 +8,31 @@ body {
 }
 
 /* NIEHS look and feel */
-.navbar-default {
+.navbar-default-niehs {
     background-image: linear-gradient(to bottom, #698B00, #81AB00);
     border-bottom: 0.5em solid #6E6C5F;
 }
-.navbar-default .navbar-brand,
-.navbar-default .navbar-nav > li > a {
+.navbar-default-niehs .navbar-brand,
+.navbar-default-niehs .navbar-nav > li > a {
     color: white;
 }
-.navbar-default .navbar-brand:hover,
-.navbar-default .navbar-nav > li > a:hover {
+.navbar-default-niehs .navbar-brand:hover,
+.navbar-default-niehs .navbar-nav > li > a:hover {
     color: white;
     text-decoration: underline;
 }
-.navbar-default .navbar-toggle {
+.navbar-default-niehs .navbar-toggle {
     border-color: white;
 }
-.navbar-default .navbar-toggle .icon-bar {
+.navbar-default-niehs .navbar-toggle .icon-bar {
     background-color: white;
 }
 
-.navbar-sub {
+.navbar-sub-niehs {
     background-color: #6E6C5F;
     color: white;
 }
-.navbar-sub .navbar-nav > li > a {
+.navbar-sub-niehs .navbar-nav > li > a {
     color: white;
 }
 
