@@ -488,8 +488,14 @@ class Experiment(DetailView, AddMyUserMixin):
             key = '{}:{}'.format(fv.dataset.name, fv.locus_group.group_type)
             data_lookup[key].update({'feature_values': fv.pk})
 
-        context['datasets'] = models.Dataset.objects.filter(experiment=exp)
         context['data_lookup'] = dict(data_lookup)
+        context['datasets'] = models.Dataset.objects.filter(experiment=exp)
+        context['is_favorite'] = models.Favorite.objects.filter(
+            experiment=exp,
+            user=context['login_user'],
+        ).exists()
+        context['owned'] = \
+            exp.owners.filter(pk=context['login_user'].pk).exists()
 
         return context
 

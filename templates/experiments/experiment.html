@@ -3,29 +3,70 @@
 {% block content %}
 
 <div class="container">
-    <h1>{{experiment.name}}</h1>
-    <a href="{% url 'similar_experiments' pk=experiment.pk %}" class="btn btn-primary btn-block">Similar experiments</a>
-    <h2>Datasets</h2>
-    {% for dataset in datasets %}
-        <a href='/network/dataset/{{dataset.pk}}'>{{dataset.name}}</a><br>
-    {% endfor %}
-    <h2>Metadata</h2>
-    {% if experiment.data_type %}
-    <p><b>Data type:</b> {{experiment.data_type}}</p>
-    {% endif %}
+    <h1>
+        {{experiment.name}}
+        <button type="button" id="favorite_button" class="panel-close-button">
+            {% if is_favorite %}
+            <span id="star_glyph" class="glyphicon glyphicon-star"></span>
+            {% else %}
+            <span id="star_glyph" class="glyphicon glyphicon-star-empty"></span>
+            {% endif %}
+        </button>
+    </h1>
+    <div style="margin-top:20px; margin-bottom:20px">
+        <ul class="nav nav-tabs">
+            <li class="active"><a data-toggle='tab' href="#metadata_tab">Metadata</a></li>
+            <li><a data-toggle='tab' href="#primary_data_tab">Dataset Coverage</a></li>
+            {% if owned %}
+            <li class="dropdown pull-right">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                    Actions <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a href="{% url 'similar_experiments' pk=experiment.pk %}">Update</a></li>
+                    <li><a href="{% url 'similar_experiments' pk=experiment.pk %}">Delete</a></li>
+                </ul>
+            </li>
+            {% endif %}
+            <li class="dropdown pull-right">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                    Navigate To <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a href="{% url 'similar_experiments' pk=experiment.pk %}">Similar Experiments</a></li>
+                    <li role="separator" class="divider"></li>
+                    <li class="dropdown-header">Associated Datasets</li>
+                    {% for dataset in datasets %}
+                        <li><a href='/network/dataset/{{dataset.pk}}'>{{dataset.name}}</a></li>
+                    {% endfor %}
+                </ul>
+            </li>
+        </ul>
+    </div>
 
-    {% if experiment.cell_type %}
-    <p><b>Cell type:</b> {{experiment.cell_type}}</p>
-    {% endif %}
-
-    {% if experiment.target %}
-    <p><b>Antibody:</b> {{experiment.target}}</p>
-    {% endif %}
-
-    {% if experiment.description %}
-    <p><b>Description:</b> {{experiment.description|linebreaks}}</p>
-    {% endif %}
-    <div id='data_view'></div>
+    <div class='tab-content' id='tabs'>
+        <div id='metadata_tab' class='tab-pane fade in active'>
+            <div id='metadata'>
+                {% if experiment.data_type %}
+                <p><b>Data type:</b> {{experiment.data_type}}</p>
+                {% endif %}
+                {% if experiment.cell_type %}
+                <p><b>Cell type:</b> {{experiment.cell_type}}</p>
+                {% endif %}
+                {% if experiment.target %}
+                <p><b>Antibody:</b> {{experiment.target}}</p>
+                {% endif %}
+                {% if experiment.description %}
+                <p><b>Description:</b> {{experiment.description|linebreaks}}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div id='primary_data_tab' class='tab-pane fade'>
+            <div id='primary_data'>
+                <div id='data_view'></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock content %}
@@ -33,18 +74,28 @@
 {% block extra-js %}
 <script type='text/javascript'>
 $(document).ready(function(){
+
+    let star_glyph = $('#star_glyph');
+    $('#favorite_button').on('click', function () {
+        if (star_glyph.hasClass('glyphicon-star-empty')) {
+            star_glyph.removeClass('glyphicon-star-empty')
+            star_glyph.addClass('glyphicon-star')
+
+            $.ajax({url: '{% url 'api:experiment-add-favorite' experiment.pk %}'});
+        }
+
+        else if (star_glyph.hasClass('glyphicon-star')) {
+            star_glyph.removeClass('glyphicon-star')
+            star_glyph.addClass('glyphicon-star-empty')
+
+            $.ajax({url: '{% url 'api:experiment-remove-favorite' experiment.pk %}'});
+        }
+    });
+
     window.apps.appendExperimentDataView(
         $('#data_view')[0],
         {{data_lookup|safe}},
     );
-    // window.apps.appendMetaPlotCarousel(
-    //     $('#metaplot_carousel')[0],
-    //     {{plot_data|safe}},
-    // );
-    // window.apps.appendGeneValues(
-    //     $('#gene_values')[0],
-    //     {{gene_values|safe}},
-    // );
 });
 </script>
 {% endblock %}

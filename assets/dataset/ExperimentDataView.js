@@ -154,41 +154,44 @@ class ExperimentDataView extends React.Component {
 
     render(){
         return <div>
-            <h1>DATA</h1>
-            <div ref='selection_container'>
-                <div className="row">
-                    <div className="col-sm-5">
-                        <div>Dataset</div>
-                        <select ref='dataset_select'
-                            onChange={this.changeDataset.bind(this)}
-                            value={this.state.dataset}>
-                        </select>
-                    </div>
-                    <div className="col-sm-5">
-                        <div>Genome region</div>
-                        <select ref='region_select'
-                            onChange={this.changeRegion.bind(this)}
-                            value={this.state.region}>
-                        </select>
-                    </div>
-                    <div className="col-sm-2">
-                        <button ref='pca_button'
-                            className='btn btn-primary'
-                            style={{marginTop: 10, marginBottom: 10}}
+        <nav className="navbar navbar-default">
+            <div className="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <form className="navbar-search">
+                    <div class="row">
+                        <p className="col-xs-1 navbar-text text-right">Dataset</p>
+                        <div className="col-xs-3">
+                            <select ref='dataset_select'
+                                className="form-control navbar-btn"
+                                onChange={this.changeDataset.bind(this)}
+                                value={this.state.dataset}>
+                            </select>
+                        </div>
+                        <p className="col-xs-2 navbar-text text-right">Genome Region</p>
+                        <div className="col-xs-3">
+                            <select ref='region_select'
+                                className="form-control navbar-btn"
+                                onChange={this.changeRegion.bind(this)}
+                                value={this.state.region}>
+                            </select>
+                        </div>
+                        <button type="button"
+                            className="btn btn-primary navbar-btn col-xs-1 col-xs-offset-1"
                             onClick={this.updateData.bind(this)}>
                         Go
                         </button>
                     </div>
-                </div>
+                </form>
             </div>
-            <div ref='data_container' className="row"></div>
-                <div ref='metaplot_container' className="col-sm-6">
-                    <div ref='metaplot' id='metaplot'></div>
-                </div>
-                <div ref='feature_values_container' className="col-sm-6">
-                    <div ref='feature_values' id='feature_values'></div>
-                </div>
+        </nav>
+        <div ref='data_container' className="row">
+            <div ref='metaplot_container' className="col-sm-6">
+                <div ref='metaplot' id='metaplot'></div>
+            </div>
+            <div ref='feature_values_container' className="col-sm-6">
+                <div ref='feature_values' id='feature_values'></div>
+            </div>
         </div>
+    </div>
     }
 }
 
