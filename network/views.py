@@ -641,7 +641,7 @@ class AllExperiments(ExperimentList):
     form_class = forms.AllExperimentFilterForm
 
     def get_queryset(self):
-        base_query = Q()
+        base_query = Q(public=True)
         return super().get_queryset(base_query)
 
 
@@ -713,7 +713,7 @@ class SimilarExperiments(ExperimentList):
 
         exp = models.Experiment.objects.get(pk=self.kwargs['pk'])
 
-        query = (
+        query = Q(public=True) & (
             Q(sim_experiment_1__experiment_2=exp) |
             Q(sim_experiment_2__experiment_1=exp)
         )
