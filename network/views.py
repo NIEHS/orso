@@ -501,7 +501,7 @@ class Experiment(DetailView, AddMyUserMixin):
 
 
 class Dataset(DetailView, AddMyUserMixin):
-    template_name = 'network/dataset.html'
+    template_name = 'datasets/dataset.html'
     model = models.Dataset
 
     def get_context_data(self, **kwargs):
