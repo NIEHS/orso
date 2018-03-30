@@ -1,8 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import MetaPlot from './MetaPlot';
-
 
 class ExperimentDataView extends React.Component {
 
