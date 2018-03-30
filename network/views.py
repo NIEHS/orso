@@ -2,6 +2,7 @@ import math
 from collections import defaultdict
 
 import numpy
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
@@ -11,6 +12,7 @@ from django.views.generic import ListView
 from django.forms.models import inlineformset_factory
 from django.db.models import Q
 from django.views.generic.base import ContextMixin
+from django.views.generic.detail import SingleObjectMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import available_attrs, method_decorator
 from django.utils.cache import add_never_cache_headers
@@ -470,7 +472,34 @@ class Transcript(DetailView, AddMyUserMixin):
         return context
 
 
-class Experiment(DetailView, AddMyUserMixin):
+class CheckPublicMixin(SingleObjectMixin):
+
+    def get_object(self, **kwargs):
+        obj = super().get_object(**kwargs)
+
+        if not obj.is_public():
+            if self.request.user.is_authenticated():
+                if not obj.is_owned(self.request.user):
+                    raise PermissionDenied
+            else:
+                raise PermissionDenied
+
+        return obj
+
+
+class CheckPublicExperimentMixin(CheckPublicMixin):
+    model = models.Experiment
+
+
+class CheckPublicDatasetMixin(CheckPublicMixin):
+    model = models.Dataset
+
+
+class CheckPublicMyUserMixin(CheckPublicMixin):
+    model = models.MyUser
+
+
+class Experiment(CheckPublicExperimentMixin, AddMyUserMixin, DetailView):
     template_name = 'experiments/experiment.html'
     model = models.Experiment
 
@@ -500,7 +529,7 @@ class Experiment(DetailView, AddMyUserMixin):
         return context
 
 
-class Dataset(DetailView, AddMyUserMixin):
+class Dataset(CheckPublicDatasetMixin, DetailView, AddMyUserMixin):
     template_name = 'datasets/dataset.html'
     model = models.Dataset
 
@@ -529,7 +558,7 @@ class Dataset(DetailView, AddMyUserMixin):
         return context
 
 
-class MyUser(DetailView, AddMyUserMixin):
+class MyUser(CheckPublicMyUserMixin, DetailView, AddMyUserMixin):
     template_name = 'network/user.html'
     model = models.MyUser
 

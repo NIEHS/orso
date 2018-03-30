@@ -62,6 +62,12 @@ class MyUser(models.Model):
         verbose_name = 'MyUser'
         verbose_name_plural = 'MyUsers'
 
+    def is_public(self):
+        return self.public
+
+    def is_owned(self, user):
+        return self.user == user
+
     def get_user_favorites_count(self):
         pass
 
@@ -390,6 +396,12 @@ class Experiment(models.Model):
             'detail': detail,
         }
 
+    def is_public(self):
+        return self.public
+
+    def is_owned(self, user):
+        return self.owners.filter(pk=user.pk).exists()
+
     def is_favorite(self, my_user):
         # if ExperimentFavorite.objects.filter(owner=my_user, favorite=self).exists():  # noqa
         #     return 'true'
@@ -607,6 +619,12 @@ class Dataset(models.Model):
 
     def get_favorites_count(self):
         pass
+
+    def is_public(self):
+        return self.experiment.public
+
+    def is_owned(self, user):
+        return self.experiment.owners.filter(pk=user.pk).exists()
 
     def get_display_data(self, my_user):
         plot_data = dict()
