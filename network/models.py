@@ -48,6 +48,8 @@ class MyUser(models.Model):
         'Experiment', blank=True, related_name='metadata_rec',
         through='MetadataRec', through_fields=('user', 'experiment'))
 
+    public = models.BooleanField(default=True)
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL)
     slug = models.CharField(
@@ -351,6 +353,8 @@ class Experiment(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
     consortial_id = models.CharField(max_length=128, null=True, default=None)
+
+    public = models.BooleanField(default=True)
 
     processed = models.BooleanField(default=False)
     revoked = models.BooleanField(default=False)
