@@ -3,12 +3,78 @@
 {% block content %}
 
 <div class="container">
-    <h1>{{dataset.name}} ({{dataset.assembly}})</h1>
-    Experiment: <a href='/network/experiment/{{dataset.experiment.pk}}'>{{dataset.experiment.name}}</a>
-    <h2>Metagene plots</h2>
-    <div id='metaplot_carousel'></div>
-    <h2>Top 20 genes</h2>
-    <div id='gene_values'></div>
+    <h1>
+        {{dataset.name}}
+        <button type="button" id="favorite_button" class="panel-close-button">
+            {% if is_favorite %}
+            <span id="star_glyph" class="glyphicon glyphicon-star"></span>
+            {% else %}
+            <span id="star_glyph" class="glyphicon glyphicon-star-empty"></span>
+            {% endif %}
+        </button>
+    </h1>
+    <div style="margin-top:20px; margin-bottom:20px">
+        <ul class="nav nav-tabs">
+            <li class="active"><a data-toggle='tab' href="#metadata_tab">Metadata</a></li>
+            <li><a data-toggle='tab' href="#primary_data_tab">Dataset Coverage</a></li>
+            {% if owned %}
+            <li class="dropdown pull-right">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                    Actions <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a href="{% url 'update_experiment' pk=dataset.experiment.pk %}">Update Experiment</a></li>
+                    <li><a href="{% url 'delete_experiment' pk=dataset.experiment.pk %}">Delete Experiment</a></li>
+                </ul>
+            </li>
+            {% endif %}
+            <li class="dropdown pull-right">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                    Navigate To <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li class="dropdown-header">Parent Experiment</li>
+                    <li><a href='{% url 'experiment' pk=dataset.experiment.pk %}'>{{dataset.experiment.name}}</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    <div class='tab-content' id='tabs'>
+        <div id='metadata_tab' class='tab-pane fade in active'>
+            <div id='metadata'>
+                <p><b>Assembly:</b> {{dataset.assembly.name}}</p>
+                {% if dataset.experiment.data_type %}
+                <p><b>Data type:</b> {{dataset.experiment.data_type}}</p>
+                {% endif %}
+                {% if dataset.experiment.cell_type %}
+                <p><b>Cell type:</b> {{dataset.experiment.cell_type}}</p>
+                {% endif %}
+                {% if dataset.experiment.target %}
+                <p><b>Antibody:</b> {{dataset.experiment.target}}</p>
+                {% endif %}
+                {% if dataset.experiment.description %}
+                <p><b>Experiment Description:</b> {{dataset.experiment.description|linebreaks}}</p>
+                {% endif %}
+                {% if dataset.description %}
+                <p><b>Dataset Description:</b> {{dataset.description|linebreaks}}</p>
+                {% endif %}
+                {% if dataset.plus_url %}
+                <p><b>Plus Strand BigWig URL:</b> <a href='{{dataset.plus_url}}'>{{dataset.plus_url}}</a></p>
+                {% endif %}
+                {% if dataset.minus_url %}
+                <p><b>Minus Strand BigWig URL:</b> <a href='{{dataset.minus_url}}'>{{dataset.minus_url}}</a></p>
+                {% endif %}
+                {% if dataset.ambiguous_url %}
+                <p><b>BigWig URL:</b> <a href='{{dataset.ambiguous_url}}'>{{dataset.ambiguous_url}}</a></p>
+                {% endif %}
+            </div>
+        </div>
+        <div id='primary_data_tab' class='tab-pane fade'>
+            <div id='primary_data'>
+                <div id='data_view'></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock content %}
@@ -16,13 +82,27 @@
 {% block extra-js %}
 <script type='text/javascript'>
 $(document).ready(function(){
-    window.apps.appendMetaPlotCarousel(
-        $('#metaplot_carousel')[0],
-        {{plot_data|safe}},
-    );
-    window.apps.appendGeneValues(
-        $('#gene_values')[0],
-        {{gene_values|safe}},
+
+    let star_glyph = $('#star_glyph');
+    $('#favorite_button').on('click', function () {
+        if (star_glyph.hasClass('glyphicon-star-empty')) {
+            star_glyph.removeClass('glyphicon-star-empty')
+            star_glyph.addClass('glyphicon-star')
+
+            $.ajax({url: '{% url 'api:experiment-add-favorite' dataset.experiment.pk %}'});
+        }
+
+        else if (star_glyph.hasClass('glyphicon-star')) {
+            star_glyph.removeClass('glyphicon-star')
+            star_glyph.addClass('glyphicon-star-empty')
+
+            $.ajax({url: '{% url 'api:experiment-remove-favorite' dataset.experiment.pk %}'});
+        }
+    });
+
+    window.apps.appendDatasetDataView(
+        $('#data_view')[0],
+        {{data_lookup|safe}},
     );
 });
 </script>

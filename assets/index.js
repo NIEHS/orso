@@ -26,6 +26,7 @@ import {
     appendGeneValues,
     appendRecommendationScatter,
     appendExperimentDataView,
+    appendDatasetDataView,
 } from './dataset';
 
 
@@ -55,4 +56,5 @@ window.apps = {
     appendGeneValues,
     appendRecommendationScatter,
     appendExperimentDataView,
+    appendDatasetDataView,
 };

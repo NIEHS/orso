@@ -506,31 +506,25 @@ class Dataset(DetailView, AddMyUserMixin):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        dataset = self.get_object()
 
-        context['plot_data'] = self.get_object().get_metaplots()
+        data_lookup = defaultdict(dict)
+        for mp in models.MetaPlot.objects.filter(
+                dataset=dataset):
+            data_lookup[mp.locus_group.group_type].update(
+                {'metaplot': mp.pk})
+        for fv in models.FeatureValues.objects.filter(
+                dataset=dataset):
+            data_lookup[fv.locus_group.group_type].update(
+                {'feature_values': fv.pk})
 
-        gene_values = []
-        gene_set = set()
-
-        for intersection in models.DatasetIntersection.objects.filter(
-            dataset=self.get_object(),
-            locus__group__group_type='genebody'
-        ).order_by('-normalized_value'):
-
-            transcript = intersection.locus.from_genebody.get()
-            if all([
-                transcript.end - transcript.start >= 200,
-                transcript.gene.name not in gene_set,
-            ]):
-                gene_values.append([
-                    transcript.gene.name,
-                    intersection.normalized_value,
-                ])
-                gene_set.add(transcript.gene.name)
-            if len(gene_values) >= 20:
-                break
-
-        context['gene_values'] = gene_values
+        context['data_lookup'] = dict(data_lookup)
+        context['is_favorite'] = models.Favorite.objects.filter(
+            experiment=dataset.experiment,
+            user=context['login_user'],
+        ).exists()
+        context['owned'] = dataset.experiment.owners.filter(
+            pk=context['login_user'].pk).exists()
 
         return context
 
