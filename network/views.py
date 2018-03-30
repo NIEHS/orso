@@ -601,7 +601,7 @@ class ExperimentList(AddMyUserMixin, ListView):
         if self.form.is_valid():
             query &= self.form.get_query()
 
-        qs = self.model.objects.filter(query).distinct()
+        qs = self.model.objects.filter(query).distinct().order_by('pk')
 
         paginator = Paginator(qs, self.get_paginate_by(qs))
         page = self.request.GET.get('page')
