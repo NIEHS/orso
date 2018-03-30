@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container container-fluid">
     <h1>
-        {{user.username}}
+        {{object.user.username}}
         <button type="button" id="favorite_button" class="panel-close-button">
             {% if is_followed %}
             <span id="star_glyph" class="glyphicon glyphicon-star"></span>
