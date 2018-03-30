@@ -155,7 +155,7 @@ class ExperimentDataView extends React.Component {
         <nav className="navbar navbar-default">
             <div className="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                 <form className="navbar-search">
-                    <div class="row">
+                    <div>
                         <p className="col-xs-1 navbar-text text-right">Dataset</p>
                         <div className="col-xs-3">
                             <select ref='dataset_select'
