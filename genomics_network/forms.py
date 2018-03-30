@@ -8,6 +8,7 @@ from network import models
 from utils.forms import BaseFormHelper
 
 PASSWORD_HELP = 'Must have at least 8 characters'
+PUBLIC_HELP = 'Public accounts may be followed by other users'
 
 
 def check_password(pw):
@@ -59,6 +60,10 @@ class RegistrationForm(forms.ModelForm):
     password2 = forms.CharField(
         label='Password confirmation',
         widget=forms.PasswordInput(attrs={'autocomplete': 'off'}))
+    public = forms.BooleanField(
+        label='Public account?',
+        initial=True,
+        help_text=PUBLIC_HELP)
 
     class Meta:
         model = User
@@ -104,10 +109,12 @@ class RegistrationForm(forms.ModelForm):
     def save(self, commit=True):
         user = super(RegistrationForm, self).save(commit=False)
         user.set_password(self.cleaned_data['password1'])
+        public = self.cleaned_data['public']
         if commit:
             user.save()
             models.MyUser.objects.create(
                 user=user,
                 slug=user.username,
+                public=public,
             )
         return user

@@ -263,7 +263,14 @@ class ExperimentForm(BootstrapModelForm):
         model = models.Experiment
         fields = (
             'name', 'experiment_type', 'cell_type', 'target', 'description',
+            'public',
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['public'].widget.attrs.update({
+            'class': 'checkbox',
+        })
 
 
 class DatasetForm(BootstrapModelForm):
