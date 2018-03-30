@@ -9,7 +9,7 @@ from django.views.generic \
     import View, TemplateView, DetailView, CreateView, UpdateView, DeleteView
 from django.views.generic import ListView
 from django.forms.models import inlineformset_factory
-from django.db.models import Min, Q
+from django.db.models import Q
 from django.views.generic.base import ContextMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import available_attrs, method_decorator
