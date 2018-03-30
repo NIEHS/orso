@@ -3,7 +3,6 @@ import json
 import numpy as np
 from celery import group, chain, chord
 from celery.decorators import task
-from django.core.cache import cache
 from django.db.models import Q
 
 from analysis import metaplot, transcript_coverage
@@ -86,6 +85,11 @@ def update_and_clean(dataset_pks, experiment_pk=None):
             experiment_type=experiment_type,
         ):
             set_pca_transformed_values(dataset, pca)
+
+        for locus_group in models.LocusGroup.objects.filter(
+                assembly=dataset.assembly,
+        ):
+            update_or_create_feature_values(dataset.pk, locus_group.pk)
 
         dataset.processed = True
         dataset.save()
