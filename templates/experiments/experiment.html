@@ -23,8 +23,8 @@
                     Actions <span class="caret"></span>
                 </a>
                 <ul class="dropdown-menu">
-                    <li><a href="{% url 'similar_experiments' pk=experiment.pk %}">Update</a></li>
-                    <li><a href="{% url 'similar_experiments' pk=experiment.pk %}">Delete</a></li>
+                    <li><a href="{% url 'update_experiment' pk=experiment.pk %}">Update</a></li>
+                    <li><a href="{% url 'delete_experiment' pk=experiment.pk %}">Delete</a></li>
                 </ul>
             </li>
             {% endif %}
