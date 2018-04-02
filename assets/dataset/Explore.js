@@ -52,7 +52,7 @@ class Explore extends React.Component {
 
         // Add experiment type options
         for (var i = 0; i < this.state.exp_type_choices.length; i++) {
-            $(this.refs.exp_type_select).append(
+            $(this.refs.experiment_type_select).append(
                 '<option val="' + i + '">' + this.state.exp_type_choices[i] + '</option>');
         }
 
@@ -94,14 +94,14 @@ class Explore extends React.Component {
         this.update_button();
     }
 
-    update_exp_type_select(){
+    update_experiment_type_select(){
         if (this.state.assembly == '--') {
             var available_exp_types = this.state.exp_type_choices;
         } else {
             var available_exp_types = this.props.available_exp_types[this.state.assembly];
         }
 
-        $(this.refs.exp_type_select).find('option').each(function() {
+        $(this.refs.experiment_type_select).find('option').each(function() {
             if ($.inArray(this.value, available_exp_types) == -1 && this.value != '--') {
                 this.disabled = true;
             } else {
@@ -119,7 +119,7 @@ class Explore extends React.Component {
     change_assembly(event){
         this.setState({
             assembly: event.target.value,
-        }, this.update_exp_type_select);
+        }, this.update_experiment_type_select);
     }
 
     change_exp_type(event){
@@ -167,40 +167,44 @@ class Explore extends React.Component {
     render(){
         return <div className='container-fluid' ref='explore_container'>
             <h1>PCA</h1>
-            <div ref='selection_container'>
-                <div className="row">
-                    <div className="col-sm-2">
-                        <div>Assembly</div>
-                        <select ref='assembly_select'
-                            onChange={this.change_assembly.bind(this)}
-                            value={this.state.assembly}>
-                        </select>
-                    </div>
-                    <div className="col-sm-4">
-                        <div>Experiment type</div>
-                        <select ref='exp_type_select'
-                            onChange={this.change_exp_type.bind(this)}
-                            value={this.state.exp_type}>
-                        </select>
-                    </div>
-                    <div className="col-sm-4">
-                        <div>Genome region</div>
-                        <select ref='region_select'
-                            onChange={this.change_region.bind(this)}
-                            value={this.state.region}>
-                        </select>
-                    </div>
-                    <div className="col-sm-2">
-                        <button ref='pca_button'
-                            className='btn btn-primary'
-                            style={{marginTop: 10, marginBottom: 10}}
-                            onClick={this.get_pca.bind(this)}
-                            disabled={!(this.state.pca_enabled)}>
-                        Go
-                        </button>
-                    </div>
+            <nav className="navbar navbar-default">
+                <div className="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <form className="navbar-search">
+                        <div>
+                            <p className="col-xs-1 navbar-text text-right">Assembly</p>
+                            <div className="col-xs-2">
+                                <select ref='assembly_select'
+                                    className="form-control navbar-btn"
+                                    onChange={this.change_assembly.bind(this)}
+                                    value={this.state.assembly}>
+                                </select>
+                            </div>
+                            <p className="col-xs-1 navbar-text text-right">Experiment Type</p>
+                            <div className="col-xs-2">
+                                <select ref='experiment_type_select'
+                                    className="form-control navbar-btn"
+                                    onChange={this.change_exp_type.bind(this)}
+                                    value={this.state.exp_type}>
+                                </select>
+                            </div>
+                            <p className="col-xs-1 navbar-text text-right">Genome Region</p>
+                            <div className="col-xs-2">
+                                <select ref='region_select'
+                                    className="form-control navbar-btn"
+                                    onChange={this.change_region.bind(this)}
+                                    value={this.state.region}>
+                                </select>
+                            </div>
+                            <button type="button"
+                                className="btn btn-primary navbar-btn col-xs-offset-1"
+                                onClick={this.get_pca.bind(this)}
+                                disabled={!(this.state.pca_enabled)}>
+                            Go
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </div>
+            </nav>
             <div ref='pca_container'></div>
         </div>
     }
