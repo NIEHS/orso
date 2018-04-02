@@ -935,7 +935,7 @@ class Followers(LoginRequiredMixin, UserList):
 
 
 class UserFollowed(UserList):
-    template_name = 'users/all_users.html'
+    template_name = 'users/user_followed.html'
     display_user_navbar = False
 
     def get(self, request, *args, **kwargs):
@@ -946,9 +946,14 @@ class UserFollowed(UserList):
         base_query = Q(followed__following=self.target_user)
         return super().get_queryset(base_query)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['target_user'] = self.target_user
+        return context
+
 
 class UserFollowers(UserList):
-    template_name = 'users/all_users.html'
+    template_name = 'users/user_followers.html'
     display_user_navbar = False
 
     def get(self, request, *args, **kwargs):
@@ -958,6 +963,11 @@ class UserFollowers(UserList):
     def get_queryset(self):
         base_query = Q(following__followed=self.target_user)
         return super().get_queryset(base_query)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['target_user'] = self.target_user
+        return context
 
 
 class FavoriteUsers(LoginRequiredMixin, TemplateView, AddMyUserMixin):

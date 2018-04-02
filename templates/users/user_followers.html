@@ -1,0 +1,26 @@
+{% extends 'base_USERS.html' %}
+
+{% block sub-content-header %}
+<div class="container">
+    <h1><a href="{% url 'user' target_user.pk %}">
+        {{target_user.user.username}}</a>'s Followers ({{object_list|length}})</h1>
+</div>
+{% endblock sub-content-header %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+{% for user in object_list %}
+$(document).ready(function(){
+    window.apps.appendSmallUserView(
+        $('#user_container')[0],
+        {{user.meta_data|safe}},
+        {{user.plot_data|safe}},
+        {{user.urls|safe}},
+        {
+            'display_favorite': true,
+        }
+    );
+});
+{% endfor %}
+</script>
+{% endblock %}
