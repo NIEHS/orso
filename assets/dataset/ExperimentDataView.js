@@ -173,7 +173,7 @@ class ExperimentDataView extends React.Component {
                             </select>
                         </div>
                         <button type="button"
-                            className="btn btn-primary navbar-btn col-xs-1 col-xs-offset-1"
+                            className="btn btn-primary navbar-btn col-xs-offset-1"
                             onClick={this.updateData.bind(this)}>
                         Go
                         </button>
