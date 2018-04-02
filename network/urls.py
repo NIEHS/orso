@@ -55,6 +55,8 @@ urlpatterns = [
         name='favorite_experiments'),
     url(r'^recommended_experiments/$', views.RecommendedExperiments.as_view(),
         name='recommended_experiments'),
+    url(r'^user_experiments/(?P<pk>\d+)/$', views.UserExperiments.as_view(),
+        name='user_experiments'),
 
     url(r'^users/$', views.AllUsers.as_view(),
         name='all_users'),

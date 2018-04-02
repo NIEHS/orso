@@ -577,6 +577,9 @@ class MyUser(CheckPublicMyUserMixin, DetailView, AddMyUserMixin):
 
 
 class ExperimentList(AddMyUserMixin, ListView):
+
+    display_experiment_navbar = True
+
     def dispatch(self, request, *args, **kwargs):
         if self.request.user.is_authenticated():
             self.my_user = models.MyUser.objects.get(user=self.request.user)
@@ -630,7 +633,7 @@ class ExperimentList(AddMyUserMixin, ListView):
         if self.form.is_valid():
             query &= self.form.get_query()
 
-        qs = self.model.objects.filter(query).distinct().order_by('pk')
+        qs = models.Experiment.objects.filter(query).distinct().order_by('pk')
 
         paginator = Paginator(qs, self.get_paginate_by(qs))
         page = self.request.GET.get('page')
@@ -653,6 +656,7 @@ class ExperimentList(AddMyUserMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['display_experiment_navbar'] = self.display_experiment_navbar
         # context['experiment_counts'] = self.my_user.get_experiment_counts()
         context['experiment_counts'] = 0
         context['form'] = self.form
@@ -665,7 +669,6 @@ class ExperimentList(AddMyUserMixin, ListView):
 
 
 class AllExperiments(ExperimentList):
-    model = models.Experiment
     template_name = 'experiments/all_experiments.html'
     form_class = forms.AllExperimentFilterForm
 
@@ -675,7 +678,6 @@ class AllExperiments(ExperimentList):
 
 
 class PersonalExperiments(LoginRequiredMixin, ExperimentList):
-    model = models.Experiment
     template_name = 'experiments/personal_experiments.html'
     form_class = forms.PersonalExperimentFilterForm
 
@@ -685,12 +687,25 @@ class PersonalExperiments(LoginRequiredMixin, ExperimentList):
 
 
 class FavoriteExperiments(LoginRequiredMixin, ExperimentList):
-    model = models.Experiment
     template_name = 'experiments/favorite_experiments.html'
     form_class = forms.FavoriteExperimentFilterForm
 
     def get_queryset(self):
         base_query = Q(favorite__user=self.my_user)
+        return super().get_queryset(base_query)
+
+
+class UserExperiments(ExperimentList):
+    template_name = 'experiments/all_experiments.html'
+    form_class = forms.AllExperimentFilterForm
+    display_experiment_navbar = False
+
+    def get(self, request, *args, **kwargs):
+        self.target_user = models.MyUser.objects.get(pk=self.kwargs['pk'])
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        base_query = Q(owners__in=[self.target_user])
         return super().get_queryset(base_query)
 
 
