@@ -60,9 +60,13 @@ urlpatterns = [
 
     url(r'^users/$', views.AllUsers.as_view(),
         name='all_users'),
-    url(r'^followed_users/$', views.FollowedUsers.as_view(),
-        name='followed_users'),
+    url(r'^followed/$', views.Followed.as_view(),
+        name='followed'),
     url(r'^followers/$', views.Followers.as_view(),
+        name='followers'),
+    url(r'^user_followed/(?P<pk>\d+)/$', views.UserFollowed.as_view(),
+        name='followed'),
+    url(r'^user_followers/(?P<pk>\d+)/$', views.UserFollowers.as_view(),
         name='followers'),
 
     url(r'^dataset-comparison/(?P<x>\d+)-(?P<y>\d+)/$',

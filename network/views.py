@@ -813,6 +813,7 @@ class PCA(AddMyUserMixin, DetailView):
 class UserList(AddMyUserMixin, ListView):
     model = models.MyUser
     form_class = forms.UserFilterForm
+    display_user_navbar = False
 
     def dispatch(self, request, *args, **kwargs):
         if self.request.user.is_authenticated():
@@ -893,6 +894,7 @@ class UserList(AddMyUserMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        context['display_user_navbar'] = self.display_user_navbar
         context['form'] = self.form
         context['search_field'] = self.form['search']
         context['other_fields'] = []
@@ -911,7 +913,7 @@ class AllUsers(UserList):
         return super().get_queryset(base_query)
 
 
-class FollowedUsers(LoginRequiredMixin, UserList):
+class Followed(LoginRequiredMixin, UserList):
     template_name = 'users/all_users.html'
 
     def get_queryset(self):
@@ -924,6 +926,32 @@ class Followers(LoginRequiredMixin, UserList):
 
     def get_queryset(self):
         base_query = Q(following__followed=self.my_user)
+        return super().get_queryset(base_query)
+
+
+class UserFollowed(UserList):
+    template_name = 'users/all_users.html'
+    display_user_navbar = False
+
+    def get(self, request, *args, **kwargs):
+        self.target_user = models.MyUser.objects.get(pk=self.kwargs['pk'])
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        base_query = Q(followed__following=self.target_user)
+        return super().get_queryset(base_query)
+
+
+class UserFollowers(UserList):
+    template_name = 'users/all_users.html'
+    display_user_navbar = False
+
+    def get(self, request, *args, **kwargs):
+        self.target_user = models.MyUser.objects.get(pk=self.kwargs['pk'])
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        base_query = Q(following__followed=self.target_user)
         return super().get_queryset(base_query)
 
 

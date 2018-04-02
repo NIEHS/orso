@@ -3,16 +3,18 @@
 
 {% block content %}
 
+{% if display_user_navbar %}
 <nav class="navbar navbar-sub-niehs">
     <div class="container">
         <ul class="nav navbar-nav">
             <li><a href="{% url 'all_users' %}">All users</a></li>
-            <li><a href="{% url 'followed_users' %}">Following</a></li>
+            <li><a href="{% url 'followed' %}">Following</a></li>
             <li><a href="{% url 'followers' %}">Followers</a></li>
-            <!-- <li><a href="{% url 'followed_users' %}">Following <span id="followed_counts" class="badge">{{user_counts.followed_counts}}</span></a></li> -->
+            <!-- <li><a href="{% url 'followed' %}">Following <span id="followed_counts" class="badge">{{user_counts.followed_counts}}</span></a></li> -->
         </ul>
     </div>
 </nav>
+{% endif %}
 
 {% endblock content %}
 
