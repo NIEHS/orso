@@ -696,7 +696,7 @@ class FavoriteExperiments(LoginRequiredMixin, ExperimentList):
 
 
 class UserExperiments(ExperimentList):
-    template_name = 'experiments/all_experiments.html'
+    template_name = 'experiments/user_experiments.html'
     form_class = forms.AllExperimentFilterForm
     display_experiment_navbar = False
 
@@ -707,6 +707,11 @@ class UserExperiments(ExperimentList):
     def get_queryset(self):
         base_query = Q(owners__in=[self.target_user])
         return super().get_queryset(base_query)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['target_user'] = self.target_user
+        return context
 
 
 # TODO: Have RecommendedExperiments and SimilarExperiments inherit from the

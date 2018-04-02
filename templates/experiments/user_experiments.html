@@ -1,0 +1,26 @@
+{% extends 'base_EXPERIMENTS.html' %}
+
+{% block sub-content-header %}
+<div class="container">
+    <h1><a>{{target_user.user.username}}</a>'s Experiments ({{object_list|length}})</h1>
+</div>
+{% endblock sub-content-header %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+{% for experiment in object_list %}
+$(document).ready(function(){
+    window.apps.appendSmallDataView(
+        $('#experiment_container')[0],
+        {{experiment.pk}},
+        {{experiment.meta_data|safe}},
+        {{experiment.plot_data|safe}},
+        {{experiment.urls|safe}},
+        {
+            'display_favorite': true,
+        }
+    );
+});
+{% endfor %}
+</script>
+{% endblock %}
