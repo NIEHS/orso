@@ -65,9 +65,9 @@ urlpatterns = [
     url(r'^followers/$', views.Followers.as_view(),
         name='followers'),
     url(r'^user_followed/(?P<pk>\d+)/$', views.UserFollowed.as_view(),
-        name='followed'),
+        name='user_followed'),
     url(r'^user_followers/(?P<pk>\d+)/$', views.UserFollowers.as_view(),
-        name='followers'),
+        name='user_followers'),
 
     url(r'^dataset-comparison/(?P<x>\d+)-(?P<y>\d+)/$',
         views.DatasetComparison.as_view(), name='dataset-comparison'),
@@ -80,6 +80,11 @@ urlpatterns = [
         name='update_experiment'),
     url(r'^delete_experiment/(?P<pk>\d+)/$', views.ExperimentDelete.as_view(),
         name='delete_experiment'),
+
+    url(r'^update_user/(?P<pk>\d+)/$', views.MyUserUpdate.as_view(),
+        name='update_user'),
+    url(r'^delete_user/(?P<pk>\d+)/$', views.MyUserDelete.as_view(),
+        name='delete_user'),
 
     url(r'^pca/(?P<pk>\d+)/$', views.PCA.as_view(), name='pca'),
 

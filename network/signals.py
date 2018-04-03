@@ -1,5 +1,5 @@
 # from django.core.cache import cache
-from django.db.models.signals import post_save, pre_delete
+from django.db.models.signals import post_save, pre_delete, post_delete
 from django.dispatch import receiver
 
 from . import tasks, models
@@ -72,3 +72,8 @@ def favorite_pre_delete_update(sender, instance, **kwargs):
         ).delete()
     except models.Activity.DoesNotExist:
         pass
+
+
+@receiver(post_delete, sender=models.MyUser)
+def myuser_post_delete(sender, instance, **kwargs):
+    instance.user.delete()

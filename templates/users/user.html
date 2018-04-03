@@ -12,25 +12,60 @@
             {% endif %}
         </button>
     </h1>
-    <h2>User interactions</h2>
-    Following {{meta_data.user_following_number}} users</br>
-    {{meta_data.data_favorite_number}} favorite datasets</br>
-    Followed by {{meta_data.user_followed_by_number}} users</br>
-    {{user.username}}'s datasets have been favorited {{meta_data.data_favorited_by_number}} times</br>
-    <h2>Experiments overview</h2>
-    <div class="row">
-        <div class="col-sm-6">
-            <div>Assemblies:</div>
-            <div id="pie_1"></div>
+
+    <div style="margin-top:20px; margin-bottom:20px">
+        <ul class="nav nav-tabs">
+            <li class="active"><a data-toggle='tab' href="#user_interactions_tab">User Interactions</a></li>
+            <li><a data-toggle='tab' href="#experiments_overview_tab">Experiments Overview</a></li>
+            {% if myuser == login_user %}
+            <li class="dropdown pull-right">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                    Actions <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a href="{% url 'update_user' object.pk %}">Update Profile</a></li>
+                    <li><a href="{% url 'delete_user' object.pk %}">Delete Profile</a></li>
+                </ul>
+            </li>
+            {% endif %}
+            <li class="dropdown pull-right">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                    Navigate To <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a href="{% url 'user_experiments' object.pk %}">Personal Experiments</a></li>
+                    <li role="separator" class="divider"></li>
+                    <li><a href="{% url 'user_followers' object.pk %}">Followers</a></li>
+                    <li><a href="{% url 'user_followed' object.pk %}">Followed Users</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <div class='tab-content' id='tabs'>
+        <div id='user_interactions_tab' class='tab-pane fade in active'>
+            <div id='user_interactions'>
+                Following {{meta_data.user_following_number}} users</br>
+                {{meta_data.data_favorite_number}} favorite datasets</br>
+                Followed by {{meta_data.user_followed_by_number}} users</br>
+                {{user.username}}'s datasets have been favorited {{meta_data.data_favorited_by_number}} times</br>
+            </div>
         </div>
-        <div class="col-sm-6">
-            <div>Data types:</div>
-            <div id="pie_2"></div>
+        <div id='experiments_overview_tab' class='tab-pane fade'>
+            <div id='experiments_overview'>
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div>Assemblies:</div>
+                        <div id="pie_1"></div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div>Data types:</div>
+                        <div id="pie_2"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    <h2>Most recent experiment</h2>
-    </br>
-    <div id="recent_dataset"></div>
 </div>
 {% endblock content %}
 
@@ -63,17 +98,6 @@ $(document).ready(function(){
         $('#pie_2')[0],
         {{plot_data.experiment_counts|safe}},
         1,
-    );
-
-    window.apps.createSmallDataView(
-        $('#recent_dataset')[0],
-        {{latest_dataset.meta_data.id}},
-        {{latest_dataset.meta_data|safe}},
-        {{latest_dataset.plot_data|safe}},
-        {{latest_dataset.urls|safe}},
-        {
-            'display_favorite': true,
-        }
     );
 });
 </script>

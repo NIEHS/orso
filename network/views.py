@@ -199,6 +199,25 @@ class ExperimentDelete(LoginRequiredMixin, NeverCacheFormMixin, DeleteView):
         return reverse('personal_experiments')
 
 
+class MyUserUpdate(AddMyUserMixin, LoginRequiredMixin, NeverCacheFormMixin,
+                   UpdateView):
+    model = models.MyUser
+    template_name = 'users/update.html'
+    fields = ('public',)
+
+    def get_success_url(self):
+        return reverse('user', args=[self.object.pk])
+
+
+class MyUserDelete(AddMyUserMixin, LoginRequiredMixin, NeverCacheFormMixin,
+                   DeleteView):
+    model = models.MyUser
+    template_name = 'users/delete.html'
+
+    def get_success_url(self):
+        return reverse('home')
+
+
 class Index(View):
     def get(self, request, *args, **kwargs):
         return HttpResponse('Hello, world.')
@@ -566,13 +585,7 @@ class MyUser(CheckPublicMyUserMixin, DetailView, AddMyUserMixin):
         context = super().get_context_data(**kwargs)
         my_user = self.get_object()
         login_user = context['login_user']
-
-        latest = (models.Experiment.objects
-                        .filter(owners__in=[my_user])
-                        .latest())
         context.update(my_user.get_display_data(login_user))
-        context['latest_dataset'] = latest.get_display_data(login_user)
-
         return context
 
 

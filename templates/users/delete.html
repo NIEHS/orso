@@ -1,0 +1,15 @@
+{% extends 'base_USERS.html' %}
+{% load staticfiles %}
+
+{% block sub-content %}
+<div class="container">
+    <form action="" method="post">{% csrf_token %}
+        <p>Are you sure you want to delete "{{ object }}"?</p>
+        <input type="submit" value="Confirm" />
+    </form>
+</div>
+{% endblock sub-content %}
+
+{% block extra-js %}
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+{% endblock %}
