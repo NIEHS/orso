@@ -63,20 +63,18 @@ class ExperimentDataView extends React.Component {
         }];
 
         var layout = {
+            title: 'Average Signal across Genes/Features',
             autosize: true,
             height: $(this.refs.carousel_inner).height(),
             width: $(this.refs.carousel_inner).width(),
             xaxis: {
+                title: 'Relative Position',
                 tickvals: plot_data['metaplot']['ticks']['tickvals'],
                 ticktext: plot_data['metaplot']['ticks']['ticktext'],
             },
-            margin: {
-                l: 50,
-                r: 50,
-                b: 80,
-                t: 10,
-                pad: 4,
-            }
+            yaxis: {
+                title: 'Average Read Coverage/Signal',
+            },
         };
 
         var options = {
@@ -103,21 +101,17 @@ class ExperimentDataView extends React.Component {
         }];
 
         var layout = {
+            title: 'Gene/Feature Values',
             autosize: true,
             height: $(this.refs.carousel_inner).height(),
             width: $(this.refs.carousel_inner).width(),
             xaxis: {
+                title: 'Median Value Across All Datasets',
                 type: 'log',
             },
             yaxis: {
+                title: 'Gene/Feature Value (TPM)',
                 type: 'log',
-            },
-            margin: {
-                l: 50,
-                r: 50,
-                b: 80,
-                t: 10,
-                pad: 4,
             },
             hovermode: 'closest',
         };
