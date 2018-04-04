@@ -699,6 +699,12 @@ class PersonalExperiments(LoginRequiredMixin, ExperimentList):
         base_query = Q(owners__in=[self.my_user])
         return super().get_queryset(base_query)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['processing'] = models.Experiment.objects.filter(
+            dataset__processed=False)
+        return context
+
 
 class FavoriteExperiments(LoginRequiredMixin, ExperimentList):
     template_name = 'experiments/favorite_experiments.html'

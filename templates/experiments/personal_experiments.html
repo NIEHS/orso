@@ -1,11 +1,22 @@
 {% extends 'base_EXPERIMENTS.html' %}
 
+{% block sub-content-header %}
+{% if processing %}
+<div class="container">
+    {% for experiment in processing %}
+    <div class="alert alert-warning alert-dismissible">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close">×</a>
+        Currently processing <b>{{experiment.name}}</b>...
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock sub-content-header %}
+
 {% block extra-js %}
 <script type='text/javascript'>
 {% for experiment in object_list %}
-$(document).ready(function(){
-    // if (Boolean({{i.plot_data.promoter_metaplot|safe}}) &&
-    //         Boolean({{i.plot_data.enhancer_metaplot|safe}})) {
+    $(document).ready(function(){
         window.apps.appendSmallDataView(
             $('#experiment_container')[0],
             {{experiment.pk}},
@@ -17,14 +28,7 @@ $(document).ready(function(){
                 'display_delete': true
             }
         );
-    // } else {
-    //     $('#processing_container').append(
-    //         '<div class="alert alert-warning alert-dismissible">' +
-    //         '<a href="#" class="close" data-dismiss="alert" aria-label="close">×</a>' +
-    //         '<b>{{i.meta_data.name}}</b> is not displayed. Currently processing...</div>'
-    //     );
-    // }
-});
+    });
 {% endfor %}
 </script>
 {% endblock %}
