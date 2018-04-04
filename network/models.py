@@ -7,10 +7,12 @@ import string
 import os
 from collections import defaultdict
 
-from django.db import models
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField, ArrayField
+from django.db import models
+from django.db.models import Q
 from django.urls import reverse
+from django.utils.html import format_html
 from nltk.corpus import stopwords
 from picklefield.fields import PickledObjectField
 from scipy.stats import variation as coeff_variance
@@ -293,6 +295,35 @@ class Recommendation(models.Model):
 
     created = models.DateTimeField(auto_now_add=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
+
+    def get_recommendation_tag(self):
+
+        if self.rec_type == 'primary':
+            exp_url = reverse(
+                'experiment', args=[self.referring_experiment.pk])
+            return {
+                'tag': 'Similar data values to ',
+                'target_name': self.referring_experiment.name,
+                'target_url': exp_url,
+            }
+
+        elif self.rec_type == 'metadata':
+            exp_url = reverse(
+                'experiment', args=[self.referring_experiment.pk])
+            return {
+                'tag': 'Similar metadata to ',
+                'target_name': self.referring_experiment.name,
+                'target_url': exp_url,
+            }
+
+        elif self.rec_type == 'user':
+            user_url = reverse(
+                'user', args=[self.referring_user.pk])
+            return {
+                'tag': 'Interactions by user ',
+                'target_name': self.referring_user.user.username,
+                'target_url': user_url,
+            }
 
 
 class Similarity(models.Model):
@@ -587,6 +618,21 @@ class Experiment(models.Model):
 
         # Convert to set
         return set(word_list)
+
+    def get_recommendation_tags(self, my_user):
+        query = Q(recommended_experiment=self)
+        query &= Q(user=my_user)
+        query &= ~Q(recommended_experiment__owners=my_user)
+        recs = Recommendation.objects.filter(query)
+
+        tags = [rec.get_recommendation_tag() for rec in recs]
+        tags = set([(tag['tag'], tag['target_name'], tag['target_url'])
+                   for tag in tags])
+        tags = sorted(list(tags), key=lambda x: (x[0], x[1], x[2]))
+        tags = [{'tag': tag[0], 'target_name': tag[1], 'target_url': tag[2]}
+                for tag in tags]
+
+        return tags
 
 
 class Dataset(models.Model):

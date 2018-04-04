@@ -182,6 +182,14 @@ class SmallDataView extends React.Component {
         var id_css_select = '#' + id_select;
         var carousel_id = 'metaplot_carousel_' + this.props.exp_id;
 
+        var recommendation_tags = this.props.recommendation_tags.map((x, index) => {
+            return (
+                <li key={index}>
+                    {x['tag']}<a href={x['target_url']}>{x['target_name']}</a>
+                </li>
+            );
+        });
+
         return <div className="panel panel-default" id={id_select}>
             <div className="panel-heading">
                 <div className="panel-title pull-left">
@@ -227,13 +235,16 @@ class SmallDataView extends React.Component {
             <div className="panel-body">
                 <div className='small_data_view'>
                     <div className="row">
-                        <div style={{height:"200px"}} className="col-sm-4">
+                        <div style={{height:"200px", overflow:"auto"}} className="col-sm-4">
                             <ul>
                                 <li><b>Assembly:</b> {this.props.meta_data['assemblies'].join(', ')}</li>
                                 <li><b>Data type:</b> {this.props.meta_data['data_type']}</li>
                                 <li><b>Cell type:</b> {this.props.meta_data['cell_type']}</li>
                                 {this.props.meta_data['target'] &&
                                     <li><b>Target:</b> {this.props.meta_data['target']}</li>}
+                            </ul>
+                            <ul>
+                                {recommendation_tags}
                             </ul>
                         </div>
                         <div style={{height:"200px"}} className="col-sm-8">
@@ -263,6 +274,7 @@ SmallDataView.propTypes = {
     plot_data: React.PropTypes.array.isRequired,
     urls: React.PropTypes.object.isRequired,
 
+    recommendation_tags: React.PropTypes.array,
     score_dist: React.PropTypes.array,
     score: React.PropTypes.number,
 

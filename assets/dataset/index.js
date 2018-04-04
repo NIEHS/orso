@@ -51,8 +51,9 @@ let createSmallDataView = function(el, exp_id, meta_data, plot_data, urls, args)
         display_remove_favorite={Boolean(args.display_remove_favorite)}/>, el);
 };
 
-let appendSmallDataView = function(el, exp_id, meta_data, plot_data, urls, args) {
+let appendSmallDataView = function(el, exp_id, meta_data, plot_data, urls, args, recommendation_tags) {
     var element = $('<div></div>').appendTo(el);
+    if (recommendation_tags === undefined) recommendation_tags = [];
     ReactDOM.render(<SmallDataView
         exp_id={exp_id}
         meta_data={meta_data}
@@ -64,7 +65,8 @@ let appendSmallDataView = function(el, exp_id, meta_data, plot_data, urls, args)
         display_edit={Boolean(args.display_edit)}
         display_delete={Boolean(args.display_delete)}
         display_remove_recommendation={Boolean(args.display_remove_recommendation)}
-        display_remove_favorite={Boolean(args.display_remove_favorite)}/>, element[0]);
+        display_remove_favorite={Boolean(args.display_remove_favorite)}
+        recommendation_tags={recommendation_tags}/>, element[0]);
 };
 
 let createSmallPersonalDataView = function(el, meta_data, promoter_data, enhancer_data, dataset_url, update_url, delete_url) {

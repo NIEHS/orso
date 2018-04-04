@@ -762,6 +762,8 @@ class RecommendedExperiments(LoginRequiredMixin, ExperimentList):
                 obj.plot_data = obj.get_average_metaplots()
                 obj.meta_data = obj.get_metadata(self.my_user)
                 obj.urls = obj.get_urls()
+                obj.recommendation_tags = \
+                    obj.get_recommendation_tags(self.my_user)
 
         return qs
 

@@ -13,7 +13,8 @@ $(document).ready(function(){
         {
             'display_favorite': true,
             'display_remove_recommendation': true,
-        }
+        },
+        {{experiment.recommendation_tags|safe}}
     );
 });
 {% endfor %}
