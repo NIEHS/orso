@@ -642,6 +642,7 @@ class ExperimentList(AddMyUserMixin, ListView):
     def get_queryset(self, base_query):
 
         query = base_query
+        query &= Q(dataset__processed=True)  # Only returned processed exps
 
         if self.form.is_valid():
             query &= self.form.get_query()
