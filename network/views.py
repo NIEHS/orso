@@ -194,6 +194,7 @@ class ExperimentUpdate(LoginRequiredMixin, NeverCacheFormMixin, AddMyUserMixin,
 class ExperimentDelete(LoginRequiredMixin, NeverCacheFormMixin, DeleteView):
     model = models.Experiment
     form_class = forms.ExperimentForm
+    template_name = 'experiments/delete.html'
 
     def get_success_url(self):
         return reverse('personal_experiments')
