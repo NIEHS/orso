@@ -1,12 +1,21 @@
 {% extends 'base_USERS.html' %}
 {% load staticfiles %}
+{% load url_replace %}
 
 {% block sub-content %}
 <div class="container">
-    <form action="" method="post">{% csrf_token %}
-        <p>Are you sure you want to delete "{{ object }}"?</p>
-        <input type="submit" value="Confirm" />
-    </form>
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <form action="" method="post">{% csrf_token %}
+                <p>
+                    <a href="{% url 'user' object.pk %}">{{object.user.username}}</a>,
+                    are you sure you want to delete your profile?
+                </p>
+                <input class="btn btn-primary" type="submit" value="Confirm"/>
+                <button onclick="window.history.back();" class="btn btn-default" type="button">Cancel</button>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock sub-content %}
 
