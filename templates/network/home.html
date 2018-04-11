@@ -2,45 +2,52 @@
 
 {% block content %}
 <div class="container container-fluid">
-
-    <h1>Welcome back, <b>{{user.username}}</b>!</h1>
-    <h2>Recent activity</h2>
-    {% for activity in object_list %}
-        {% if activity.followed_user %}
-            {% if activity.followed_user.user == user %}
+    {% if user.is_authenticated %}
+        <h1>Welcome back, <b>{{user.username}}</b>!</h1>
+        <h2>Recent activity</h2>
+        {% for activity in object_list %}
+            {% if activity.followed_user %}
+                {% if activity.followed_user.user == user %}
+                    <div class="panel panel-default">
+                        <div class="panel-body">
+                            <a href="{% url 'user' pk=activity.user.pk %}">{{activity.user}}</a>
+                            followed you.
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="panel panel-default">
+                        <div class="panel-body">
+                            <a href="{% url 'user' pk=activity.user.pk %}">{{activity.user}}</a>
+                            followed
+                            <a href="{% url 'user' pk=activity.followed_user.pk %}">{{activity.followed_user}}</a> .
+                        </div>
+                    </div>
+                {% endif %}
+            {% elif activity.created_experiment %}
                 <div class="panel panel-default">
                     <div class="panel-body">
                         <a href="{% url 'user' pk=activity.user.pk %}">{{activity.user}}</a>
-                        followed you.
+                        created experiment
+                        <a href="{% url 'experiment' pk=activity.created_experiment.pk %}">{{activity.created_experiment}}</a>.
                     </div>
                 </div>
-            {% else %}
+            {% elif activity.favorited_experiment %}
                 <div class="panel panel-default">
                     <div class="panel-body">
                         <a href="{% url 'user' pk=activity.user.pk %}">{{activity.user}}</a>
-                        followed
-                        <a href="{% url 'user' pk=activity.followed_user.pk %}">{{activity.followed_user}}</a> .
+                        favorited experiment
+                        <a href="{% url 'experiment' pk=activity.favorited_experiment.pk %}">{{activity.favorited_experiment}}</a>.
                     </div>
                 </div>
             {% endif %}
-        {% elif activity.created_experiment %}
-            <div class="panel panel-default">
-                <div class="panel-body">
-                    <a href="{% url 'user' pk=activity.user.pk %}">{{activity.user}}</a>
-                    created experiment
-                    <a href="{% url 'experiment' pk=activity.created_experiment.pk %}">{{activity.created_experiment}}</a>.
-                </div>
-            </div>
-        {% elif activity.favorited_experiment %}
-            <div class="panel panel-default">
-                <div class="panel-body">
-                    <a href="{% url 'user' pk=activity.user.pk %}">{{activity.user}}</a>
-                    favorited experiment
-                    <a href="{% url 'experiment' pk=activity.favorited_experiment.pk %}">{{activity.favorited_experiment}}</a>.
-                </div>
-            </div>
-        {% endif %}
-    {% endfor %}
+        {% endfor %}
+    {% else %}
+        <h1>Welcome to ORSO!</h1>
+        <p>
+            ORSO (Online Resource for Social Omics) is a web application designed
+            to connect life scientists with data relevant to their interests.
+        </p>
+    {% endif %}
 </div>
 
 {% endblock content %}
