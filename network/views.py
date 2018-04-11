@@ -316,22 +316,21 @@ class Home(AddMyUserMixin, ListView):
     template_name = 'network/home.html'
     model = models.Activity
 
-    def dispatch(self, request, *args, **kwargs):
-        if self.request.user.is_authenticated():
-            self.my_user = models.MyUser.objects.get(user=self.request.user)
-        else:
-            self.my_user = None
-        return super().dispatch(request, *args, **kwargs)
-
     def get_queryset(self, **kwargs):
 
-        query = Q()
-        # Followed user performs an action
-        query |= Q(user__following__followed=self.my_user)
-        # Another user followed the requesting user
-        query |= Q(followed_user=self.my_user)
+        if self.request.user.is_authenticated():
+            my_user = models.MyUser.objects.get(user=self.request.user)
 
-        return self.model.objects.filter(query).order_by('-last_updated')
+            query = Q()
+            # Followed user performs an action
+            query |= Q(user__following__followed=my_user)
+            # Another user followed the requesting user
+            query |= Q(followed_user=my_user)
+
+            return self.model.objects.filter(query).order_by('-last_updated')
+
+        else:
+            return None
 
 
 class ExplorePCA(TemplateView, AddMyUserMixin):
