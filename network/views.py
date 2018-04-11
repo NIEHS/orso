@@ -155,6 +155,16 @@ class ExperimentUpdate(LoginRequiredMixin, NeverCacheFormMixin, AddMyUserMixin,
     def get_success_url(self):
         return reverse('personal_experiments')
 
+    def get_object(self, **kwargs):
+        obj = super().get_object(**kwargs)
+
+        if self.request.user.is_authenticated():
+            my_user = models.MyUser.objects.get(user=self.request.user)
+            if not obj.owners.filter(pk=my_user.pk).exists():
+                raise PermissionDenied
+
+        return obj
+
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
         if self.request.POST:
@@ -197,6 +207,16 @@ class ExperimentDelete(AddMyUserMixin, LoginRequiredMixin, NeverCacheFormMixin,
     model = models.Experiment
     form_class = forms.ExperimentForm
     template_name = 'experiments/delete.html'
+
+    def get_object(self, **kwargs):
+        obj = super().get_object(**kwargs)
+
+        if self.request.user.is_authenticated():
+            my_user = models.MyUser.objects.get(user=self.request.user)
+            if not obj.owners.filter(pk=my_user.pk).exists():
+                raise PermissionDenied
+
+        return obj
 
     def get_success_url(self):
         return reverse('personal_experiments')
