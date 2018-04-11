@@ -4,7 +4,8 @@
 {% block sub-content %}
 <div class="container">
     <form action="" method="post">{% csrf_token %}
-    {{ form.as_p }}
+    {{ user_form.as_p }}
+    {{ my_user_form.as_p }}
     <input type="submit" value="Update" />
 </form>
 </div>

@@ -35,7 +35,7 @@
 
             {% if user.is_authenticated %}
             <ul class="nav navbar-nav navbar-right">
-                <li><a href="{% url 'user' login_user.pk %}">{{user.username}}</a></li>
+                <li><a href="{% url 'user' user.pk %}">{{user.username}}</a></li>
                 <li><a href="{% url 'logout' %}"><span class="glyphicon glyphicon-log-out"></span> Log out</a></li>
             </ul>
             {% else %}

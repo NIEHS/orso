@@ -1,6 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
+from django.contrib.auth.models import User
 from django.http import HttpResponse
 
 from . import models
@@ -126,29 +127,31 @@ class DatasetViewset(viewsets.ModelViewSet):
 class UserViewset(viewsets.ModelViewSet):
 
     def get_queryset(self):
-        return models.MyUser.objects.all()
+        return User.objects.all()
 
     @detail_route(methods=['get'], url_path='follow')
     def add_user_to_favorites(self, request, pk=None):
-        object = self.get_object()
-        my_user = models.MyUser.objects.get(user=self.request.user)
+
+        followed_user = models.MyUser.objects.get(user=self.get_object())
+        following_user = models.MyUser.objects.get(user=self.request.user)
 
         models.Follow.objects.update_or_create(
-            followed=object,
-            following=my_user,
+            followed=followed_user,
+            following=following_user,
         )
 
         return HttpResponse(status=202)
 
     @detail_route(methods=['get'], url_path='stop-following')
     def remove_user_from_favorites(self, request, pk=None):
-        object = self.get_object()
-        my_user = models.MyUser.objects.get(user=self.request.user)
+
+        followed_user = models.MyUser.objects.get(user=self.get_object())
+        following_user = models.MyUser.objects.get(user=self.request.user)
 
         try:
             follow = models.Follow.objects.get(
-                followed=object,
-                following=my_user,
+                followed=followed_user,
+                following=following_user,
             )
             follow.delete()
         except models.Follow.DoesNotExist:

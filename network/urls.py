@@ -81,9 +81,9 @@ urlpatterns = [
     url(r'^delete_experiment/(?P<pk>\d+)/$', views.ExperimentDelete.as_view(),
         name='delete_experiment'),
 
-    url(r'^update_user/(?P<pk>\d+)/$', views.MyUserUpdate.as_view(),
+    url(r'^update_user/(?P<pk>\d+)/$', views.UserUpdate.as_view(),
         name='update_user'),
-    url(r'^delete_user/(?P<pk>\d+)/$', views.MyUserDelete.as_view(),
+    url(r'^delete_user/(?P<pk>\d+)/$', views.UserDelete.as_view(),
         name='delete_user'),
 
     url(r'^pca/(?P<pk>\d+)/$', views.PCA.as_view(), name='pca'),

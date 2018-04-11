@@ -3,9 +3,9 @@
 {% block content %}
 <div class="container container-fluid">
     <h1>
-        {{object.user.username}}
+        {{object.username}}
         <button type="button" id="favorite_button" class="panel-close-button">
-            {% if is_followed %}
+            {% if meta_data.is_followed == 'true' %}
             <span id="star_glyph" class="glyphicon glyphicon-star"></span>
             {% else %}
             <span id="star_glyph" class="glyphicon glyphicon-star-empty"></span>
@@ -17,7 +17,7 @@
         <ul class="nav nav-tabs">
             <li class="active"><a data-toggle='tab' href="#user_interactions_tab">User Interactions</a></li>
             <li><a data-toggle='tab' href="#experiments_overview_tab">Experiments Overview</a></li>
-            {% if myuser == login_user %}
+            {% if object == user %}
             <li class="dropdown pull-right">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
                     Actions <span class="caret"></span>
@@ -71,6 +71,7 @@
 
 {% block extra-js %}
 <script type='text/javascript'>
+
 $(document).ready(function(){
     let star_glyph = $('#star_glyph');
     $('#favorite_button').on('click', function () {
@@ -78,14 +79,14 @@ $(document).ready(function(){
             star_glyph.removeClass('glyphicon-star-empty')
             star_glyph.addClass('glyphicon-star')
 
-            $.ajax({url: '{% url 'api:user-follow' myuser.pk %}'});
+            $.ajax({url: '{% url 'api:user-follow' user_object.pk %}'});
         }
 
         else if (star_glyph.hasClass('glyphicon-star')) {
             star_glyph.removeClass('glyphicon-star')
             star_glyph.addClass('glyphicon-star-empty')
 
-            $.ajax({url: '{% url 'api:user-stop-following' myuser.pk %}'});
+            $.ajax({url: '{% url 'api:user-stop-following' user_object.pk %}'});
         }
     });
 

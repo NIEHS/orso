@@ -8,7 +8,7 @@
         <div class="panel-body">
             <form action="" method="post">{% csrf_token %}
                 <p>
-                    <a href="{% url 'user' object.pk %}">{{object.user.username}}</a>,
+                    <a href="{% url 'user' object.pk %}">{{object.username}}</a>,
                     are you sure you want to delete your profile?
                 </p>
                 <input class="btn btn-primary" type="submit" value="Confirm"/>

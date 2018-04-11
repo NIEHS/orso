@@ -1,4 +1,5 @@
 # from django.core.cache import cache
+from django.contrib.auth.models import User
 from django.db.models.signals import post_save, pre_delete, post_delete
 from django.dispatch import receiver
 
@@ -74,6 +75,7 @@ def favorite_pre_delete_update(sender, instance, **kwargs):
         pass
 
 
-@receiver(post_delete, sender=models.MyUser)
-def myuser_post_delete(sender, instance, **kwargs):
-    instance.user.delete()
+@receiver(post_delete, sender=User)
+def user_post_delete(sender, instance, **kwargs):
+    my_user = models.MyUser.objects.get(user=instance)
+    my_user.delete()

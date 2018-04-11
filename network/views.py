@@ -14,6 +14,7 @@ from django.db.models import Q
 from django.views.generic.base import ContextMixin
 from django.views.generic.detail import SingleObjectMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import User
 from django.utils.decorators import available_attrs, method_decorator
 from django.utils.cache import add_never_cache_headers
 from django.urls import reverse
@@ -201,23 +202,89 @@ class ExperimentDelete(AddMyUserMixin, LoginRequiredMixin, NeverCacheFormMixin,
         return reverse('personal_experiments')
 
 
-class MyUserUpdate(AddMyUserMixin, LoginRequiredMixin, NeverCacheFormMixin,
-                   UpdateView):
-    model = models.MyUser
+class UserUpdate(AddMyUserMixin, LoginRequiredMixin, NeverCacheFormMixin,
+                 UpdateView):
+    model = User
     template_name = 'users/update.html'
-    fields = ('public',)
+    form_class = forms.UserForm
+
+    user_form_class = form_class
+    my_user_form_class = forms.MyUserForm
 
     def get_success_url(self):
         return reverse('user', args=[self.object.pk])
 
+    def get_object(self, **kwargs):
+        obj = super().get_object(**kwargs)
 
-class MyUserDelete(AddMyUserMixin, LoginRequiredMixin, NeverCacheFormMixin,
-                   DeleteView):
-    model = models.MyUser
+        if self.request.user.is_authenticated():
+            if obj != self.request.user:
+                raise PermissionDenied
+
+        return obj
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        my_user = models.MyUser.objects.get(user=self.object)
+
+        if self.request.POST:
+            context['user_form'] = self.user_form_class(
+                self.request.POST, instance=self.object)
+            context['my_user_form'] = self.my_user_form_class(
+                self.request.POST, instance=my_user)
+        else:
+            context['user_form'] = self.user_form_class(
+                instance=self.object)
+            context['my_user_form'] = self.my_user_form_class(
+                instance=my_user)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+
+        user = self.object
+        my_user = models.MyUser.objects.get(user=user)
+
+        user_form = self.user_form_class(
+            self.request.POST, instance=user)
+        my_user_form = self.my_user_form_class(
+            self.request.POST, instance=my_user)
+
+        if user_form.is_valid() and my_user_form.is_valid():
+            return self.form_valid(user_form, my_user_form)
+        else:
+            return self.form_invalid(user_form, my_user_form)
+
+    def form_valid(self, user_form, my_user_form):
+        user_form.save()
+        my_user_form.save()
+        return HttpResponseRedirect(self.get_success_url())
+
+    def form_invalid(self, user_form, my_user_form):
+        return self.render_to_response(
+            self.get_context_data(
+                user_form=user_form,
+                my_user_form=my_user_form))
+
+
+class UserDelete(AddMyUserMixin, LoginRequiredMixin, NeverCacheFormMixin,
+                 DeleteView):
+    model = User
     template_name = 'users/delete.html'
+    form_class = forms.UserForm
+    my_user_form_class = forms.MyUserForm
 
     def get_success_url(self):
         return reverse('home')
+
+    def get_object(self, **kwargs):
+        obj = super().get_object(**kwargs)
+
+        if self.request.user.is_authenticated():
+            if obj != self.request.user:
+                raise PermissionDenied
+
+        return obj
 
 
 class Index(View):
@@ -579,15 +646,34 @@ class Dataset(CheckPublicDatasetMixin, DetailView, AddMyUserMixin):
         return context
 
 
-class MyUser(CheckPublicMyUserMixin, DetailView, AddMyUserMixin):
+class MyUser(DetailView, AddMyUserMixin):
     template_name = 'users/user.html'
-    model = models.MyUser
+    model = User
+    context_object_name = 'user_object'
+
+    def get_object(self, **kwargs):
+        user = super().get_object(**kwargs)
+        obj = models.MyUser.objects.get(user=user)
+
+        if not obj.is_public():
+            if self.request.user.is_authenticated():
+                if not obj.is_owned(self.request.user):
+                    raise PermissionDenied
+            else:
+                raise PermissionDenied
+
+        return user
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        my_user = self.get_object()
+
+        my_user = models.MyUser.objects.get(user=self.get_object())
         login_user = context['login_user']
+
+        print(my_user.get_display_data(login_user))
+
         context.update(my_user.get_display_data(login_user))
+
         return context
 
 
