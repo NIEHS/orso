@@ -828,11 +828,12 @@ class UserExperiments(ExperimentList):
     display_experiment_navbar = False
 
     def get(self, request, *args, **kwargs):
-        self.target_user = models.MyUser.objects.get(pk=self.kwargs['pk'])
+        self.target_user = User.objects.get(pk=self.kwargs['pk'])
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        base_query = Q(owners__in=[self.target_user])
+        my_user = models.MyUser.objects.get(user=self.target_user)
+        base_query = Q(owners=my_user)
         return super().get_queryset(base_query)
 
     def get_context_data(self, **kwargs):

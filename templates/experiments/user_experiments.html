@@ -3,7 +3,7 @@
 {% block sub-content-header %}
 <div class="container">
     <h1><a href="{% url 'user' target_user.pk %}">
-        {{target_user.user.username}}</a>'s Experiments ({{object_list|length}})</h1>
+        {{target_user.username}}</a>'s Experiments ({{object_list|length}})</h1>
 </div>
 {% endblock sub-content-header %}
 
