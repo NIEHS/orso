@@ -1,5 +1,12 @@
 {% extends 'base_EXPERIMENTS.html' %}
 
+{% block sub-nav-js %}
+<script>
+    $('.navbar-sub-niehs').children('li').removeClass('active');
+    $('#favorite_experiments_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block extra-js %}
 <script type='text/javascript'>
 {% for experiment in object_list %}

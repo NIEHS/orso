@@ -1,5 +1,12 @@
 {% extends 'base.html' %}
 
+{% block nav-js %}
+<script>
+    $('li.active').removeClass('active');
+    $('#home_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="container container-fluid">
     {% if user.is_authenticated %}
@@ -50,6 +57,3 @@
 </div>
 
 {% endblock content %}
-
-{% block extra-js %}
-{% endblock %}

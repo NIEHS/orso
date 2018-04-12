@@ -1,5 +1,12 @@
 {% extends 'base.html' %}
 
+{% block nav-js %}
+<script>
+    $('li.active').removeClass('active');
+    $('#experiments_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block content %}
 
 <div class="container">

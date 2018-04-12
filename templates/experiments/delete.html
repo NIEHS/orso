@@ -1,6 +1,13 @@
 {% extends 'base.html' %}
 {% load url_replace %}
 
+{% block nav-js %}
+<script>
+    $('li.active').removeClass('active');
+    $('#experiments_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block sub-content %}
 <div class="container">
     <div class="panel panel-default">

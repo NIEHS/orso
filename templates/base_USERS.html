@@ -1,6 +1,13 @@
 {% extends 'base.html' %}
 {% load url_replace %}
 
+{% block nav-js %}
+<script>
+    $('li.active').removeClass('active');
+    $('#users_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block content %}
 
 {% if display_user_navbar %}

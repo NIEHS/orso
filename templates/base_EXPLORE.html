@@ -1,16 +1,26 @@
 {% extends 'base.html' %}
 {% load url_replace %}
 
+{% block nav-js %}
+<script>
+    $('.navbar-default-niehs').children('li').removeClass('active');
+    $('#explore_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block content %}
 
 <nav class="navbar navbar-sub-niehs">
     <div class="container">
         <ul class="nav navbar-nav">
-            <li><a href="{% url 'explore_overview' %}">Overview</a></li>
-            <li><a href="{% url 'explore_pca' %}">PCA</a></li>
+            <li id='explore_overview_tab'><a href="{% url 'explore_overview' %}">Overview</a></li>
+            <li id='explore_pca_tab'><a href="{% url 'explore_pca' %}">PCA</a></li>
         </ul>
     </div>
 </nav>
+
+{% block sub-nav-js %}
+{% endblock sub-nav-js %}
 
 <div class="container container-fluid">
     <div id="explore_container"></div>

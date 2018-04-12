@@ -13,14 +13,14 @@ body {
     border-bottom: 0.5em solid #6E6C5F;
 }
 .navbar-default-niehs .navbar-brand,
+.navbar-default-niehs .navbar-nav > li {
+    color: white;
+    border-bottom: 2px solid #81AB00;
+}
 .navbar-default-niehs .navbar-nav > li > a {
     color: white;
 }
-.navbar-default-niehs .navbar-brand:hover,
-.navbar-default-niehs .navbar-nav > li > a:hover {
-    color: white;
-    text-decoration: underline;
-}
+
 .navbar-default-niehs .navbar-toggle {
     border-color: white;
 }
@@ -28,12 +28,39 @@ body {
     background-color: white;
 }
 
+.navbar-default-niehs .navbar-nav > li.active {
+    border-bottom: 2px solid white;
+}
+
+.navbar-default-niehs .navbar-nav > li:hover {
+    background-color: none;
+}
+.navbar-default-niehs .navbar-nav > li > a:hover {
+    color: white;
+    background-color: inherit;
+    text-decoration: underline;
+}
+
 .navbar-sub-niehs {
     background-color: #6E6C5F;
     color: white;
+    border-bottom: 2px solid #6E6C5F;
 }
 .navbar-sub-niehs .navbar-nav > li > a {
     color: white;
+}
+
+.navbar-sub-niehs .navbar-nav > li.active {
+    border-bottom: 2px solid white;
+}
+
+.navbar-sub-niehs .navbar-nav > li:hover {
+    background-color: none;
+}
+.navbar-sub-niehs .navbar-nav > li > a:hover {
+    color: white;
+    background-color: inherit;
+    text-decoration: underline;
 }
 
 /* Wrapper for page content to push down footer */

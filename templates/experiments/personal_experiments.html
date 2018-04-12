@@ -1,5 +1,12 @@
 {% extends 'base_EXPERIMENTS.html' %}
 
+{% block sub-nav-js %}
+<script>
+    $('.navbar-sub-niehs').children('li').removeClass('active');
+    $('#personal_experiments_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block sub-content-header %}
 {% if processing %}
 <div class="container">

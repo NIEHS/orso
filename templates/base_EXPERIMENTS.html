@@ -1,16 +1,23 @@
 {% extends 'base.html' %}
 {% load url_replace %}
 
+{% block nav-js %}
+<script>
+    $('li.active').removeClass('active');
+    $('#experiments_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block content %}
 
 {% if user.is_authenticated and display_experiment_navbar %}
 <nav class="navbar navbar-sub-niehs">
     <div class="container">
         <ul class="nav navbar-nav">
-            <li><a href="{% url 'all_experiments' %}">All experiments</a></li>
-            <li><a href="{% url 'recommended_experiments' %}">Recommended</a></li>
-            <li><a href="{% url 'favorite_experiments' %}">Favorites <span id="favorite_counts" class="badge">{{experiment_counts.favorite_experiment_counts}}</span></a></li>
-            <li><a href="{% url 'personal_experiments' %}">Your experiments <span id="personal_counts" class="badge">{{experiment_counts.personal_experiment_counts}}</span></a></li>
+            <li id='all_experiments_tab'><a href="{% url 'all_experiments' %}">All experiments</a></li>
+            <li id='recommended_experiments_tab'><a href="{% url 'recommended_experiments' %}">Recommended</a></li>
+            <li id='favorite_experiments_tab'><a href="{% url 'favorite_experiments' %}">Favorites <span id="favorite_counts" class="badge">{{experiment_counts.favorite_experiment_counts}}</span></a></li>
+            <li id='personal_experiments_tab'><a href="{% url 'personal_experiments' %}">Your experiments <span id="personal_counts" class="badge">{{experiment_counts.personal_experiment_counts}}</span></a></li>
         </ul>
         <ul class="nav navbar-nav navbar-right">
             <li><a href="{% url 'create_experiment' %}"><span class="glyphicon glyphicon-plus"></span> Add new experiment</a></li>
@@ -18,6 +25,9 @@
     </div>
 </nav>
 {% endif %}
+
+{% block sub-nav-js %}
+{% endblock sub-nav-js %}
 
 {% endblock content %}
 

@@ -1,5 +1,12 @@
 {% extends 'base_EXPLORE.html' %}
 
+{% block sub-nav-js %}
+<script>
+    $('.navbar-sub-niehs').children('li').removeClass('active');
+    $('#explore_pca_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block sub-content %}
 <div class="container">
     <div id="explore"/>

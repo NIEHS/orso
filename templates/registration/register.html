@@ -2,6 +2,13 @@
 
 {% load crispy_forms_tags %}
 
+{% block nav-js %}
+<script>
+    $('li.active').removeClass('active');
+    $('#register_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block title %}{{block.super}}: Create account{% endblock %}
 
 

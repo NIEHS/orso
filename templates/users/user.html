@@ -1,5 +1,19 @@
 {% extends 'base.html' %}
 
+{% block nav-js %}
+{% if object == user %}
+<script>
+    $('li.active').removeClass('active');
+    $('#self_tab').addClass('active');
+</script>
+{% else %}
+<script>
+    $('li.active').removeClass('active');
+    $('#users_tab').addClass('active');
+</script>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="container container-fluid">
     <h1>
