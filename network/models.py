@@ -143,7 +143,7 @@ class MyUser(models.Model):
             reverse('api:user-stop-following', kwargs={'pk': self.pk})
         hide_recommendation = \
             reverse('api:user-hide-recommendation', kwargs={'pk': self.pk})
-        detail = reverse('user', kwargs={'pk': self.pk})
+        detail = reverse('user', kwargs={'pk': self.user.pk})
 
         return {
             'add_favorite': add_favorite,
