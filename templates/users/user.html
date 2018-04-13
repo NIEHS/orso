@@ -47,7 +47,11 @@
                     Navigate To <span class="caret"></span>
                 </a>
                 <ul class="dropdown-menu">
+                    {% if meta_data.experiment_number > 0 %}
                     <li><a href="{% url 'user_experiments' object.pk %}">Personal Experiments</a></li>
+                    {% else %}
+                    <li class='disabled'><a href="#">No Personal Experiments</a></li>
+                    {% endif %}
                     <li role="separator" class="divider"></li>
                     <li><a href="{% url 'user_followers' object.pk %}">Followers</a></li>
                     <li><a href="{% url 'user_followed' object.pk %}">Followed Users</a></li>
@@ -62,11 +66,12 @@
                 Following {{meta_data.user_following_number}} users</br>
                 {{meta_data.data_favorite_number}} favorite datasets</br>
                 Followed by {{meta_data.user_followed_by_number}} users</br>
-                {{object.username}}'s datasets have been favorited {{meta_data.data_favorited_by_number}} times</br>
+                <b>{{object.username}}</b>'s datasets have been favorited {{meta_data.data_favorited_by_number}} times</br>
             </div>
         </div>
         <div id='experiments_overview_tab' class='tab-pane fade'>
             <div id='experiments_overview'>
+                {% if meta_data.experiment_number > 0 %}
                 <div class="row">
                     <div class="col-sm-6">
                         <div>Assemblies:</div>
@@ -77,6 +82,9 @@
                         <div id="pie_2"></div>
                     </div>
                 </div>
+                {% else %}
+                <b>{{object.username}}</b> owns 0 experiments.
+                {% endif %}
             </div>
         </div>
     </div>
@@ -85,6 +93,8 @@
 
 {% block extra-js %}
 <script type='text/javascript'>
+
+var experiment_number = {{meta_data.experiment_number}};
 
 $(document).ready(function(){
     let star_glyph = $('#star_glyph');
@@ -104,16 +114,18 @@ $(document).ready(function(){
         }
     });
 
-    window.apps.createPieChart(
-        $('#pie_1')[0],
-        {{plot_data.assembly_counts|safe}},
-        0,
-    );
-    window.apps.createPieChart(
-        $('#pie_2')[0],
-        {{plot_data.experiment_counts|safe}},
-        1,
-    );
+    if (experiment_number > 0) {
+        window.apps.createPieChart(
+            $('#pie_1')[0],
+            {{plot_data.assembly_counts|safe}},
+            0,
+        );
+        window.apps.createPieChart(
+            $('#pie_2')[0],
+            {{plot_data.experiment_counts|safe}},
+            1,
+        );
+    }
 });
 </script>
 {% endblock %}

@@ -82,7 +82,7 @@ class MyUser(models.Model):
         detail['username'] = self.user.username
         detail['pk'] = self.pk
 
-        detail['dataset_number'] = \
+        detail['experiment_number'] = \
             Experiment.objects.filter(owners=self).distinct().count()
         detail['data_favorited_by_number'] = \
             Favorite.objects.filter(experiment__owners=self).distinct().count()
