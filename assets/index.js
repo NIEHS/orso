@@ -27,6 +27,7 @@ import {
     appendRecommendationScatter,
     appendExperimentDataView,
     appendDatasetDataView,
+    createBarChart,
 } from './dataset';
 
 
@@ -57,4 +58,5 @@ window.apps = {
     appendRecommendationScatter,
     appendExperimentDataView,
     appendDatasetDataView,
+    createBarChart,
 };

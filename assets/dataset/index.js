@@ -23,6 +23,7 @@ import GeneValues from './GeneValues';
 import RecommendationScatter from './RecommendationScatter';
 import ExperimentDataView from './ExperimentDataView';
 import DatasetDataView from './DatasetDataView';
+import BarChart from './BarChart';
 
 
 let createMetaPlot = function(el, metaplot) {
@@ -220,56 +221,63 @@ let appendExpression = function(el, data) {
 
     ReactDOM.render(<Expression
         data={data}/>, element[0]);
-}
+};
 
 let appendGeneScatter = function(el, data) {
     var element = $('<div></div>').appendTo(el);
 
     ReactDOM.render(<GeneScatter
         data={data}/>, element[0]);
-}
+};
 
 let appendGeneFoldChange = function(el, data) {
     var element = $('<div></div>').appendTo(el);
 
     ReactDOM.render(<GeneFoldChange
         data={data}/>, element[0]);
-}
+};
 
 let appendMetaPlotCarousel = function(el, data) {
     var element = $('<div></div>').appendTo(el);
 
     ReactDOM.render(<MetaPlotCarousel
         data={data}/>, element[0]);
-}
+};
 
 let appendGeneValues = function(el, data) {
     var element = $('<div></div>').appendTo(el);
 
     ReactDOM.render(<GeneValues
         data={data}/>, element[0]);
-}
+};
 
 let appendRecommendationScatter = function(el, data) {
     var element = $('<div></div>').appendTo(el);
 
     ReactDOM.render(<RecommendationScatter
         data={data}/>, element[0]);
-}
+};
 
 let appendExperimentDataView = function(el, data_lookup) {
     var element = $('<div></div>').appendTo(el);
 
     ReactDOM.render(<ExperimentDataView
         data_lookup={data_lookup}/>, element[0]);
-}
+};
 
 let appendDatasetDataView = function(el, data_lookup) {
     var element = $('<div></div>').appendTo(el);
 
     ReactDOM.render(<DatasetDataView
         data_lookup={data_lookup}/>, element[0]);
-}
+};
+
+let createBarChart = function(el, data, index, layout) {
+    ReactDOM.render(<BarChart
+        data={data}
+        id={index}
+        layout={layout}/>, el);
+};
 
 export {
     createMetaPlot,
@@ -298,4 +306,5 @@ export {
     appendRecommendationScatter,
     appendExperimentDataView,
     appendDatasetDataView,
+    createBarChart,
 };

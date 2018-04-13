@@ -74,11 +74,9 @@
                 {% if meta_data.experiment_number > 0 %}
                 <div class="row">
                     <div class="col-sm-6">
-                        <div>Assemblies:</div>
                         <div id="pie_1"></div>
                     </div>
                     <div class="col-sm-6">
-                        <div>Data types:</div>
                         <div id="pie_2"></div>
                     </div>
                 </div>
@@ -97,6 +95,7 @@
 var experiment_number = {{meta_data.experiment_number}};
 
 $(document).ready(function(){
+
     let star_glyph = $('#star_glyph');
     $('#favorite_button').on('click', function () {
         if (star_glyph.hasClass('glyphicon-star-empty')) {
@@ -115,15 +114,31 @@ $(document).ready(function(){
     });
 
     if (experiment_number > 0) {
-        window.apps.createPieChart(
+        window.apps.createBarChart(
             $('#pie_1')[0],
             {{plot_data.assembly_counts|safe}},
             0,
+            {
+                title: 'Assemblies',
+                height: 300,
+                width: $('#tabs').width() / 2,
+                yaxis: {
+                    title: 'Count',
+                },
+            },
         );
-        window.apps.createPieChart(
+        window.apps.createBarChart(
             $('#pie_2')[0],
             {{plot_data.experiment_counts|safe}},
             1,
+            {
+                title: 'Experiment Types',
+                height: 300,
+                width: $('#tabs').width() / 2,
+                yaxis: {
+                    title: 'Count',
+                },
+            },
         );
     }
 });

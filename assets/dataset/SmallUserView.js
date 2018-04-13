@@ -1,5 +1,6 @@
 import React from 'react';
-import PieChart from './PieChart';
+import ReactDOM from 'react-dom';
+import BarChart from './BarChart';
 
 
 class SmallUserView extends React.Component {
@@ -56,6 +57,58 @@ class SmallUserView extends React.Component {
 
             $.ajax({url: remove_favorite_url});
         });
+
+        var pie_id_1 = '' + this.props.meta_data['pk'] + '_0';
+        var pie_id_2 = '' + this.props.meta_data['pk'] + '_1';
+
+        if (Object.keys(this.props.plot_data['assembly_counts']).length > 0) {
+            ReactDOM.render(
+                <BarChart
+                    data={this.props.plot_data['assembly_counts']}
+                    id={pie_id_1}
+                    layout={{
+                        title: 'Assemblies',
+                        height: 200,
+                        width: $(this.refs.assembly_panel).width(),
+                        titlefont: {
+                            size: 14,
+                        },
+                        margins: {
+                            l: 40,
+                            r: 40,
+                            b: 40,
+                            t: 40,
+                            pad: 0,
+                        },
+                    }}
+                />,
+                this.refs.assembly_panel,
+            );
+        }
+        if (Object.keys(this.props.plot_data['experiment_counts']).length > 0) {
+            ReactDOM.render(
+                <BarChart
+                    data={this.props.plot_data['experiment_counts']}
+                    id={pie_id_2}
+                    layout={{
+                        title: 'Experiment Types',
+                        titlefont: {
+                            size: 14,
+                        },
+                        height: 200,
+                        width: $(this.refs.experiment_type_panel).width(),
+                        margins: {
+                            l: 40,
+                            r: 40,
+                            b: 40,
+                            t: 40,
+                            pad: 0,
+                        },
+                    }}
+                />,
+                this.refs.experiment_type_panel,
+            );
+        }
     }
 
     render(){
@@ -65,7 +118,7 @@ class SmallUserView extends React.Component {
         var pie_id_1 = '' + this.props.meta_data['pk'] + '_0';
         var pie_id_2 = '' + this.props.meta_data['pk'] + '_1';
 
-        return <div className="panel panel-default" id={id_select}>
+        return <div className="panel panel-default" id={id_select} ref='panel'>
             <div className="panel-heading">
                 <div className="panel-title pull-left">
                     <a href={this.props.urls['detail']}>{this.props.meta_data['username']}</a>
@@ -107,23 +160,9 @@ class SmallUserView extends React.Component {
                             <li>Datasets favorited {this.props.meta_data['data_favorited_by_number']} times</li>
                         </ul>
                     </div>
-                    {Object.keys(this.props.plot_data['assembly_counts']).length > 0 &&
-                        <div className="col-sm-3">
-                            <h4 style={{textAlign:"center"}}>Assembly</h4>
-                            <PieChart
-                                data={this.props.plot_data['assembly_counts']}
-                                id={pie_id_1}
-                            />
-                        </div>
-                    }
+                    <div ref='assembly_panel' className="col-sm-3"></div>
                     {Object.keys(this.props.plot_data['experiment_counts']).length > 0 &&
-                        <div className="col-sm-3">
-                            <h4 style={{textAlign:"center"}}>Experiment types</h4>
-                            <PieChart
-                                data={this.props.plot_data['experiment_counts']}
-                                id={pie_id_2}
-                            />
-                        </div>
+                        <div ref='experiment_type_panel' className="col-sm-3"></div>
                     }
                 </div>
             </div>
