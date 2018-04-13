@@ -689,8 +689,6 @@ class MyUser(DetailView, AddMyUserMixin):
         my_user = models.MyUser.objects.get(user=self.get_object())
         login_user = context['login_user']
 
-        print(my_user.get_display_data(login_user))
-
         context.update(my_user.get_display_data(login_user))
 
         return context
