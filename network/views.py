@@ -849,9 +849,14 @@ class RecommendedExperiments(LoginRequiredMixin, ExperimentList):
 
     def get_queryset(self):
 
+        rec_query = Q(user=self.my_user)
+        if self.form.is_valid():
+            rec_query &= Q(rec_type__in=self.form.get_rec_type())
+        recommendations = models.Recommendation.objects.filter(rec_query)
+
         query = (
             ~Q(owners=self.my_user) & ~Q(favorite__user=self.my_user) &
-            Q(recommended_experiment__user=self.my_user)
+            Q(recommended_experiment__in=recommendations)
         )
 
         if self.form.is_valid():

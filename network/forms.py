@@ -135,20 +135,22 @@ class AllExperimentFilterForm(ExperimentFilterForm):
 
 
 class RecommendedExperimentFilterForm(ExperimentFilterForm):
-    order_choices = [
-        ('correlation_rank', 'correlation'),
-        ('metadata_rank', 'metadata'),
+    rec_type_choices = [
+        ('primary', 'Primary Data'),
+        ('metadata', 'Metadata'),
+        ('user', 'User Interactions'),
     ]
 
-    order = forms.ChoiceField(
+    rec_type = forms.MultipleChoiceField(
         label='Recommendation criteria',
-        choices=order_choices,
-        initial=[c[0] for c in order_choices],
+        choices=rec_type_choices,
+        initial=[c[0] for c in rec_type_choices],
         required=False,
+        widget=forms.CheckboxSelectMultiple(),
     )
 
     field_order = [
-        'order'
+        'rec_type'
     ]
 
     def __init__(self, *args, **kwargs):
@@ -169,8 +171,8 @@ class RecommendedExperimentFilterForm(ExperimentFilterForm):
         self.fields['target'].widget = \
             AutoCompleteWidget(lookups.RecExpTargetLookup)
 
-    def get_order(self):
-        return self.cleaned_data.get('order')
+    def get_rec_type(self):
+        return self.cleaned_data.get('rec_type')
 
 
 class PersonalExperimentFilterForm(ExperimentFilterForm):
