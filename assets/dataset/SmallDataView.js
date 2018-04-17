@@ -235,7 +235,8 @@ class SmallDataView extends React.Component {
             <div className="panel-body">
                 <div className='small_data_view'>
                     <div className="row">
-                        <div style={{height:"200px", overflow:"auto"}} className="col-sm-4">
+                        <div style={{height:"200px", overflow:"auto", paddingLeft:"40px"}} className="col-sm-4">
+                            <b>Metadata:</b>
                             <ul>
                                 <li><b>Assembly:</b> {this.props.meta_data['assemblies'].join(', ')}</li>
                                 <li><b>Data type:</b> {this.props.meta_data['data_type']}</li>
@@ -243,6 +244,9 @@ class SmallDataView extends React.Component {
                                 {this.props.meta_data['target'] &&
                                     <li><b>Target:</b> {this.props.meta_data['target']}</li>}
                             </ul>
+                            {recommendation_tags.length > 0 &&
+                                <b>Recommendation criteria:</b>
+                            }
                             <ul>
                                 {recommendation_tags}
                             </ul>
