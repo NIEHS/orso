@@ -630,6 +630,7 @@ class Experiment(CheckPublicExperimentMixin, AddMyUserMixin, DetailView):
             experiment=exp,
             user=context['login_user'],
         ).exists()
+        context['network'] = exp.get_network()
         context['owned'] = \
             exp.owners.filter(pk=context['login_user'].pk).exists()
 
