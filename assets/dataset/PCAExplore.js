@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom';
 import PCA from './PCA';
 
 
-class Explore extends React.Component {
+class PCAExplore extends React.Component {
 
     constructor(props) {
         super(props);
@@ -210,7 +210,7 @@ class Explore extends React.Component {
     }
 }
 
-Explore.propTypes = {
+PCAExplore.propTypes = {
     pca_lookup: React.PropTypes.object.isRequired,
     available_exp_types: React.PropTypes.object.isRequired,
     available_assemblies: React.PropTypes.object.isRequired,
@@ -218,4 +218,4 @@ Explore.propTypes = {
     user_data: React.PropTypes.object,
 };
 
-export default Explore;
+export default PCAExplore;

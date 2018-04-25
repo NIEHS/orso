@@ -14,7 +14,8 @@ import PieChart from './PieChart';
 import SmallUserView from './SmallUserView';
 import SmallRecommendedDataView from './SmallRecommendedDataView';
 import PCA from './PCA';
-import Explore from './Explore';
+import PCAExplore from './PCAExplore';
+import NetworkExplore from './NetworkExplore';
 import Expression from './Expression';
 import GeneScatter from './GeneScatter';
 import GeneFoldChange from './GeneFoldChange';
@@ -205,15 +206,22 @@ let appendPCA = function(el, pca_data, exp_urls) {
         data={pca_data} exp_urls={exp_urls}/>, element[0]);
 };
 
-let appendExplore = function(el, pca_lookup, exp_types, assemblies, groups, user_data) {
+let appendPCAExplore = function(el, pca_lookup, exp_types, assemblies, groups, user_data) {
     var element = $('<div></div>').appendTo(el);
 
-    ReactDOM.render(<Explore
+    ReactDOM.render(<PCAExplore
         pca_lookup={pca_lookup}
         available_exp_types={exp_types}
         available_assemblies={assemblies}
         available_groups={groups}
         user_data={user_data}/>, element[0]);
+};
+
+let appendNetworkExplore = function(el, network_lookup) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<NetworkExplore
+        network_lookup={network_lookup}/>, element[0]);
 };
 
 let appendExpression = function(el, data) {
@@ -297,7 +305,8 @@ export {
     appendSmallUserView,
     appendSmallRecommendedDataView,
     appendPCA,
-    appendExplore,
+    appendPCAExplore,
+    appendNetworkExplore,
     appendExpression,
     appendGeneScatter,
     appendGeneFoldChange,

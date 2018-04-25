@@ -3,26 +3,22 @@
 {% block sub-nav-js %}
 <script>
     $('.navbar-sub-niehs').children('li').removeClass('active');
-    $('#explore_pca_tab').addClass('active');
+    $('#explore_network_tab').addClass('active');
 </script>
 {% endblock %}
 
 {% block sub-content %}
 <div class="container">
-    <div id="explore"/>
+    <div id="explore"></div>
 </div>
 {% endblock sub-content %}
 
 {% block extra-js %}
 <script type='text/javascript'>
 $(document).ready(function(){
-    window.apps.appendPCAExplore(
+    window.apps.appendNetworkExplore(
         $("#explore")[0],
-        {{pca_lookup|safe}},
-        {{available_experiment_types|safe}},
-        {{available_assemblies|safe}},
-        {{available_groups|safe}},
-        {{user_data|safe}},
+        {{network_lookup|safe}},
     );
 });
 </script>

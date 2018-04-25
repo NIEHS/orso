@@ -18,7 +18,7 @@ import {
     appendSmallUserView,
     appendSmallRecommendedDataView,
     appendPCA,
-    appendExplore,
+    appendPCAExplore,
     appendExpression,
     appendGeneScatter,
     appendGeneFoldChange,
@@ -28,6 +28,7 @@ import {
     appendExperimentDataView,
     appendDatasetDataView,
     createBarChart,
+    appendNetworkExplore,
 } from './dataset';
 
 
@@ -49,7 +50,7 @@ window.apps = {
     appendSmallUserView,
     appendSmallRecommendedDataView,
     appendPCA,
-    appendExplore,
+    appendPCAExplore,
     appendExpression,
     appendGeneScatter,
     appendGeneFoldChange,
@@ -59,4 +60,5 @@ window.apps = {
     appendExperimentDataView,
     appendDatasetDataView,
     createBarChart,
+    appendNetworkExplore,
 };

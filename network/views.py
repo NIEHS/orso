@@ -395,6 +395,20 @@ class ExplorePCA(TemplateView, AddMyUserMixin):
         return context
 
 
+class ExploreNetwork(TemplateView, AddMyUserMixin):
+    template_name = 'explore/network.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        organism_lookup = dict()
+        for org in models.Organism.objects.all():
+            organism_lookup[org.name] = org.pk
+
+        context['network_lookup'] = organism_lookup
+        return context
+
+
 class ExploreOverview(TemplateView, AddMyUserMixin):
     template_name = 'explore/overview.html'
 
