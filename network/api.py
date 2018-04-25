@@ -183,3 +183,8 @@ class MetaPlotViewset(viewsets.ModelViewSet):
 class FeatureValuesViewset(viewsets.ModelViewSet):
     queryset = models.FeatureValues.objects.all()
     serializer_class = serializers.FeatureValuesSerializer
+
+
+class OrganismNetworkViewset(viewsets.ModelViewSet):
+    queryset = models.Organism.objects.all()
+    serializer_class = serializers.OrganismNetworkSerializer

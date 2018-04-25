@@ -41,6 +41,17 @@ class PCAPlotSerializer(serializers.ModelSerializer):
         fields = ('pca_plot', 'explained_variance', 'components')
 
 
+class OrganismNetworkSerializer(serializers.ModelSerializer):
+    network = serializers.SerializerMethodField('_network')
+
+    def _network(self, organism):
+        return organism.get_network()
+
+    class Meta:
+        model = models.Organism
+        fields = ('network',)
+
+
 class MetaPlotSerializer(serializers.ModelSerializer):
     metaplot = serializers.SerializerMethodField('_metaplot')
 

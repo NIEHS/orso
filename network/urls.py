@@ -22,6 +22,9 @@ router.register('metaplot',
 router.register('feature-values',
                 api.FeatureValuesViewset,
                 base_name='feature-values')
+router.register('network',
+                api.OrganismNetworkViewset,
+                base_name='network')
 
 urlpatterns = [
 
