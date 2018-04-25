@@ -887,7 +887,46 @@ class Dataset(models.Model):
             }
 
 
+class Organism(models.Model):
+    name = models.CharField(unique=True, max_length=32)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def get_network(self):
+        experiments = Experiment.objects.filter(
+            dataset__assembly__organism=self)
+        similarities = Similarity.objects.filter(
+            experiment_1__in=experiments, experiment_2__in=experiments)
+
+        nodes = []
+        edges = []
+
+        exp_to_nodes = dict()
+        for i, exp in enumerate(experiments):
+            exp_to_nodes[exp.pk] = i
+            nodes.append({
+                'id': i,
+                'title': exp.name,
+            })
+
+        _edges = set()
+        for sim in similarities:
+            pk_1, pk_2 = sorted((sim.experiment_1.pk, sim.experiment_2.pk))
+            _edges.add((pk_1, pk_2))
+        for _edge in _edges:
+            edges.append({
+                'from': exp_to_nodes[_edge[0]],
+                'to': exp_to_nodes[_edge[1]],
+            })
+
+        return {
+            'nodes': nodes,
+            'edges': edges,
+        }
+
+
 class Assembly(models.Model):
+    organism = models.ForeignKey('Organism')
+
     name = models.CharField(unique=True, max_length=32)
     chromosome_sizes = JSONField(blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True)
