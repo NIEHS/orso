@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.exceptions import NotAcceptable
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from django.contrib.auth.models import User
@@ -6,6 +7,14 @@ from django.http import HttpResponse
 
 from . import models
 from . import serializers
+
+
+def try_int(val, default=None):
+    """Return int or default value."""
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return default
 
 
 class BrowserViewset(viewsets.ViewSet):
@@ -185,6 +194,15 @@ class FeatureValuesViewset(viewsets.ModelViewSet):
     serializer_class = serializers.FeatureValuesSerializer
 
 
-class OrganismNetworkViewset(viewsets.ModelViewSet):
+class OrganismNetworkViewset(viewsets.ViewSet):
+
     queryset = models.Organism.objects.all()
     serializer_class = serializers.OrganismNetworkSerializer
+
+    @detail_route(methods=['get'])
+    def network(self, request):
+        exp_type_pk = try_int(self.request.GET.get('exp-type'), -1)
+        if exp_type_pk == -1:
+            raise NotAcceptable("Experiment type `id` parameter required")
+        exp_type = models.ExperimentType.objects.get(pk=exp_type_pk)
+        return Response(self.object.get_network(experiment_type=exp_type))

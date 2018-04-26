@@ -891,9 +891,13 @@ class Organism(models.Model):
     name = models.CharField(unique=True, max_length=32)
     last_updated = models.DateTimeField(auto_now=True)
 
-    def get_network(self):
-        experiments = Experiment.objects.filter(
-            dataset__assembly__organism=self)
+    def get_network(self, experiment_type=None):
+
+        exp_query = Q(dataset__assembly__organism=self)
+        if experiment_type:
+            exp_query &= Q(experiment_type=experiment_type)
+
+        experiments = Experiment.objects.filter(exp_query)
         similarities = Similarity.objects.filter(
             experiment_1__in=experiments, experiment_2__in=experiments)
 

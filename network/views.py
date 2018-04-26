@@ -63,6 +63,17 @@ def browser(request):
         chromosome, start, end, datasets))
 
 
+@api_view()
+def network(request):
+    org_pk = request.GET.get('organism')
+    exp_type = request.GET.get('exp-type')
+
+    organism = models.Organism.objects.get(pk=org_pk)
+    exp_type = models.ExperimentType.objects.get(pk=exp_type)
+
+    return Response(organism.get_network(exp_type))
+
+
 class NeverCacheFormMixin:
 
     @method_decorator(never_cache)
@@ -401,11 +412,33 @@ class ExploreNetwork(TemplateView, AddMyUserMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        experiment_type_lookup = dict()
         organism_lookup = dict()
+        available_experiment_types = dict()
+        available_organisms = dict()
+
         for org in models.Organism.objects.all():
             organism_lookup[org.name] = org.pk
+            for exp_type in models.ExperimentType.objects.filter(
+                    experiment__dataset__assembly__organism=org):
+                experiment_type_lookup[exp_type.name] = exp_type.pk
 
-        context['network_lookup'] = organism_lookup
+                if org.name not in available_experiment_types:
+                    available_experiment_types[org.name] = []
+                if exp_type.name not in available_experiment_types[org.name]:
+                    available_experiment_types[org.name].append(exp_type.name)
+
+                if exp_type.name not in available_organisms:
+                    available_organisms[exp_type.name] = []
+                if org.name not in available_organisms[exp_type.name]:
+                    available_organisms[exp_type.name].append(org.name)
+
+        context['experiment_type_lookup'] = experiment_type_lookup
+        context['organism_lookup'] = organism_lookup
+        context['available_experiment_types'] = available_experiment_types
+        context['available_organisms'] = available_organisms
+        context
+
         return context
 
 
