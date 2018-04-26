@@ -18,8 +18,7 @@
 $(document).ready(function(){
     window.apps.appendNetworkExplore(
         $("#explore")[0],
-        {{organism_lookup|safe}},
-        {{experiment_type_lookup|safe}},
+        {{network_lookup|safe}},
         {{available_organisms|safe}},
         {{available_experiment_types|safe}},
     );

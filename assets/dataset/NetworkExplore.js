@@ -12,14 +12,19 @@ class NetworkExplore extends React.Component {
         var organism_choices = ['--'];
         var exp_type_choices = ['--'];
 
-        var organisms = Object.keys(this.props.organism_lookup);
-        for (var i = 0; i < organisms.length; i++) {
-            organism_choices.push(organisms[i])
-        }
+        var lookup_keys = Object.keys(this.props.network_lookup);
+        for (var i = 0; i < lookup_keys.length; i++) {
+            var split = lookup_keys[i].split(':');
 
-        var exp_types = Object.keys(this.props.exp_type_lookup);
-        for (var i = 0; i < exp_types.length; i++) {
-            exp_type_choices.push(exp_types[i])
+            var organism = split[0];
+            var exp_type = split[1];
+
+            if ($.inArray(organism, organism_choices) == -1) {
+                organism_choices.push(organism);
+            }
+            if ($.inArray(exp_type, exp_type_choices) == -1) {
+                exp_type_choices.push(exp_type);
+            }
         }
 
         this.state = {
@@ -52,14 +57,17 @@ class NetworkExplore extends React.Component {
     get_network(event){
         this.clear_network();
 
-        var organism_pk = this.props.organism_lookup[this.state.organism];
-        var exp_type_pk = this.props.exp_type_lookup[this.state.exp_type];
-        var network_url = `/network/network/?organism=${organism_pk}&exp-type=${exp_type_pk}`;
+        var network_pk =
+            this.props.network_lookup[
+                this.state.organism + ':' +
+                this.state.exp_type
+            ];
+        var network_url = `/network/api/network-plot/${network_pk}/`;
 
         var cb = function(data) {
             ReactDOM.render(
                 <Network
-                    network={data}
+                    network={data.network}
                 />,
                 this.refs.network_container,
             );
@@ -166,8 +174,7 @@ class NetworkExplore extends React.Component {
 }
 
 NetworkExplore.propTypes = {
-    organism_lookup: React.PropTypes.object.isRequired,
-    exp_type_lookup: React.PropTypes.object.isRequired,
+    network_lookup: React.PropTypes.object.isRequired,
     available_organisms: React.PropTypes.object.isRequired,
     available_exp_types: React.PropTypes.object.isRequired,
 };

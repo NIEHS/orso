@@ -194,15 +194,6 @@ class FeatureValuesViewset(viewsets.ModelViewSet):
     serializer_class = serializers.FeatureValuesSerializer
 
 
-class OrganismNetworkViewset(viewsets.ViewSet):
-
-    queryset = models.Organism.objects.all()
-    serializer_class = serializers.OrganismNetworkSerializer
-
-    @detail_route(methods=['get'])
-    def network(self, request):
-        exp_type_pk = try_int(self.request.GET.get('exp-type'), -1)
-        if exp_type_pk == -1:
-            raise NotAcceptable("Experiment type `id` parameter required")
-        exp_type = models.ExperimentType.objects.get(pk=exp_type_pk)
-        return Response(self.object.get_network(experiment_type=exp_type))
+class NetworkViewset(viewsets.ModelViewSet):
+    queryset = models.Network.objects.all()
+    serializer_class = serializers.NetworkSerializer

@@ -1,5 +1,6 @@
 from .data_recommendations import *
 from .metadata_recommendations import *
+from .network import *
 from .normalize import *
 from .process_datasets import *
 from .process_experiments import *

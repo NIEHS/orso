@@ -16,6 +16,9 @@ router.register('browser',
 router.register('pca-plot',
                 api.PCAPlotViewset,
                 base_name='pca-plot')
+router.register('network-plot',
+                api.NetworkViewset,
+                base_name='network-plot')
 router.register('metaplot',
                 api.MetaPlotViewset,
                 base_name='metaplot')
@@ -93,7 +96,7 @@ urlpatterns = [
     # url(r'^test/$', views.TestSmallDataView.as_view(), name='test'),
     url(r'^test/$', views.TestSmallUserView.as_view(), name='test'),
     url(r'^browser/$', views.browser, name='browser'),
-    url(r'^network/$', views.network, name='network'),
+    # url(r'^network/$', views.network, name='network'),
 
     url(r'^api/',
         include(router.urls, namespace='api')),

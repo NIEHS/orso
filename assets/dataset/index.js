@@ -217,12 +217,11 @@ let appendPCAExplore = function(el, pca_lookup, exp_types, assemblies, groups, u
         user_data={user_data}/>, element[0]);
 };
 
-let appendNetworkExplore = function(el, organism_lookup, exp_type_lookup, available_organisms, available_exp_types) {
+let appendNetworkExplore = function(el, network_lookup, available_organisms, available_exp_types) {
     var element = $('<div></div>').appendTo(el);
 
     ReactDOM.render(<NetworkExplore
-        organism_lookup={organism_lookup}
-        exp_type_lookup={exp_type_lookup}
+        network_lookup={network_lookup}
         available_organisms={available_organisms}
         available_exp_types={available_exp_types}/>, element[0]);
 };
