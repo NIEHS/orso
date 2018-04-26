@@ -937,10 +937,11 @@ class Organism(models.Model):
             pk_1, pk_2 = sorted((sim.experiment_1.pk, sim.experiment_2.pk))
             _edges.add((pk_1, pk_2))
         for _edge in _edges:
-            edges.append({
-                'from': exp_to_nodes[_edge[0]],
-                'to': exp_to_nodes[_edge[1]],
-            })
+            if _edge[0] != _edge[1]:
+                edges.append({
+                    'from': exp_to_nodes[_edge[0]],
+                    'to': exp_to_nodes[_edge[1]],
+                })
 
         return {
             'nodes': nodes,
