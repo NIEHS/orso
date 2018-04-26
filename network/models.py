@@ -904,12 +904,32 @@ class Organism(models.Model):
         nodes = []
         edges = []
 
+        with open(os.path.join(settings.COLOR_KEY_DIR, 'cell_type.json')) as f:
+            cell_type_to_color = json.load(f)
+        with open(os.path.join(settings.COLOR_KEY_DIR, 'target.json')) as f:
+            target_to_color = json.load(f)
+
+        color_by_target_group = [
+            'ChIP-seq',
+            'siRNA knockdown followed by RNA-seq',
+            'shRNA knockdown followed by RNA-seq',
+            'CRISPR genome editing followed by RNA-seq',
+            'CRISPRi followed by RNA-seq',
+        ]
+
         exp_to_nodes = dict()
         for i, exp in enumerate(experiments):
             exp_to_nodes[exp.pk] = i
+
+            if experiment_type.name in color_by_target_group:
+                color = target_to_color[exp.target]
+            else:
+                color = cell_type_to_color[exp.cell_type]
+
             nodes.append({
                 'id': i,
                 'title': exp.name,
+                'color': color,
             })
 
         _edges = set()
