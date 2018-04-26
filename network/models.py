@@ -921,10 +921,13 @@ class Organism(models.Model):
         for i, exp in enumerate(experiments):
             exp_to_nodes[exp.pk] = i
 
-            if experiment_type.name in color_by_target_group:
-                color = target_to_color[exp.target]
-            else:
-                color = cell_type_to_color[exp.cell_type]
+            try:
+                if experiment_type.name in color_by_target_group:
+                    color = target_to_color[exp.target]
+                else:
+                    color = cell_type_to_color[exp.cell_type]
+            except KeyError:
+                color = '#A9A9A9'
 
             nodes.append({
                 'id': i,
