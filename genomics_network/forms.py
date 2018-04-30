@@ -63,7 +63,8 @@ class RegistrationForm(forms.ModelForm):
     public = forms.BooleanField(
         label='Public account?',
         initial=True,
-        help_text=PUBLIC_HELP)
+        help_text=PUBLIC_HELP,
+        required=False)
 
     class Meta:
         model = User
