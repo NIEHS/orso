@@ -22,8 +22,8 @@
     </h1>
     <div style="margin-top:20px; margin-bottom:20px">
         <ul class="nav nav-tabs">
-            <li class="active"><a data-toggle='tab' href="#network_tab">Network</a></li>
-            <li><a data-toggle='tab' href="#metadata_tab">Metadata</a></li>
+            <!-- <li class="active"><a data-toggle='tab' href="#network_tab">Network</a></li> -->
+            <li class="active"><a data-toggle='tab' href="#metadata_tab">Metadata</a></li>
             <li><a data-toggle='tab' href="#primary_data_tab">Dataset Coverage</a></li>
             {% if owned %}
             <li class="dropdown pull-right">
@@ -53,10 +53,10 @@
     </div>
 
     <div class='tab-content' id='tabs'>
-        <div id='network_tab' class='tab-pane fade in active'>
+        <!-- <div id='network_tab' class='tab-pane fade in active'>
             <div id='network'></div>
-        </div>
-        <div id='metadata_tab' class='tab-pane fade'>
+        </div> -->
+        <div id='metadata_tab' class='tab-pane fade in active'>
             <div id='metadata'>
                 {% if experiment.data_type %}
                 <p><b>Data type:</b> {{experiment.data_type}}</p>
@@ -107,39 +107,39 @@ $(document).ready(function(){
         $('#data_view')[0],
         {{data_lookup|safe}},
     );
-
-    // create an array with nodes
-    var nodes = new vis.DataSet({{network.nodes|safe}});
-
-    // create an array with edges
-    var edges = new vis.DataSet({{network.edges|safe}});
-
-    // create a network
-    var container = document.getElementById('network');
-
-    // provide the data in the vis format
-    var data = {
-        nodes: nodes,
-        edges: edges,
-    };
-    var options = {
-        edges: {
-            smooth:{
-                enabled: true,
-            },
-        },
-        layout: {
-            hierarchical: {
-                enabled: true,
-            },
-        },
-        physics: {
-            enabled: false,
-        }
-    };
-
-    // initialize your network!
-    var network = new vis.Network(container, data, options);
+    //
+    // // create an array with nodes
+    // var nodes = new vis.DataSet({{network.nodes|safe}});
+    //
+    // // create an array with edges
+    // var edges = new vis.DataSet({{network.edges|safe}});
+    //
+    // // create a network
+    // var container = document.getElementById('network');
+    //
+    // // provide the data in the vis format
+    // var data = {
+    //     nodes: nodes,
+    //     edges: edges,
+    // };
+    // var options = {
+    //     edges: {
+    //         smooth:{
+    //             enabled: true,
+    //         },
+    //     },
+    //     layout: {
+    //         hierarchical: {
+    //             enabled: true,
+    //         },
+    //     },
+    //     physics: {
+    //         enabled: false,
+    //     }
+    // };
+    //
+    // // initialize your network!
+    // var network = new vis.Network(container, data, options);
 });
 </script>
 {% endblock %}
