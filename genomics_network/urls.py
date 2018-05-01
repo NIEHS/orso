@@ -21,7 +21,6 @@ from . import forms, views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^', include('network.urls')),
 
     url(r'^login/$',
         auth_views.login,
@@ -36,4 +35,6 @@ urlpatterns = [
     url(r'^register/$',
         views.Register.as_view(),
         name='register'),
+
+    url(r'^', include('network.urls')),
 ]
