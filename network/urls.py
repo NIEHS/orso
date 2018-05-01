@@ -1,4 +1,5 @@
 from django.conf.urls import include, url
+from django.views.generic.base import RedirectView
 from rest_framework.routers import DefaultRouter
 
 from . import api, views
@@ -28,7 +29,6 @@ router.register('feature-values',
 
 urlpatterns = [
 
-    url(r'^$', views.Index.as_view(), name='index'),
     url(r'^home/$', views.Home.as_view(), name='home'),
     url(r'^dataset/(?P<pk>\d+)/$', views.Dataset.as_view(),
         name='dataset'),
@@ -102,4 +102,5 @@ urlpatterns = [
         include(router.urls, namespace='api')),
 
     url(r'^selectable/', include('selectable.urls')),
+    url(r'^.*$', RedirectView.as_view(pattern_name='home', permanent=False)),
 ]

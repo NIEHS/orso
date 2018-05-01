@@ -21,7 +21,7 @@ from . import forms, views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^network/', include('network.urls')),
+    url(r'^', include('network.urls')),
 
     url(r'^login/$',
         auth_views.login,
