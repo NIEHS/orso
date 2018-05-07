@@ -256,12 +256,19 @@ def update_metadata_similarities(experiment_pks):
                             experiment_2=exp_2,
                             sim_type='metadata',
                         )
+                        models.Similarity.objects.update_or_create(
+                            experiment_1=exp_2,
+                            experiment_2=exp_1,
+                            sim_type='metadata',
+                        )
                     else:
-                        try:
-                            models.Similarity.objects.get(
-                                experiment_1=exp_1,
-                                experiment_2=exp_2,
-                                sim_type='metadata',
-                            ).delete()
-                        except models.Similarity.DoesNotExist:
-                            pass
+                        models.Similarity.objects.filter(
+                            experiment_1=exp_1,
+                            experiment_2=exp_2,
+                            sim_type='metadata',
+                        ).delete()
+                        models.Similarity.objects.filter(
+                            experiment_1=exp_2,
+                            experiment_2=exp_1,
+                            sim_type='metadata',
+                        ).delete()

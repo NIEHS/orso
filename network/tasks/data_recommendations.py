@@ -101,7 +101,6 @@ def update_primary_data_similarities(experiment_pk):
                                            dataset_2=ds_2,
                                            sim_type='primary',
                                        ))
-
                                 (models.Similarity
                                        .objects.update_or_create(
                                            experiment_1=ds_2.experiment,
@@ -111,26 +110,19 @@ def update_primary_data_similarities(experiment_pk):
                                            sim_type='primary',
                                        ))
                             else:
-                                try:
-                                    (models.Similarity
-                                           .objects.get(
-                                               experiment_1=ds_1.experiment,
-                                               experiment_2=ds_2.experiment,
-                                               dataset_1=ds_1,
-                                               dataset_2=ds_2,
-                                               sim_type='primary',
-                                           ).delete())
-                                except models.Similarity.DoesNotExist:
-                                    pass
-
-                                try:
-                                    (models.Similarity
-                                           .objects.get(
-                                               experiment_1=ds_2.experiment,
-                                               experiment_2=ds_1.experiment,
-                                               dataset_1=ds_2,
-                                               dataset_2=ds_1,
-                                               sim_type='primary',
-                                           ).delete())
-                                except models.Similarity.DoesNotExist:
-                                    pass
+                                (models.Similarity
+                                       .objects.filter(
+                                           experiment_1=ds_1.experiment,
+                                           experiment_2=ds_2.experiment,
+                                           dataset_1=ds_1,
+                                           dataset_2=ds_2,
+                                           sim_type='primary',
+                                       ).delete())
+                                (models.Similarity
+                                       .objects.filter(
+                                           experiment_1=ds_2.experiment,
+                                           experiment_2=ds_1.experiment,
+                                           dataset_1=ds_2,
+                                           dataset_2=ds_1,
+                                           sim_type='primary',
+                                       ).delete())
