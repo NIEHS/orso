@@ -195,5 +195,5 @@ class FeatureValuesViewset(viewsets.ModelViewSet):
 
 
 class NetworkViewset(viewsets.ModelViewSet):
-    queryset = models.Network.objects.all()
+    queryset = models.OrganismNetwork.objects.all()
     serializer_class = serializers.NetworkSerializer

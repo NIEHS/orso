@@ -4,16 +4,22 @@ import React from 'react';
 class Network extends React.Component {
 
     drawNetwork(){
-        var nodes = new vis.DataSet(this.props.network['nodes']);
-        var edges = new vis.DataSet(this.props.network['edges']);
-        var data = {
-            nodes: nodes,
-            edges: edges,
+        var g = {
+            nodes: this.props.network['nodes'],
+            edges: this.props.network['edges'],
         };
 
-        var options = {};
-
-        var network = new vis.Network($(this.refs.network)[0], data, options);
+        var s = new sigma({
+            graph: g,
+            container: 'network',
+            settings: {
+                drawLabels: false,
+            },
+            renderer: {
+                container: document.getElementById('network'),
+                type: 'canvas',
+            },
+        });
     }
 
     clearNetwork(){
@@ -29,7 +35,10 @@ class Network extends React.Component {
     }
 
     render(){
-        return <div ref='network'></div>;
+        return <div
+            style={{height:'100%', width:"100%", border: '1px solid black'}}
+            ref='network' id='network'>
+        </div>;
     }
 }
 

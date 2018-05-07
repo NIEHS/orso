@@ -15,6 +15,7 @@ import SmallUserView from './SmallUserView';
 import SmallRecommendedDataView from './SmallRecommendedDataView';
 import PCA from './PCA';
 import PCAExplore from './PCAExplore';
+import Network from './Network';
 import NetworkExplore from './NetworkExplore';
 import Expression from './Expression';
 import GeneScatter from './GeneScatter';
@@ -217,6 +218,13 @@ let appendPCAExplore = function(el, pca_lookup, exp_types, assemblies, groups, u
         user_data={user_data}/>, element[0]);
 };
 
+let appendNetwork = function(el, network) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<Network
+        network={network}/>, element[0]);
+};
+
 let appendNetworkExplore = function(el, network_lookup, available_organisms, available_exp_types) {
     var element = $('<div></div>').appendTo(el);
 
@@ -308,6 +316,7 @@ export {
     appendSmallRecommendedDataView,
     appendPCA,
     appendPCAExplore,
+    appendNetwork,
     appendNetworkExplore,
     appendExpression,
     appendGeneScatter,

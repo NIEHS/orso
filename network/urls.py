@@ -40,8 +40,8 @@ urlpatterns = [
         name='transcript'),
 
     url(r'^explore/pca/$', views.ExplorePCA.as_view(), name='explore_pca'),
-    # url(r'^explore/network/$', views.ExploreNetwork.as_view(),
-    #     name='explore_network'),
+    url(r'^explore/network/$', views.ExploreNetwork.as_view(),
+        name='explore_network'),
     url(r'^explore/overview/$', views.ExploreOverview.as_view(),
         name='explore_overview'),
     url(r'^explore/recommendations/$', views.ExploreRecommendations.as_view(),

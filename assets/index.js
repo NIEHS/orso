@@ -28,6 +28,7 @@ import {
     appendExperimentDataView,
     appendDatasetDataView,
     createBarChart,
+    appendNetwork,
     appendNetworkExplore,
 } from './dataset';
 
@@ -60,5 +61,6 @@ window.apps = {
     appendExperimentDataView,
     appendDatasetDataView,
     createBarChart,
+    appendNetwork,
     appendNetworkExplore,
 };

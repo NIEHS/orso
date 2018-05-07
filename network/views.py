@@ -416,7 +416,7 @@ class ExploreNetwork(TemplateView, AddMyUserMixin):
         available_experiment_types = dict()
         available_organisms = dict()
 
-        for network in models.Network.objects.all():
+        for network in models.OrganismNetwork.objects.all():
             org_name = network.organism.name
             exp_type_name = network.experiment_type.name
 
@@ -709,6 +709,7 @@ class Dataset(CheckPublicDatasetMixin, DetailView, AddMyUserMixin):
         ).exists()
         context['owned'] = dataset.experiment.owners.filter(
             pk=context['login_user'].pk).exists()
+        context['network'] = dataset.get_network()
 
         return context
 

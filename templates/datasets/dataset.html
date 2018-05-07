@@ -22,7 +22,8 @@
     </h1>
     <div style="margin-top:20px; margin-bottom:20px">
         <ul class="nav nav-tabs">
-            <li class="active"><a data-toggle='tab' href="#metadata_tab">Metadata</a></li>
+            <li class="active"><a data-toggle='tab' href="#network_tab">Network</a></li>
+            <li><a data-toggle='tab' href="#metadata_tab">Metadata</a></li>
             <li><a data-toggle='tab' href="#primary_data_tab">Dataset Coverage</a></li>
             {% if owned %}
             <li class="dropdown pull-right">
@@ -47,7 +48,10 @@
         </ul>
     </div>
     <div class='tab-content' id='tabs'>
-        <div id='metadata_tab' class='tab-pane fade in active'>
+        <div id='network_tab' class='tab-pane fade in active'>
+            <div id='network_view'></div>
+        </div>
+        <div id='metadata_tab' class='tab-pane fade'>
             <div id='metadata'>
                 <p><b>Assembly:</b> {{dataset.assembly.name}}</p>
                 {% if dataset.experiment.data_type %}
@@ -106,6 +110,11 @@ $(document).ready(function(){
             $.ajax({url: '{% url 'api:experiment-remove-favorite' dataset.experiment.pk %}'});
         }
     });
+
+    window.apps.appendNetwork(
+        $('#network_view')[0],
+        {{network|safe}},
+    );
 
     window.apps.appendDatasetDataView(
         $('#data_view')[0],

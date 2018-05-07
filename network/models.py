@@ -634,100 +634,15 @@ class Experiment(models.Model):
         return tags
 
     def get_network(self):
-        nodes = []
-        edges = []
+        network = ExperimentNetwork.objects.get(experiment=self)
+        return json.loads(network.network_plot)
 
-        experiments = set([self])
-        datasets = Dataset.objects.filter(experiment=self)
 
-        primary_sims = Similarity.objects.filter(
-            dataset_1__in=datasets, sim_type='primary')
-        metadata_sims = Similarity.objects.filter(
-            experiment_1__in=experiments, sim_type='metadata')
+class ExperimentNetwork(models.Model):
+    experiment = models.ForeignKey('Experiment')
 
-        other_experiments = set()
-        other_datasets = set()
-
-        for sim in primary_sims:
-            other_datasets.add(sim.dataset_2)
-        for sim in metadata_sims:
-            other_experiments.add(sim.experiment_2)
-            for ds in Dataset.objects.filter(experiment=sim.experiment_2):
-                other_datasets.add(ds)
-
-        primary_sims = Similarity.objects.filter(
-            dataset_1__in=(set(datasets) | other_datasets),
-            sim_type='primary',
-        )
-        metadata_sims = Similarity.objects.filter(
-            experiment_1__in=(set([self]) | other_experiments),
-            sim_type='metadata',
-        )
-
-        ds_to_nodes = dict()
-        node_count = 0
-
-        def add_nodes(datasets, level, node_count):
-            for i, ds in enumerate(datasets):
-                nodes.append({
-                    'id': node_count,
-                    'title': ds.name,
-                    'level': level,
-                })
-                ds_to_nodes[ds.pk] = node_count
-                node_count += 1
-            return node_count
-
-        node_count = add_nodes(datasets, 0, node_count)
-        node_count = add_nodes(other_datasets, 1, node_count)
-
-        ds_to_edge_list = defaultdict(set)
-
-        for sim in primary_sims:
-            pk_1, pk_2 = sorted([sim.dataset_1.pk, sim.dataset_2.pk])
-            ds_to_edge_list[(pk_1, pk_2)].add('primary')
-
-        for sim in metadata_sims:
-            for ds_1 in Dataset.objects.filter(
-                    experiment=sim.experiment_1):
-                for ds_2 in Dataset.objects.filter(
-                        experiment=sim.experiment_2):
-                    pk_1, pk_2 = sorted([ds_1.pk, ds_2.pk])
-                    ds_to_edge_list[(pk_1, pk_2)].add('metadata')
-
-        for ds_pks, edge_list in ds_to_edge_list.items():
-            print(ds_pks)
-            pk_1, pk_2 = ds_pks
-            if all([
-                pk_1 in ds_to_nodes,
-                pk_2 in ds_to_nodes,
-            ]):
-
-                for edge_type in edge_list:
-
-                    smooth = {}
-
-                    if edge_type == 'primary':
-                        smooth.update({'type': 'curvedCCW'})
-                    elif edge_type == 'metadata':
-                        smooth.update({'type': 'curvedCW'})
-
-                    if len(edge_list) == 1 and \
-                            datasets.filter(pk__in=ds_pks).exists():
-                        smooth.update({'roundness': 0})
-                    elif len(edge_list) > 1:
-                        smooth.update({'roundness': 0.2})
-
-                    edges.append({
-                        'from': ds_to_nodes[pk_1],
-                        'to': ds_to_nodes[pk_2],
-                        'smooth': smooth,
-                    })
-
-        return {
-            'nodes': nodes,
-            'edges': edges,
-        }
+    network_plot = JSONField()
+    last_updated = models.DateTimeField(auto_now=True)
 
 
 class Dataset(models.Model):
@@ -886,13 +801,24 @@ class Dataset(models.Model):
                 'minus': None,
             }
 
+    def get_network(self):
+        network = DatasetNetwork.objects.get(dataset=self)
+        return json.loads(network.network_plot)
+
+
+class DatasetNetwork(models.Model):
+    dataset = models.ForeignKey('Dataset')
+
+    network_plot = JSONField()
+    last_updated = models.DateTimeField(auto_now=True)
+
 
 class Organism(models.Model):
     name = models.CharField(unique=True, max_length=32)
     last_updated = models.DateTimeField(auto_now=True)
 
 
-class Network(models.Model):
+class OrganismNetwork(models.Model):
     organism = models.ForeignKey('Organism')
     experiment_type = models.ForeignKey('ExperimentType')
 
