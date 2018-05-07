@@ -42,9 +42,12 @@ class Command(BaseCommand):
             if options['primary']:
                 print('Updating primary data-based dataset recommendations...')
                 update_all_primary_data_sims_and_recs()
+                print('Done.')
             if options['metadata']:
                 print('Updating metadata-based dataset recommendations...')
                 update_all_metadata_sims_and_recs()
+                print('Done.')
             if options['user']:
                 print('Updating user-based experiment recommendations...')
                 update_user_based_recommendations()
+                print('Done.')
