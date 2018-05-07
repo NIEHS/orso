@@ -133,8 +133,8 @@ class ExperimentDataView extends React.Component {
                 this.state.region
             ];
 
-        var metaplot_url = `/network/api/metaplot/${pks['metaplot']}/`;
-        var feature_values_url = `/network/api/feature-values/${pks['feature_values']}/`;
+        var metaplot_url = `/api/metaplot/${pks['metaplot']}/`;
+        var feature_values_url = `/api/feature-values/${pks['feature_values']}/`;
 
         $.get(metaplot_url, function(data) {
             this.updateMetaPlot(data);

@@ -147,7 +147,7 @@ class PCAExplore extends React.Component {
                 this.state.exp_type + ':' +
                 this.state.region
             ];
-        var pca_url = `/network/api/pca-plot/${pca_pk}/`;
+        var pca_url = `/api/pca-plot/${pca_pk}/`;
 
         var cb = function(data) {
             ReactDOM.render(

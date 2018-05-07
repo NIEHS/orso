@@ -62,7 +62,7 @@ class NetworkExplore extends React.Component {
                 this.state.organism + ':' +
                 this.state.exp_type
             ];
-        var network_url = `/network/api/network-plot/${network_pk}/`;
+        var network_url = `/api/network-plot/${network_pk}/`;
 
         var cb = function(data) {
             ReactDOM.render(
