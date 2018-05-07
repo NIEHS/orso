@@ -92,6 +92,9 @@ class Network:
     def get_node_color(self, obj):
         return get_exp_color(obj)
 
+    def check_node_equivalence(self, obj_1, obj_2):
+        return obj_1 == obj_2
+
     def get_edge_node_1_pk(self, obj):
         return obj.experiment_1.pk
 
@@ -144,10 +147,13 @@ class Network:
 
         for i, obj_1 in enumerate(self.node_objects_list):
             for j, obj_2 in enumerate(self.node_objects_list):
-                if tuple(sorted([
-                    self.get_node_pk(obj_1),
-                    self.get_node_pk(obj_2),
-                ])) in edges:
+                if any([
+                    tuple(sorted([
+                        self.get_node_pk(obj_1),
+                        self.get_node_pk(obj_2),
+                    ])) in edges,
+                    self.check_node_equivalence(obj_1, obj_2)
+                ]):
 
                     hex_1 = self.get_node_color(obj_1)
                     rgba_1 = hex_to_rgba(hex_1)
@@ -256,9 +262,13 @@ def update_dataset_network(dataset_pk):
     def get_node_color(obj):
         return get_exp_color(obj.experiment)
 
+    def check_node_equivalence(obj_1, obj_2):
+        return obj_1.experiment == obj_2.experiment
+
     network = Network(connected_datasets, similarities)
     network.get_node_pk = get_node_pk
     network.get_node_color = get_node_color
+    network.check_node_equivalence = check_node_equivalence
     network_json = network.create_network_json()
 
     models.DatasetNetwork.objects.update_or_create(
