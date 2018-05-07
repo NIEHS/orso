@@ -197,13 +197,24 @@ def generate_metadata_sims_df_for_datasets(datasets):
 
 
 def update_all_metadata_sims_and_recs():
-    all_experiments = models.Experiment.objects.all()
-    update_metadata_similarities([exp.pk for exp in all_experiments])
+    tasks = []
+    for organism in models.Organism.objects.all():
+        for exp_type in models.ExperimentType.objects.all():
+            experiments = models.Experiment.objects.filter(
+                dataset__assembly__organism=organism,
+                experiment_type=exp_type,
+            )
+            if experiments:
+                experiment_pks = list(experiments.values_list('pk', flat=True))
+                tasks.append(update_metadata_similarities.si(experiment_pks))
 
-    user_experiments = models.Experiment.objects.filter(
-        Q(owners=True) | Q(favorite__user=True))
+    job = group(tasks)
+    results = job.apply_async()
+    results.join()
 
     tasks = []
+    user_experiments = models.Experiment.objects.filter(
+        Q(owners=True) | Q(favorite__user=True))
     for experiment in user_experiments:
         tasks.append(update_recommendations.si(
             experiment.pk, sim_types=['metadata']))
@@ -224,21 +235,21 @@ def update_metadata_similarities(experiment_pks):
     experiments = models.Experiment.objects.filter(pk__in=experiment_pks)
 
     # Get relevant experiments
-    assemblies = models.Assembly.objects.filter(
-        dataset__experiment__in=experiments)
+    organisms = models.Organism.objects.filter(
+        assembly__dataset__experiment__in=experiments)
     experiment_types = models.ExperimentType.objects.filter(
         experiment__in=experiments)
     other_experiments = models.Experiment.objects.filter(
-        dataset__assembly__in=assemblies,
+        dataset__assembly__organism__in=organisms,
         experiment_type__in=experiment_types,
     )
     total_experiments = set(experiments) | set(other_experiments)
 
-    # Get experiment to assemblies
-    experiment_to_assemblies = dict()
+    # Get experiment to organism
+    experiment_to_organism = dict()
     for exp in total_experiments:
-        experiment_to_assemblies[exp] = set(
-            models.Assembly.objects.filter(dataset__experiment=exp))
+        experiment_to_organism[exp] = set(
+            models.Organism.objects.filter(assembly__dataset__experiment=exp))
 
     sims_df = generate_metadata_sims_df(total_experiments)
 
@@ -247,8 +258,8 @@ def update_metadata_similarities(experiment_pks):
             if all([
                 exp_1 != exp_2,
                 exp_1.experiment_type == exp_2.experiment_type,
-                experiment_to_assemblies[exp_1] &
-                experiment_to_assemblies[exp_2],
+                experiment_to_organism[exp_1] &
+                experiment_to_organism[exp_2],
             ]):
                     if sims_df[exp_1.pk][exp_2.pk]:
                         models.Similarity.objects.update_or_create(
