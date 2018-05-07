@@ -20,7 +20,7 @@ from django.contrib.auth import views as auth_views
 from . import forms, views
 
 urlpatterns = [
-    url(r'^admin/', admin.site.urls),
+    url(r'^god-mode/', admin.site.urls),
 
     url(r'^login/$',
         auth_views.login,
