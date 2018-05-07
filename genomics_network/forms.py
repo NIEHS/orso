@@ -53,6 +53,9 @@ class LoginForm(AuthenticationForm):
 
 class RegistrationForm(forms.ModelForm):
 
+    email = forms.CharField(
+        label='Email address',
+        required=True)
     password1 = forms.CharField(
         label='Password',
         widget=forms.PasswordInput(attrs={'autocomplete': 'off'}),
@@ -68,7 +71,7 @@ class RegistrationForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ('username', )
+        fields = ('username', 'email')
 
     def __init__(self, *args, **kwargs):
         super(RegistrationForm, self).__init__(*args, **kwargs)
