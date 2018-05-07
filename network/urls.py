@@ -102,5 +102,5 @@ urlpatterns = [
         include(router.urls, namespace='api')),
 
     url(r'^selectable/', include('selectable.urls')),
-    url(r'^.*$', RedirectView.as_view(pattern_name='home', permanent=False)),
+    url(r'^$', RedirectView.as_view(pattern_name='home', permanent=False)),
 ]
