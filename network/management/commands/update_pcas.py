@@ -42,4 +42,7 @@ class Command(BaseCommand):
                     )[0])
 
         pool = Pool(options['threads'])
+
+        print('Updating PCAs...')
         pool.map(call_update_pca, [pca.pk for pca in pcas])
+        print('Done.')
