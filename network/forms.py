@@ -1,3 +1,4 @@
+import requests
 from django import forms
 from django.contrib.auth.models import User
 from django.db.models import Q
@@ -292,14 +293,24 @@ class DatasetForm(BootstrapModelForm):
         plus_url = cleaned_data.get('plus_url')
         minus_url = cleaned_data.get('minus_url')
 
-        error_text = 'An ambiguous URL may not be included with stranded URLs.'
+        stranded_error_text = \
+            'An ambiguous URL may not be included with stranded URLs.'
+
+        def check_url(url):
+            request = requests.head(url)
+            if request.status_code >= 400:
+                raise forms.ValidationError(
+                    '{} is not a valid URL.'.format(url))
 
         if ambiguous_url:
             if plus_url or minus_url:
-                raise forms.ValidationError(error_text)
+                raise forms.ValidationError(stranded_error_text)
+            check_url(ambiguous_url)
         elif plus_url and minus_url:
             if ambiguous_url:
-                raise forms.ValidationError(error_text)
+                raise forms.ValidationError(stranded_error_text)
+            check_url(plus_url)
+            check_url(minus_url)
         else:
             raise forms.ValidationError(
                 'Either ambiguous or stranded URLs required.')
