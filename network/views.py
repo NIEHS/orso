@@ -673,13 +673,15 @@ class Experiment(CheckPublicExperimentMixin, AddMyUserMixin, DetailView):
 
         context['data_lookup'] = dict(data_lookup)
         context['datasets'] = models.Dataset.objects.filter(experiment=exp)
-        context['is_favorite'] = models.Favorite.objects.filter(
-            experiment=exp,
-            user=context['login_user'],
-        ).exists()
         context['network'] = exp.get_network()
-        context['owned'] = \
-            exp.owners.filter(pk=context['login_user'].pk).exists()
+
+        if context['login_user']:
+            context['is_favorite'] = models.Favorite.objects.filter(
+                experiment=exp,
+                user=context['login_user'],
+            ).exists()
+            context['owned'] = \
+                exp.owners.filter(pk=context['login_user'].pk).exists()
 
         return context
 
@@ -703,13 +705,15 @@ class Dataset(CheckPublicDatasetMixin, DetailView, AddMyUserMixin):
                 {'feature_values': fv.pk})
 
         context['data_lookup'] = dict(data_lookup)
-        context['is_favorite'] = models.Favorite.objects.filter(
-            experiment=dataset.experiment,
-            user=context['login_user'],
-        ).exists()
-        context['owned'] = dataset.experiment.owners.filter(
-            pk=context['login_user'].pk).exists()
         context['network'] = dataset.get_network()
+
+        if context['login_user']:
+            context['is_favorite'] = models.Favorite.objects.filter(
+                experiment=dataset.experiment,
+                user=context['login_user'],
+            ).exists()
+            context['owned'] = dataset.experiment.owners.filter(
+                pk=context['login_user'].pk).exists()
 
         return context
 
