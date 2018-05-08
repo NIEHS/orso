@@ -14,14 +14,17 @@
 <nav class="navbar navbar-sub-niehs">
     <div class="container">
         <ul class="nav navbar-nav">
-            <li><a href="{% url 'all_users' %}">All users</a></li>
-            <li><a href="{% url 'followed' %}">Following</a></li>
-            <li><a href="{% url 'followers' %}">Followers</a></li>
+            <li id='all_users_tab'><a href="{% url 'all_users' %}">All users</a></li>
+            <li id='following_tab'><a href="{% url 'followed' %}">Following</a></li>
+            <li id='followers_tab'><a href="{% url 'followers' %}">Followers</a></li>
             <!-- <li><a href="{% url 'followed' %}">Following <span id="followed_counts" class="badge">{{user_counts.followed_counts}}</span></a></li> -->
         </ul>
     </div>
 </nav>
 {% endif %}
+
+{% block sub-nav-js %}
+{% endblock sub-nav-js %}
 
 {% endblock content %}
 

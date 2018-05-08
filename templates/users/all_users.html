@@ -1,5 +1,12 @@
 {% extends 'base_USERS.html' %}
 
+{% block sub-nav-js %}
+<script>
+    $('.navbar-sub-niehs').children('li').removeClass('active');
+    $('#all_users_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block extra-js %}
 <script type='text/javascript'>
 {% for user in object_list %}

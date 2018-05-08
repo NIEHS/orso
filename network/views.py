@@ -1002,9 +1002,8 @@ class PCA(AddMyUserMixin, DetailView):
 
 
 class UserList(AddMyUserMixin, ListView):
-    model = models.MyUser
     form_class = forms.UserFilterForm
-    display_user_navbar = False
+    display_user_navbar = True
 
     def dispatch(self, request, *args, **kwargs):
         if self.request.user.is_authenticated():
@@ -1059,7 +1058,7 @@ class UserList(AddMyUserMixin, ListView):
         if self.form.is_valid():
             query &= self.form.get_query()
 
-        qs = self.model.objects.filter(query).distinct().order_by('pk')
+        qs = models.MyUser.objects.filter(query).distinct().order_by('pk')
 
         paginator = Paginator(qs, self.get_paginate_by(qs))
         page = self.request.GET.get('page')
@@ -1107,7 +1106,7 @@ class AllUsers(UserList):
 
 
 class Followed(LoginRequiredMixin, UserList):
-    template_name = 'users/all_users.html'
+    template_name = 'users/user_followed.html'
 
     def get_queryset(self):
         base_query = Q(followed__following=self.my_user)
@@ -1115,7 +1114,7 @@ class Followed(LoginRequiredMixin, UserList):
 
 
 class Followers(LoginRequiredMixin, UserList):
-    template_name = 'users/all_users.html'
+    template_name = 'users/user_followers.html'
 
     def get_queryset(self):
         base_query = Q(following__followed=self.my_user)
@@ -1127,16 +1126,18 @@ class UserFollowed(UserList):
     display_user_navbar = False
 
     def get(self, request, *args, **kwargs):
-        self.target_user = models.MyUser.objects.get(pk=self.kwargs['pk'])
+        self.target_user = User.objects.get(pk=self.kwargs['pk'])
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        base_query = Q(followed__following=self.target_user)
+        my_user = models.MyUser.objects.get(user=self.target_user)
+        base_query = Q(followed__following=my_user)
         return super().get_queryset(base_query)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['target_user'] = self.target_user
+        context['display_user_navbar'] = self.display_user_navbar
         return context
 
 
@@ -1145,16 +1146,18 @@ class UserFollowers(UserList):
     display_user_navbar = False
 
     def get(self, request, *args, **kwargs):
-        self.target_user = models.MyUser.objects.get(pk=self.kwargs['pk'])
+        self.target_user = User.objects.get(pk=self.kwargs['pk'])
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        base_query = Q(following__followed=self.target_user)
+        my_user = models.MyUser.objects.get(user=self.target_user)
+        base_query = Q(following__followed=my_user)
         return super().get_queryset(base_query)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['target_user'] = self.target_user
+        context['display_user_navbar'] = self.display_user_navbar
         return context
 
 

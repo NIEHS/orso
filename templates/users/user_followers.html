@@ -1,9 +1,18 @@
 {% extends 'base_USERS.html' %}
 
+{% block sub-nav-js %}
+<script>
+    $('.navbar-sub-niehs').children('li').removeClass('active');
+    $('#followers_tab').addClass('active');
+</script>
+{% endblock %}
+
 {% block sub-content-header %}
 <div class="container">
+    {% if target_user %}
     <h1><a href="{% url 'user' target_user.pk %}">
-        {{target_user.user.username}}</a>'s Followers ({{object_list|length}})</h1>
+        {{target_user.username}}</a>'s Followers ({{object_list|length}})</h1>
+    {% endif %}
 </div>
 {% endblock sub-content-header %}
 
