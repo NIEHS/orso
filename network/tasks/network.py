@@ -103,17 +103,28 @@ class Network:
 
     def create_network_json(self):
 
-        g = nx.Graph()
-
-        for i, obj in enumerate(self.node_objects_list):
-            g.add_node(i, title=self.get_node_name(obj))
-
         edges = set()
         for obj in self.edge_objects_list:
             edges.add(tuple(sorted([
                 self.get_edge_node_1_pk(obj),
                 self.get_edge_node_2_pk(obj),
             ])))
+
+        g = nx.Graph()
+
+        for i, obj in enumerate(self.node_objects_list):
+            g.add_node(i)
+
+        for i, obj_1 in enumerate(self.node_objects_list):
+            for j, obj_2 in enumerate(self.node_objects_list):
+                if any([
+                    tuple(sorted([
+                        self.get_node_pk(obj_1),
+                        self.get_node_pk(obj_2),
+                    ])) in edges,
+                    self.check_node_equivalence(obj_1, obj_2)
+                ]):
+                    g.add_edge(i, j)
 
         fa2 = ForceAtlas2()
         try:
