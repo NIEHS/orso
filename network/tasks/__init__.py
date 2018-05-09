@@ -1,4 +1,5 @@
 from .data_recommendations import *
+from .dendrogram import *
 from .metadata_recommendations import *
 from .network import *
 from .normalize import *

@@ -826,6 +826,14 @@ class OrganismNetwork(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
 
+class Dendrogram(models.Model):
+    organism = models.ForeignKey('Organism')
+    experiment_type = models.ForeignKey('ExperimentType')
+
+    dendrogram_plot = JSONField()
+    last_updated = models.DateTimeField(auto_now=True)
+
+
 class Assembly(models.Model):
     organism = models.ForeignKey('Organism')
 
