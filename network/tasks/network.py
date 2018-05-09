@@ -1,80 +1,14 @@
 import json
-import math
-import os
 import random
 
 import networkx as nx
 from celery import group
 from celery.decorators import task
-from django.conf import settings
-from django.core.cache import cache
 from django.db.models import Q
 from fa2 import ForceAtlas2
 
 from network import models
-
-TARGET_RELEVANT_EXP_TYPES = [
-    'ChIP-seq',
-    'siRNA knockdown followed by RNA-seq',
-    'shRNA knockdown followed by RNA-seq',
-    'CRISPR genome editing followed by RNA-seq',
-    'CRISPRi followed by RNA-seq',
-]
-
-
-def hex_to_rgba(hex_value, alpha=1.0):
-    red, green, blue = bytes.fromhex(hex_value[1:])
-    return (red, green, blue, alpha)
-
-
-def blend_rgba(rgba_1, rgba_2):
-
-    def blend(val_1, val_2):
-        return math.floor(
-            math.pow(
-                math.pow(val_1, 2.2) + math.pow(val_2, 2.2),
-                1 / 2.2
-            )
-        )
-
-    red = blend(rgba_1[0], rgba_2[0])
-    green = blend(rgba_1[1], rgba_2[1])
-    blue = blend(rgba_1[2], rgba_2[2])
-
-    alpha = (rgba_1[3] + rgba_2[3]) / 2
-
-    return (red, green, blue, alpha)
-
-
-def get_exp_color(experiment):
-
-    def retrieve_color_guide(target_color_guide, json_path):
-        guide = cache.get(target_color_guide, None)
-        if guide:
-            return guide
-        else:
-            with open(json_path) as f:
-                guide = json.load(f)
-            cache.set(target_color_guide, guide)
-            return guide
-
-    if experiment.experiment_type.name in TARGET_RELEVANT_EXP_TYPES:
-        color_guide = retrieve_color_guide(
-            'target_color_guide',
-            os.path.join(settings.COLOR_KEY_DIR, 'target.json'))
-        color_key = 'target'
-    else:
-        color_guide = retrieve_color_guide(
-            'cell_type_color_guide',
-            os.path.join(settings.COLOR_KEY_DIR, 'cell_type.json'))
-        color_key = 'cell_type'
-
-    try:
-        color = color_guide[getattr(experiment, color_key)]
-    except KeyError:
-        color = '#A9A9A9'
-
-    return color
+from network.tasks.utils import blend_colors, get_exp_color, hex_to_rgba
 
 
 class Network:
@@ -172,7 +106,7 @@ class Network:
                     hex_2 = self.get_node_color(obj_2)
                     rgba_2 = hex_to_rgba(hex_2)
 
-                    rgba = blend_rgba(rgba_1, rgba_2)
+                    rgba = blend_colors([rgba_1, rgba_2])
 
                     edge_list.append({
                         'id': edge_count,
