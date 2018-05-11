@@ -48,7 +48,7 @@ class NetworkSerializer(serializers.ModelSerializer):
         return json.loads(network.network_plot)
 
     class Meta:
-        model = models.Organism
+        model = models.OrganismNetwork
         fields = ('network',)
 
 
@@ -70,7 +70,7 @@ class MetaPlotSerializer(serializers.ModelSerializer):
         return json.loads(metaplot.metaplot)
 
     class Meta:
-        model = models.FeatureValues
+        model = models.MetaPlot
         fields = ('metaplot',)
 
 
