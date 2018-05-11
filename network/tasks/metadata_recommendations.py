@@ -3,9 +3,10 @@ import os
 from collections import defaultdict
 
 import pandas as pd
-from celery import group
+from celery import chain, group
 from celery.decorators import task
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Q
 
 from analysis.string_db import (
@@ -197,20 +198,8 @@ def generate_metadata_sims_df_for_datasets(datasets):
 
 
 def update_all_metadata_sims_and_recs():
-    tasks = []
-    for organism in models.Organism.objects.all():
-        for exp_type in models.ExperimentType.objects.all():
-            experiments = models.Experiment.objects.filter(
-                dataset__assembly__organism=organism,
-                experiment_type=exp_type,
-            )
-            if experiments:
-                experiment_pks = list(experiments.values_list('pk', flat=True))
-                tasks.append(update_metadata_similarities.si(experiment_pks))
-
-    job = group(tasks)
-    results = job.apply_async()
-    results.join()
+    exp_pks = list([exp.pk for exp in models.Experiment.objects.all()])
+    update_by_cache(exp_pks)
 
     tasks = []
     user_experiments = models.Experiment.objects.filter(
@@ -222,6 +211,61 @@ def update_all_metadata_sims_and_recs():
     job = group(tasks)
     results = job.apply_async()
     results.join()
+
+
+def update_by_cache(experiment_pks):
+    key = ','.join([str(pk) for pk in sorted(experiment_pks)])
+
+    tasks = []
+    for exp_pk in experiment_pks:
+        tasks.append(update_metadata_by_cached_df.si(exp_pk, key))
+
+    job = chain(
+        generate_cached_metadata_sims_df.si(experiment_pks, key),
+        group(tasks),
+    )
+    results = job.apply_async()
+    results.join()
+
+    cache.delete(key)
+
+
+@task
+def generate_cached_metadata_sims_df(experiment_pks, key):
+    experiments = models.Experiment.objects.filter(pk__in=experiment_pks)
+    df = generate_metadata_sims_df(experiments)
+    cache.set(key, df, 60 * 60 * 12)
+    return key
+
+
+@task
+def update_metadata_by_cached_df(exp_pk, key):
+    row = cache.get(key)[exp_pk]
+    exp_1 = models.Experiment.objects.get(pk=exp_pk)
+    for sim, pk in zip(row, row.index):
+        exp_2 = models.Experiment.objects.get(pk=pk)
+        if sim:
+            models.Similarity.objects.update_or_create(
+                experiment_1=exp_1,
+                experiment_2=exp_2,
+                sim_type='metadata',
+            )
+            models.Similarity.objects.update_or_create(
+                experiment_1=exp_2,
+                experiment_2=exp_1,
+                sim_type='metadata',
+            )
+        else:
+            models.Similarity.objects.filter(
+                experiment_1=exp_1,
+                experiment_2=exp_2,
+                sim_type='metadata',
+            ).delete()
+            models.Similarity.objects.filter(
+                experiment_1=exp_2,
+                experiment_2=exp_1,
+                sim_type='metadata',
+            ).delete()
 
 
 @task
