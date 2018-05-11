@@ -17,6 +17,8 @@ import PCA from './PCA';
 import PCAExplore from './PCAExplore';
 import Network from './Network';
 import NetworkExplore from './NetworkExplore';
+import Dendrogram from './Dendrogram';
+import DendrogramExplore from './DendrogramExplore';
 import Expression from './Expression';
 import GeneScatter from './GeneScatter';
 import GeneFoldChange from './GeneFoldChange';
@@ -234,6 +236,22 @@ let appendNetworkExplore = function(el, network_lookup, available_organisms, ava
         available_exp_types={available_exp_types}/>, element[0]);
 };
 
+let appendDendrogram = function(el, dendrogram) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<Dendrogram
+        dendrogram={dendrogram}/>, element[0]);
+};
+
+let appendDendrogramExplore = function(el, dendrogram_lookup, available_organisms, available_exp_types) {
+    var element = $('<div></div>').appendTo(el);
+
+    ReactDOM.render(<DendrogramExplore
+        dendrogram_lookup={dendrogram_lookup}
+        available_organisms={available_organisms}
+        available_exp_types={available_exp_types}/>, element[0]);
+};
+
 let appendExpression = function(el, data) {
     var element = $('<div></div>').appendTo(el);
 
@@ -318,6 +336,8 @@ export {
     appendPCAExplore,
     appendNetwork,
     appendNetworkExplore,
+    appendDendrogram,
+    appendDendrogramExplore,
     appendExpression,
     appendGeneScatter,
     appendGeneFoldChange,

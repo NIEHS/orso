@@ -442,6 +442,42 @@ class ExploreNetwork(TemplateView, AddMyUserMixin):
         return context
 
 
+class ExploreDendrogram(TemplateView, AddMyUserMixin):
+    template_name = 'explore/dendrogram.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        dendrogram_lookup = dict()
+        available_experiment_types = dict()
+        available_organisms = dict()
+
+        for dendrogram in models.Dendrogram.objects.all():
+            org_name = dendrogram.organism.name
+            exp_type_name = dendrogram.experiment_type.name
+
+            dendrogram_lookup['{}:{}'.format(
+                org_name,
+                exp_type_name,
+            )] = dendrogram.pk
+
+            if org_name not in available_experiment_types:
+                available_experiment_types[org_name] = []
+            if exp_type_name not in available_experiment_types[org_name]:
+                available_experiment_types[org_name].append(exp_type_name)
+
+            if exp_type_name not in available_organisms:
+                available_organisms[exp_type_name] = []
+            if org_name not in available_organisms[exp_type_name]:
+                available_organisms[exp_type_name].append(org_name)
+
+        context['dendrogram_lookup'] = dendrogram_lookup
+        context['available_experiment_types'] = available_experiment_types
+        context['available_organisms'] = available_organisms
+
+        return context
+
+
 class ExploreOverview(TemplateView, AddMyUserMixin):
     template_name = 'explore/overview.html'
 

@@ -197,3 +197,8 @@ class FeatureValuesViewset(viewsets.ModelViewSet):
 class NetworkViewset(viewsets.ModelViewSet):
     queryset = models.OrganismNetwork.objects.all()
     serializer_class = serializers.NetworkSerializer
+
+
+class DendrogramViewset(viewsets.ModelViewSet):
+    queryset = models.Dendrogram.objects.all()
+    serializer_class = serializers.DendrogramSerializer

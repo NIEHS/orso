@@ -30,6 +30,8 @@ import {
     createBarChart,
     appendNetwork,
     appendNetworkExplore,
+    appendDendrogram,
+    appendDendrogramExplore,
 } from './dataset';
 
 
@@ -63,4 +65,6 @@ window.apps = {
     createBarChart,
     appendNetwork,
     appendNetworkExplore,
+    appendDendrogram,
+    appendDendrogramExplore,
 };

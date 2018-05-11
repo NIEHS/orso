@@ -1,0 +1,27 @@
+{% extends 'base_EXPLORE.html' %}
+
+{% block sub-nav-js %}
+<script>
+    $('.navbar-sub-niehs').children('li').removeClass('active');
+    $('#explore_dendrogram_tab').addClass('active');
+</script>
+{% endblock %}
+
+{% block sub-content %}
+<div class="container">
+    <div id="explore"></div>
+</div>
+{% endblock sub-content %}
+
+{% block extra-js %}
+<script type='text/javascript'>
+$(document).ready(function(){
+    window.apps.appendDendrogramExplore(
+        $("#explore")[0],
+        {{dendrogram_lookup|safe}},
+        {{available_organisms|safe}},
+        {{available_experiment_types|safe}},
+    );
+});
+</script>
+{% endblock %}

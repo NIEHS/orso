@@ -62,15 +62,15 @@ def create_and_annotate_nodes(experiments, link, dend):
             'children': set(),
             'leaf': True,
             'dist': 0,
-            'x': i,
-            'y': 0,
+            'x': i + 1,  # Offset from axis
+            'y': -1,  # Allows linkages of 0 to be visible
         }
     for i, row in enumerate(link):
         index = i + len(leaf_order)
         nodes[index] = {
             'children': set([int(row[0]), int(row[1])]),
             'leaf': False,
-            'y': 1 + row[2],
+            'y': row[2],
         }
 
     # Annotate

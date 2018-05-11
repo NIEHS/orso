@@ -52,6 +52,17 @@ class NetworkSerializer(serializers.ModelSerializer):
         fields = ('network',)
 
 
+class DendrogramSerializer(serializers.ModelSerializer):
+    dendrogram = serializers.SerializerMethodField('_dendrogram')
+
+    def _dendrogram(self, dendrogram):
+        return json.loads(dendrogram.dendrogram_plot)
+
+    class Meta:
+        model = models.Dendrogram
+        fields = ('dendrogram',)
+
+
 class MetaPlotSerializer(serializers.ModelSerializer):
     metaplot = serializers.SerializerMethodField('_metaplot')
 

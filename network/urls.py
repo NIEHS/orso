@@ -20,6 +20,9 @@ router.register('pca-plot',
 router.register('network-plot',
                 api.NetworkViewset,
                 base_name='network-plot')
+router.register('dendrogram',
+                api.DendrogramViewset,
+                base_name='dendrogram')
 router.register('metaplot',
                 api.MetaPlotViewset,
                 base_name='metaplot')
@@ -40,6 +43,8 @@ urlpatterns = [
         name='transcript'),
 
     url(r'^explore/pca/$', views.ExplorePCA.as_view(), name='explore_pca'),
+    url(r'^explore/dendrogram/$', views.ExploreDendrogram.as_view(),
+        name='explore_dendrogram'),
     url(r'^explore/network/$', views.ExploreNetwork.as_view(),
         name='explore_network'),
     url(r'^explore/overview/$', views.ExploreOverview.as_view(),
