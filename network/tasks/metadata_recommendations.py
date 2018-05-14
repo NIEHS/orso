@@ -3,10 +3,9 @@ import os
 from collections import defaultdict
 
 import pandas as pd
-from celery import chain, group
+from celery import group
 from celery.decorators import task
 from django.conf import settings
-from django.core.cache import cache
 from django.db.models import Q
 
 from analysis.string_db import (
@@ -199,7 +198,7 @@ def generate_metadata_sims_df_for_datasets(datasets):
 
 def update_all_metadata_sims_and_recs():
     exp_pks = list([exp.pk for exp in models.Experiment.objects.all()])
-    update_by_cache(exp_pks)
+    update_bulk_similarities(exp_pks)
 
     tasks = []
     user_experiments = models.Experiment.objects.filter(
@@ -213,36 +212,27 @@ def update_all_metadata_sims_and_recs():
     results.join()
 
 
-def update_by_cache(experiment_pks):
-    key = ','.join([str(pk) for pk in sorted(experiment_pks)])
+# Designed to update similarities for many experiments at once. Uses celery
+# to query and update similarity objects.
+def update_bulk_similarities(experiment_pks):
+    experiments = models.Experiment.objects.filter(pk__in=experiment_pks)
+    df = generate_metadata_sims_df(experiments)
 
     tasks = []
     for exp_pk in experiment_pks:
-        tasks.append(update_metadata_by_cached_df.si(exp_pk, key))
-
-    job = chain(
-        generate_cached_metadata_sims_df.si(experiment_pks, key),
-        group(tasks),
-    )
+        row = df[exp_pk]
+        other_exp_pks = list([int(val) for val in row.index])
+        sims = list([bool(val) for val in row])
+        tasks.append(_update_similarity.si(exp_pk, other_exp_pks, sims))
+    job = group(tasks)
     results = job.apply_async()
     results.join()
 
-    cache.delete(key)
-
 
 @task
-def generate_cached_metadata_sims_df(experiment_pks, key):
-    experiments = models.Experiment.objects.filter(pk__in=experiment_pks)
-    df = generate_metadata_sims_df(experiments)
-    cache.set(key, df, 60 * 60 * 12)
-    return key
-
-
-@task
-def update_metadata_by_cached_df(exp_pk, key):
-    row = cache.get(key)[exp_pk]
+def _update_similarity(exp_pk, other_exp_pks, sims):
     exp_1 = models.Experiment.objects.get(pk=exp_pk)
-    for sim, pk in zip(row, row.index):
+    for pk, sim in zip(other_exp_pks, sims):
         exp_2 = models.Experiment.objects.get(pk=pk)
         if sim:
             models.Similarity.objects.update_or_create(
