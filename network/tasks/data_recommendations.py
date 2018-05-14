@@ -1,5 +1,6 @@
 from celery import group
 from celery.decorators import task
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 from network import models
@@ -69,7 +70,7 @@ def update_primary_data_similarities(experiment_pk):
                 ds_1 = dataset
                 for ds_2 in other_datasets:
 
-                    if ds_1 != ds_2:
+                    if ds_1 != ds_2 and ds_1.experiment != ds_2.experiment:
 
                         try:
                             vec_1 = models.PCATransformedValues.objects.get(
@@ -93,22 +94,29 @@ def update_primary_data_similarities(experiment_pk):
                             sim = pca.neural_network.predict(vec)[0]
 
                             if bool(sim):
-                                (models.Similarity
-                                       .objects.update_or_create(
-                                           experiment_1=ds_1.experiment,
-                                           experiment_2=ds_2.experiment,
-                                           dataset_1=ds_1,
-                                           dataset_2=ds_2,
-                                           sim_type='primary',
-                                       ))
-                                (models.Similarity
-                                       .objects.update_or_create(
-                                           experiment_1=ds_2.experiment,
-                                           experiment_2=ds_1.experiment,
-                                           dataset_1=ds_2,
-                                           dataset_2=ds_1,
-                                           sim_type='primary',
-                                       ))
+                                try:
+                                    (models.Similarity
+                                           .objects.update_or_create(
+                                               experiment_1=ds_1.experiment,
+                                               experiment_2=ds_2.experiment,
+                                               dataset_1=ds_1,
+                                               dataset_2=ds_2,
+                                               sim_type='primary',
+                                           ))
+                                except ValidationError:
+                                    pass
+
+                                try:
+                                    (models.Similarity
+                                           .objects.update_or_create(
+                                               experiment_1=ds_2.experiment,
+                                               experiment_2=ds_1.experiment,
+                                               dataset_1=ds_2,
+                                               dataset_2=ds_1,
+                                               sim_type='primary',
+                                           ))
+                                except ValidationError:
+                                    pass
                             else:
                                 (models.Similarity
                                        .objects.filter(

@@ -349,6 +349,11 @@ class Similarity(models.Model):
     created = models.DateTimeField(auto_now_add=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
 
+    class Meta:
+        unique_together = (
+            'sim_type', 'experiment_1', 'experiment_2', 'dataset_1',
+            'dataset_2')
+
 
 class Project(models.Model):
     owners = models.ManyToManyField('MyUser', blank=True)

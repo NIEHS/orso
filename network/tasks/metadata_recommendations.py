@@ -6,6 +6,7 @@ import pandas as pd
 from celery import group
 from celery.decorators import task
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 from analysis.string_db import (
@@ -234,28 +235,36 @@ def _update_similarity(exp_pk, other_exp_pks, sims):
     exp_1 = models.Experiment.objects.get(pk=exp_pk)
     for pk, sim in zip(other_exp_pks, sims):
         exp_2 = models.Experiment.objects.get(pk=pk)
-        if sim:
-            models.Similarity.objects.update_or_create(
-                experiment_1=exp_1,
-                experiment_2=exp_2,
-                sim_type='metadata',
-            )
-            models.Similarity.objects.update_or_create(
-                experiment_1=exp_2,
-                experiment_2=exp_1,
-                sim_type='metadata',
-            )
-        else:
-            models.Similarity.objects.filter(
-                experiment_1=exp_1,
-                experiment_2=exp_2,
-                sim_type='metadata',
-            ).delete()
-            models.Similarity.objects.filter(
-                experiment_1=exp_2,
-                experiment_2=exp_1,
-                sim_type='metadata',
-            ).delete()
+        if exp_1 != exp_2:
+            if sim:
+                try:
+                    models.Similarity.objects.update_or_create(
+                        experiment_1=exp_1,
+                        experiment_2=exp_2,
+                        sim_type='metadata',
+                    )
+                except ValidationError:
+                    pass
+
+                try:
+                    models.Similarity.objects.update_or_create(
+                        experiment_1=exp_2,
+                        experiment_2=exp_1,
+                        sim_type='metadata',
+                    )
+                except ValidationError:
+                    pass
+            else:
+                models.Similarity.objects.filter(
+                    experiment_1=exp_1,
+                    experiment_2=exp_2,
+                    sim_type='metadata',
+                ).delete()
+                models.Similarity.objects.filter(
+                    experiment_1=exp_2,
+                    experiment_2=exp_1,
+                    sim_type='metadata',
+                ).delete()
 
 
 @task
@@ -296,16 +305,23 @@ def update_metadata_similarities(experiment_pks):
                 experiment_to_organism[exp_2],
             ]):
                     if sims_df[exp_1.pk][exp_2.pk]:
-                        models.Similarity.objects.update_or_create(
-                            experiment_1=exp_1,
-                            experiment_2=exp_2,
-                            sim_type='metadata',
-                        )
-                        models.Similarity.objects.update_or_create(
-                            experiment_1=exp_2,
-                            experiment_2=exp_1,
-                            sim_type='metadata',
-                        )
+                        try:
+                            models.Similarity.objects.update_or_create(
+                                experiment_1=exp_1,
+                                experiment_2=exp_2,
+                                sim_type='metadata',
+                            )
+                        except ValidationError:
+                            pass
+
+                        try:
+                            models.Similarity.objects.update_or_create(
+                                experiment_1=exp_2,
+                                experiment_2=exp_1,
+                                sim_type='metadata',
+                            )
+                        except ValidationError:
+                            pass
                     else:
                         models.Similarity.objects.filter(
                             experiment_1=exp_1,
