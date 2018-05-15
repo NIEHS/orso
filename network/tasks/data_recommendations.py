@@ -89,11 +89,20 @@ def update_primary_data_similarities(experiment_pk):
                             vec_2 = None
 
                         if vec_1 and vec_2:
-                            vec = pca.neural_network_scaler.transform(
-                                [vec_1 + vec_2])
-                            sim = pca.neural_network.predict(vec)[0]
 
-                            if bool(sim):
+                            combined_vec_1 = \
+                                pca.neural_network_scaler.transform(
+                                    [vec_1 + vec_2])
+                            combined_vec_2 = \
+                                pca.neural_network_scaler.transform(
+                                    [vec_2 + vec_1])
+
+                            sim_1 = \
+                                pca.neural_network.predict(combined_vec_1)[0]
+                            sim_2 = \
+                                pca.neural_network.predict(combined_vec_2)[0]
+
+                            if bool(sim_1) and bool(sim_2):
                                 try:
                                     (models.Similarity
                                            .objects.update_or_create(
