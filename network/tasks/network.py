@@ -46,19 +46,20 @@ class Network:
 
         g = nx.Graph()
 
-        for i, obj in enumerate(self.node_objects_list):
-            g.add_node(i)
+        for obj in self.node_objects_list:
+            g.add_node(self.get_node_pk(obj))
 
-        for i, obj_1 in enumerate(self.node_objects_list):
-            for j, obj_2 in enumerate(self.node_objects_list):
+        for obj_1 in self.node_objects_list:
+            for obj_2 in self.node_objects_list:
+                pk_1, pk_2 = tuple(sorted([
+                    self.get_node_pk(obj_1),
+                    self.get_node_pk(obj_2),
+                ]))
                 if any([
-                    tuple(sorted([
-                        self.get_node_pk(obj_1),
-                        self.get_node_pk(obj_2),
-                    ])) in edges,
+                    (pk_1, pk_2) in edges,
                     self.check_node_equivalence(obj_1, obj_2)
                 ]):
-                    g.add_edge(i, j)
+                    g.add_edge(pk_1, pk_2)
 
         fa2 = ForceAtlas2()
         try:
@@ -66,19 +67,22 @@ class Network:
                 g, pos=None, iterations=2000)
         except ZeroDivisionError:
             positions = dict()
-            for i in range(len(self.node_objects_list)):
-                positions[i] = (random.random(), random.random())
+            for obj in self.node_objects_list:
+                positions[self.get_node_pk(obj)] = \
+                    (random.random(), random.random())
 
         node_list = []
 
-        for i, obj in enumerate(self.node_objects_list):
-            position = positions[i]
+        for obj in self.node_objects_list:
+
+            pk = self.get_node_pk(obj)
+            position = positions[pk]
 
             hex_color = self.get_node_color(obj)
             rgba = hex_to_rgba(hex_color)
 
             node_list.append({
-                'id': i,
+                'id': self.get_node_pk(obj),
                 'label': self.get_node_name(obj),
                 'color': 'rgba({}, {}, {}, {})'.format(
                     *[str(n) for n in rgba]),
@@ -91,12 +95,13 @@ class Network:
         edge_count = 0
 
         for i, obj_1 in enumerate(self.node_objects_list):
-            for j, obj_2 in enumerate(self.node_objects_list):
+            for obj_2 in self.node_objects_list[(i + 1):]:
+                pk_1, pk_2 = tuple(sorted([
+                    self.get_node_pk(obj_1),
+                    self.get_node_pk(obj_2),
+                ]))
                 if any([
-                    tuple(sorted([
-                        self.get_node_pk(obj_1),
-                        self.get_node_pk(obj_2),
-                    ])) in edges,
+                    (pk_1, pk_2) in edges,
                     self.check_node_equivalence(obj_1, obj_2)
                 ]):
 
@@ -110,8 +115,8 @@ class Network:
 
                     edge_list.append({
                         'id': edge_count,
-                        'source': i,
-                        'target': j,
+                        'source': pk_1,
+                        'target': pk_2,
                         'color': 'rgba({}, {}, {}, {})'.format(
                             *[str(n) for n in rgba]),
                     })
