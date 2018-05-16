@@ -435,11 +435,15 @@ class PCA extends React.Component {
     }
 }
 
+PCA.defaultProps = {
+    user_data: [],
+};
+
 PCA.propTypes = {
     plot: React.PropTypes.object.isRequired,
     explained_variance: React.PropTypes.array.isRequired,
     components: React.PropTypes.array.isRequired,
-    user_data: React.PropTypes.array,
+    user_data: React.PropTypes.array.isRequired,
 };
 
 export default PCA;
