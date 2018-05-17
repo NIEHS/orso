@@ -22,9 +22,16 @@
     </h1>
     <div style="margin-top:20px; margin-bottom:20px">
         <ul class="nav nav-tabs">
+
+            {% if network %}
             <li class="active"><a data-toggle='tab' href="#network_tab">Network</a></li>
             <li><a data-toggle='tab' href="#metadata_tab">Metadata</a></li>
+            {% else %}
+            <li class="active"><a data-toggle='tab' href="#metadata_tab">Metadata</a></li>
+            {% endif %}
+
             <li><a data-toggle='tab' href="#primary_data_tab">Dataset Coverage</a></li>
+
             {% if owned %}
             <li class="dropdown pull-right">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
@@ -36,6 +43,7 @@
                 </ul>
             </li>
             {% endif %}
+
             <li class="dropdown pull-right">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
                     Navigate To <span class="caret"></span>
@@ -53,10 +61,14 @@
     </div>
 
     <div class='tab-content' id='tabs'>
+        {% if network %}
         <div id='network_tab' class='tab-pane fade in active'>
             <div id='network_view'></div>
         </div>
         <div id='metadata_tab' class='tab-pane fade'>
+        {% else %}
+        <div id='metadata_tab' class='tab-pane fade in active'>
+        {% endif %}
             <div id='metadata'>
                 {% if experiment.data_type %}
                 <p><b>Data type:</b> {{experiment.data_type}}</p>
@@ -83,6 +95,20 @@
 {% endblock content %}
 
 {% block extra-js %}
+
+{% if network %}
+<script type='text/javascript'>
+$(document).ready(function(){
+
+    window.apps.appendNetwork(
+        $('#network_view')[0],
+        {{network|safe}},
+    );
+
+});
+</script>
+{% endif %}
+
 <script type='text/javascript'>
 $(document).ready(function(){
 
@@ -103,48 +129,10 @@ $(document).ready(function(){
         }
     });
 
-    window.apps.appendNetwork(
-        $('#network_view')[0],
-        {{network|safe}},
-    );
-
     window.apps.appendExperimentDataView(
         $('#data_view')[0],
         {{data_lookup|safe}},
     );
-    //
-    // // create an array with nodes
-    // var nodes = new vis.DataSet({{network.nodes|safe}});
-    //
-    // // create an array with edges
-    // var edges = new vis.DataSet({{network.edges|safe}});
-    //
-    // // create a network
-    // var container = document.getElementById('network');
-    //
-    // // provide the data in the vis format
-    // var data = {
-    //     nodes: nodes,
-    //     edges: edges,
-    // };
-    // var options = {
-    //     edges: {
-    //         smooth:{
-    //             enabled: true,
-    //         },
-    //     },
-    //     layout: {
-    //         hierarchical: {
-    //             enabled: true,
-    //         },
-    //     },
-    //     physics: {
-    //         enabled: false,
-    //     }
-    // };
-    //
-    // // initialize your network!
-    // var network = new vis.Network(container, data, options);
 });
 </script>
 {% endblock %}

@@ -2,13 +2,15 @@ import json
 import random
 
 import networkx as nx
+import numpy
 from celery import group
 from celery.decorators import task
 from django.db.models import Q
 from fa2 import ForceAtlas2
 
 from network import models
-from network.tasks.utils import blend_colors, get_exp_color, hex_to_rgba
+from network.tasks.utils import blend_colors, get_exp_color, hex_to_rgba, \
+    rgba_to_string
 
 
 class Network:
@@ -88,7 +90,7 @@ class Network:
                     *[str(n) for n in rgba]),
                 'x': position[0],
                 'y': position[1],
-                'size': 8,
+                'size': 1,
             })
 
         edge_list = []
@@ -122,12 +124,71 @@ class Network:
                     })
                     edge_count += 1
 
-        network = json.dumps({
+        network = {
             'nodes': node_list,
             'edges': edge_list,
+        }
+
+        sub_graphs = nx.connected_component_subgraphs(g)
+
+        max_nodes = 0
+        max_node_subgraph = None
+
+        for i, sg in enumerate(sub_graphs):
+            if sg.number_of_nodes() > max_nodes:
+                max_nodes = sg.number_of_nodes()
+                max_node_subgraph = sg
+
+        subgraph_nodes = max_node_subgraph.nodes()
+
+        max_total_x = float('-inf')
+        min_total_x = float('inf')
+        max_total_y = float('-inf')
+        min_total_y = float('inf')
+
+        max_field_x = float('-inf')
+        min_field_x = float('inf')
+        max_field_y = float('-inf')
+        min_field_y = float('inf')
+
+        for node in network['nodes']:
+
+            max_total_x = max(max_total_x, node['x'])
+            min_total_x = min(min_total_x, node['x'])
+            max_total_y = max(max_total_y, node['y'])
+            min_total_y = min(min_total_y, node['y'])
+
+            if node['id'] in subgraph_nodes:
+                max_field_x = max(max_field_x, node['x'])
+                min_field_x = min(min_field_x, node['x'])
+                max_field_y = max(max_field_y, node['y'])
+                min_field_y = min(min_field_y, node['y'])
+
+            x_position = numpy.mean([max_field_x, min_field_x])
+            y_position = numpy.mean([max_field_y, min_field_y])
+
+        if max_nodes > 1:
+            x_zoom = (max_field_x - min_field_x) / \
+                (max_total_x - min_total_x)
+            y_zoom = (max_field_y - min_field_y) / \
+                (max_total_y - min_total_y)
+            zoom_ratio = min(1.1 * max(x_zoom, y_zoom), 1)
+        else:
+            zoom_ratio = 1
+
+        network['nodes'].append({
+            'x': x_position,
+            'y': y_position,
+            'id': 'center',
+            'color': rgba_to_string((0, 0, 0, 0)),
+            'size': 1,
         })
 
-        return network
+        network['camera'] = {
+            'zoom_ratio': zoom_ratio,
+        }
+
+        return json.dumps(network)
 
 
 def update_experiment_networks():

@@ -3,6 +3,7 @@ import math
 import os
 
 import numpy as np
+import parse
 from django.conf import settings
 from django.core.cache import cache
 
@@ -13,6 +14,15 @@ TARGET_RELEVANT_EXP_TYPES = [
     'CRISPR genome editing followed by RNA-seq',
     'CRISPRi followed by RNA-seq',
 ]
+RGBA_STRING = 'rgba({}, {}, {}, {})'
+
+
+def string_to_rgba(string):
+    return list(parse.parse(RGBA_STRING, string))
+
+
+def rgba_to_string(rgba):
+    return RGBA_STRING.format(*[str(n) for n in rgba])
 
 
 def hex_to_rgba(hex_value, alpha=1.0):

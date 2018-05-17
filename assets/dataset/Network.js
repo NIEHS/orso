@@ -14,12 +14,25 @@ class Network extends React.Component {
             container: 'network',
             settings: {
                 drawLabels: false,
+                minNodeSize: 1,
+                maxNodeSize: 8,
             },
             renderer: {
                 container: document.getElementById('network'),
                 type: 'canvas',
             },
         });
+
+        var cam = s.camera;
+
+        var n = s.graph.nodes('center');
+        if (typeof(n) != "undefined") {
+            cam.goTo({
+                x: n[cam.readPrefix + 'x'],
+                y: n[cam.readPrefix + 'y'],
+                ratio: this.props.network['camera']['zoom_ratio'],
+            })
+        }
     }
 
     clearNetwork(){

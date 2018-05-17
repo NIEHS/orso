@@ -19,6 +19,7 @@ from scipy.stats import variation as coeff_variance
 from analysis.ontology import Ontology as OntologyObject
 from analysis.metaplot import generate_metaplot_bed
 from analysis.transcript_coverage import generate_locusgroup_bed
+from network.tasks.utils import rgba_to_string, string_to_rgba
 
 STRANDS = (('+', '+'), ('-', '-'))
 LOCUS_GROUP_TYPES = (
@@ -639,8 +640,99 @@ class Experiment(models.Model):
         return tags
 
     def get_network(self):
-        network = ExperimentNetwork.objects.get(experiment=self)
-        return json.loads(network.network_plot)
+        '''
+        Grabs the organism-level network plot. Adds a hidden 'center' node
+        used to move the camera to capture all nodes connected to the
+        experiment. Also sets nodes that are not connected to be transparent.
+        '''
+
+        organism = Organism.objects.filter(
+            assembly__dataset__experiment=self)[0]
+        network = OrganismNetwork.objects.get(
+            organism=organism, experiment_type=self.experiment_type)
+
+        plot = json.loads(network.network_plot)
+
+        in_plot = False
+        for node in plot['nodes']:
+            if node['id'] == self.pk:
+                in_plot = True
+
+        if not in_plot:
+            return None
+
+        connection_pks = Experiment.objects.filter(
+            sim_experiment_1__experiment_2=self
+        ).distinct().values_list('pk', flat=True)
+        pk_set = set([self.pk] + list(connection_pks))
+
+        max_total_x = float('-inf')
+        min_total_x = float('inf')
+        max_total_y = float('-inf')
+        min_total_y = float('inf')
+
+        max_field_x = float('-inf')
+        min_field_x = float('inf')
+        max_field_y = float('-inf')
+        min_field_y = float('inf')
+
+        for node in plot['nodes']:
+
+            max_total_x = max(max_total_x, node['x'])
+            min_total_x = min(min_total_x, node['x'])
+            max_total_y = max(max_total_y, node['y'])
+            min_total_y = min(min_total_y, node['y'])
+
+            if node['id'] in pk_set:
+                max_field_x = max(max_field_x, node['x'])
+                min_field_x = min(min_field_x, node['x'])
+                max_field_y = max(max_field_y, node['y'])
+                min_field_y = min(min_field_y, node['y'])
+            else:
+                rgba = string_to_rgba(node['color'])
+                rgba[3] = 0.2
+                node['color'] = rgba_to_string(rgba)
+
+        for edge in plot['edges']:
+            if all([
+                edge['source'] != self.pk,
+                edge['target'] != self.pk,
+            ]):
+                rgba = string_to_rgba(edge['color'])
+                rgba[3] = 0.2
+                edge['color'] = rgba_to_string(rgba)
+
+        x_position = numpy.mean([max_field_x, min_field_x])
+        y_position = numpy.mean([max_field_y, min_field_y])
+        zoom_ratio = max(
+            (max_field_x - min_field_x) / (max_total_x - min_total_x),
+            (max_field_y - min_field_y) / (max_total_y - min_total_y),
+        )
+        if zoom_ratio == 0:
+            zoom_ratio = 1
+
+        center_added = False
+        for node in plot['nodes']:
+            if node['id'] == 'center':
+                node['x'] = x_position
+                node['y'] = y_position
+                node['color'] = rgba_to_string((0, 0, 0, 0))
+                center_added = True
+
+        if not center_added:
+            plot['nodes'].append({
+                'x': x_position,
+                'y': y_position,
+                'id': 'center',
+                'color': rgba_to_string((0, 0, 0, 0)),
+                'size': 0,
+            })
+
+        plot['camera'] = {
+            'zoom_ratio': zoom_ratio,
+        }
+
+        return plot
 
 
 class ExperimentNetwork(models.Model):
