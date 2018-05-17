@@ -1,7 +1,9 @@
+import matplotlib
+matplotlib.use('Agg')  # noqa
+
 import json
+
 import numpy as np
-from celery import group
-from celery.decorators import task
 from scipy.cluster.hierarchy import dendrogram, linkage
 
 from network import models
