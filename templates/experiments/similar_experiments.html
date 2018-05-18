@@ -3,7 +3,7 @@
 {% block sub-content-header %}
 
 <div class="container" style="margin-bottom:20px;">
-    <h1><a href="{% url 'experiment' pk=ref_experiment.pk %}">{{ref_experiment.name}}</a>: {{object_list|length}} similar experiments</h1>
+    <h1><a href="{% url 'experiment' pk=ref_experiment.pk %}">{{ref_experiment.name}}</a>: {{sim_experiment_count}} similar experiments</h1>
 </div>
 
 {% endblock sub-content-header %}

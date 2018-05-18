@@ -984,15 +984,13 @@ class SimilarExperiments(ExperimentList):
 
         exp = models.Experiment.objects.get(pk=self.kwargs['pk'])
 
-        query = Q(public=True) & (
-            Q(sim_experiment_1__experiment_2=exp) |
-            Q(sim_experiment_2__experiment_1=exp)
-        )
+        query = Q(public=True) & Q(sim_experiment_1__experiment_2=exp)
 
         if self.form.is_valid():
             query &= self.form.get_query()
 
         qs = self.model.objects.filter(query).distinct()
+        self.sim_count = qs.count()
 
         paginator = Paginator(qs, self.get_paginate_by(qs))
         page = self.request.GET.get('page')
@@ -1018,6 +1016,7 @@ class SimilarExperiments(ExperimentList):
 
         context['ref_experiment'] = \
             models.Experiment.objects.get(pk=self.kwargs['pk'])
+        context['sim_experiment_count'] = self.sim_count
 
         return context
 
