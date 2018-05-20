@@ -163,8 +163,8 @@ CELERY_TIME_ZONE = TIME_ZONE
 # CELERY_TASK_EAGER_PROPAGATES = True
 
 # Celery production settings
-CELERY_BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'db+sqlite:///celery.sqlite3'
+CELERY_BROKER_URL = 'redis://localhost:6379/1'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/2'
 
 CELERY_IMPORTS = (
     'network.tasks.data_recommendations',
@@ -180,7 +180,7 @@ CELERY_IMPORTS = (
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://localhost:6379',
+        'LOCATION': 'redis://localhost:6379/0',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient'
         },
