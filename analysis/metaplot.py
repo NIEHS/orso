@@ -61,7 +61,6 @@ def get_metaplot_values(lg_object, bed_path=None, ambiguous_bigwig=None,
         metaplot_bed = NamedTemporaryFile(mode='w')
         generate_metaplot_bed(
             lg_object,
-            json.loads(lg_object.assembly.chromosome_sizes),
             metaplot_bed,
         )
         metaplot_bed.flush()
