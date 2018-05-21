@@ -37,10 +37,10 @@ urlpatterns = [
         name='dataset'),
     url(r'^experiment/(?P<pk>\d+)/$', views.Experiment.as_view(),
         name='experiment'),
-    url(r'^gene/(?P<pk>\d+)/$', views.Gene.as_view(),
-        name='gene'),
-    url(r'^transcript/(?P<pk>\d+)/$', views.Transcript.as_view(),
-        name='transcript'),
+    # url(r'^gene/(?P<pk>\d+)/$', views.Gene.as_view(),
+    #     name='gene'),
+    # url(r'^transcript/(?P<pk>\d+)/$', views.Transcript.as_view(),
+    #     name='transcript'),
 
     url(r'^explore/pca/$', views.ExplorePCA.as_view(), name='explore_pca'),
     url(r'^explore/dendrogram/$', views.ExploreDendrogram.as_view(),
@@ -77,10 +77,10 @@ urlpatterns = [
     url(r'^user_followers/(?P<pk>\d+)/$', views.UserFollowers.as_view(),
         name='user_followers'),
 
-    url(r'^dataset-comparison/(?P<x>\d+)-(?P<y>\d+)/$',
-        views.DatasetComparison.as_view(), name='dataset-comparison'),
-    url(r'^experiment-comparison/(?P<x>\d+)-(?P<y>\d+)/$',
-        views.ExperimentComparison.as_view(), name='experiment-comparison'),
+    # url(r'^dataset-comparison/(?P<x>\d+)-(?P<y>\d+)/$',
+    #     views.DatasetComparison.as_view(), name='dataset-comparison'),
+    # url(r'^experiment-comparison/(?P<x>\d+)-(?P<y>\d+)/$',
+    #     views.ExperimentComparison.as_view(), name='experiment-comparison'),
 
     url(r'^create_experiment/$', views.ExperimentCreate.as_view(),
         name='create_experiment'),
@@ -94,16 +94,17 @@ urlpatterns = [
     url(r'^delete_user/(?P<pk>\d+)/$', views.UserDelete.as_view(),
         name='delete_user'),
 
-    url(r'^pca/(?P<pk>\d+)/$', views.PCA.as_view(), name='pca'),
+    # url(r'^pca/(?P<pk>\d+)/$', views.PCA.as_view(), name='pca'),
 
     # url(r'^test/$', views.TestSmallDataView.as_view(), name='test'),
-    url(r'^test/$', views.TestSmallUserView.as_view(), name='test'),
-    url(r'^browser/$', views.browser, name='browser'),
+    # url(r'^test/$', views.TestSmallUserView.as_view(), name='test'),
+    # url(r'^browser/$', views.browser, name='browser'),
     # url(r'^network/$', views.network, name='network'),
 
     url(r'^api/',
         include(router.urls, namespace='api')),
+    url(r'^selectable/',
+        include('selectable.urls')),
 
-    url(r'^selectable/', include('selectable.urls')),
     url(r'^$', RedirectView.as_view(pattern_name='home', permanent=False)),
 ]
