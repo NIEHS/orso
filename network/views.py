@@ -741,7 +741,7 @@ class Dataset(CheckPublicDatasetMixin, DetailView, AddMyUserMixin):
                 {'feature_values': fv.pk})
 
         context['data_lookup'] = dict(data_lookup)
-        context['network'] = dataset.get_network()
+        # context['network'] = dataset.get_network()
 
         if context['login_user']:
             context['is_favorite'] = models.Favorite.objects.filter(

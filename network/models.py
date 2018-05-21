@@ -898,9 +898,9 @@ class Dataset(models.Model):
                 'minus': None,
             }
 
-    def get_network(self):
-        network = DatasetNetwork.objects.get(dataset=self)
-        return json.loads(network.network_plot)
+    # def get_network(self):
+    #     network = DatasetNetwork.objects.get(dataset=self)
+    #     return json.loads(network.network_plot)
 
 
 class DatasetNetwork(models.Model):
