@@ -4,6 +4,7 @@ matplotlib.use('Agg')  # noqa
 import json
 
 import numpy as np
+from django.db.models import Q
 from scipy.cluster.hierarchy import dendrogram, linkage
 
 from network import models
@@ -158,15 +159,22 @@ def create_dendrogram_plot(nodes):
     }
 
 
-def update_dendrogram(organism_pk, exp_type_pk):
+def update_dendrogram(organism_pk, exp_type_pk, my_user_pk=None):
 
     organism = models.Organism.objects.get(pk=organism_pk)
     exp_type = models.ExperimentType.objects.get(pk=exp_type_pk)
 
-    experiments = models.Experiment.objects.filter(
-        dataset__assembly__organism=organism,
-        experiment_type=exp_type,
-    ).distinct()
+    experiment_query = (Q(dataset__assembly__organism=organism) &
+                        Q(experiment_type=exp_type))
+
+    if my_user_pk:
+        my_user = models.MyUser.objects.get(pk=my_user_pk)
+        experiment_query &= (Q(owners=None) | Q(owners=my_user))
+    else:
+        my_user = None
+        experiment_query &= Q(owners=None)
+
+    experiments = models.Experiment.objects.filter(experiment_query).distinct()
     similarities = models.Similarity.objects.filter(
         experiment_1__in=experiments,
         experiment_2__in=experiments)
@@ -176,7 +184,6 @@ def update_dendrogram(organism_pk, exp_type_pk):
     except ValueError:
         print('Error during clustering, likely empty distance matrix; '
               '{} total experiments'.format(str(experiments.count())))
-        raise
     else:
         nodes = create_and_annotate_nodes(experiments, link, dend)
         dendrogram_plot = create_dendrogram_plot(nodes)
@@ -184,6 +191,7 @@ def update_dendrogram(organism_pk, exp_type_pk):
         models.Dendrogram.objects.update_or_create(
             organism=organism,
             experiment_type=exp_type,
+            my_user=my_user,
             defaults={
                 'dendrogram_plot': json.dumps(dendrogram_plot),
             },
