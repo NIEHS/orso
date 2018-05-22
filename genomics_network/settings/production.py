@@ -21,6 +21,7 @@ from genomics_network.settings.base import *  # noqa
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
+CSRF_COOKIE_HTTPONLY = True
 
 # Add SSL settings
 SESSION_COOKIE_SECURE = True
