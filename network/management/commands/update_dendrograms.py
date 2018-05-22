@@ -1,5 +1,3 @@
-# from multiprocessing import Pool
-
 from celery import group
 from django.core.management.base import BaseCommand
 
