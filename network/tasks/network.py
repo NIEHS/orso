@@ -221,11 +221,20 @@ def update_organism_networks():
 
     for org in models.Organism.objects.all():
         for exp_type in models.ExperimentType.objects.all():
-            if models.Experiment.objects.filter(
+
+            experiments = models.Experiment.objects.filter(
                 dataset__assembly__organism=org,
                 experiment_type=exp_type,
-            ).exists():
-                tasks.append(update_organism_network.si(org.pk, exp_type.pk))
+            )
+
+            if experiments.exists():
+                tasks.append(
+                    update_organism_network.si(org.pk, exp_type.pk))
+
+                for my_user in models.MyUser.objects.all():
+                    if experiments.filter(owners=my_user).exists():
+                        tasks.append(update_organism_network.si(
+                            org.pk, exp_type.pk, my_user_pk=my_user.pk))
 
     job = group(tasks)
     results = job.apply_async()
@@ -291,15 +300,22 @@ def update_dataset_network(dataset_pk):
 
 
 @task
-def update_organism_network(organism_pk, exp_type_pk):
+def update_organism_network(organism_pk, exp_type_pk, my_user_pk=None):
 
     organism = models.Organism.objects.get(pk=organism_pk)
     exp_type = models.ExperimentType.objects.get(pk=exp_type_pk)
 
-    experiments = models.Experiment.objects.filter(
-        dataset__assembly__organism=organism,
-        experiment_type=exp_type,
-    ).distinct()
+    experiment_query = (Q(dataset__assembly__organism=organism) &
+                        Q(experiment_type=exp_type))
+
+    if my_user_pk:
+        my_user = models.MyUser.objects.get(pk=my_user_pk)
+        experiment_query &= (Q(owners=None) | Q(owners=my_user))
+    else:
+        my_user = None
+        experiment_query &= Q(owners=None)
+
+    experiments = models.Experiment.objects.filter(experiment_query).distinct()
     similarities = models.Similarity.objects.filter(
         experiment_1__in=experiments,
         experiment_2__in=experiments)
@@ -310,6 +326,7 @@ def update_organism_network(organism_pk, exp_type_pk):
     models.OrganismNetwork.objects.update_or_create(
         organism=organism,
         experiment_type=exp_type,
+        my_user=my_user,
         defaults={
             'network_plot': network_json,
         },

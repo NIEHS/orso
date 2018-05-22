@@ -416,24 +416,38 @@ class ExploreNetwork(TemplateView, AddMyUserMixin):
         available_experiment_types = dict()
         available_organisms = dict()
 
-        for network in models.OrganismNetwork.objects.all():
-            org_name = network.organism.name
-            exp_type_name = network.experiment_type.name
+        for org in models.Organism.objects.all():
+            for exp_type in models.ExperimentType.objects.all():
 
-            network_lookup['{}:{}'.format(
-                org_name,
-                exp_type_name,
-            )] = network.pk
+                networks = models.OrganismNetwork.objects.filter(
+                    organism=org, experiment_type=exp_type)
+                if networks.exists():
 
-            if org_name not in available_experiment_types:
-                available_experiment_types[org_name] = []
-            if exp_type_name not in available_experiment_types[org_name]:
-                available_experiment_types[org_name].append(exp_type_name)
+                    try:
+                        user_network = networks.get(
+                            my_user=context['login_user'])
+                        pk = user_network.pk
+                    except models.OrganismNetwork.DoesNotExist:
+                        default_network = networks.get(
+                            my_user=None)
+                        pk = default_network.pk
 
-            if exp_type_name not in available_organisms:
-                available_organisms[exp_type_name] = []
-            if org_name not in available_organisms[exp_type_name]:
-                available_organisms[exp_type_name].append(org_name)
+                    network_lookup['{}:{}'.format(
+                        org.name,
+                        exp_type.name,
+                    )] = pk
+
+                    if org.name not in available_experiment_types:
+                        available_experiment_types[org.name] = []
+                    if exp_type.name not in \
+                            available_experiment_types[org.name]:
+                        available_experiment_types[org.name].append(
+                            exp_type.name)
+
+                    if exp_type.name not in available_organisms:
+                        available_organisms[exp_type.name] = []
+                    if org.name not in available_organisms[exp_type.name]:
+                        available_organisms[exp_type.name].append(org.name)
 
         context['network_lookup'] = network_lookup
         context['available_experiment_types'] = available_experiment_types

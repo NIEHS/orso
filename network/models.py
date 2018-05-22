@@ -918,9 +918,13 @@ class Organism(models.Model):
 class OrganismNetwork(models.Model):
     organism = models.ForeignKey('Organism')
     experiment_type = models.ForeignKey('ExperimentType')
+    my_user = models.ForeignKey('MyUser', blank=True, null=True)
 
     network_plot = JSONField()
     last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('organism', 'experiment_type', 'my_user')
 
 
 class Dendrogram(models.Model):
