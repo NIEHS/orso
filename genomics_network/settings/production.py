@@ -22,6 +22,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_AGE = None
 
 # Add SSL settings
 SESSION_COOKIE_SECURE = True

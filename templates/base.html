@@ -7,11 +7,15 @@
 
 <!DOCTYPE html>
 <html lang='en' class='no-js'>
+<script type="text/javascript">
+    if (top.frames.length!=0) {
+        if (window.location.href.replace)
+            top.location.replace(self.location.href);
+        else
+            top.location.href=self.document.href;
+    }
+</script>
 <head>
-    <script>
-        this.top.location !== this.location && (this.top.location = this.location);
-    </script>
-
     <link href='//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css'
         rel='stylesheet' type='text/css'>
     <link href='//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css'
