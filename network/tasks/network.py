@@ -66,7 +66,7 @@ class Network:
         fa2 = ForceAtlas2()
         try:
             positions = fa2.forceatlas2_networkx_layout(
-                g, pos=None, iterations=2000)
+                g, pos=None, iterations=50)
         except ZeroDivisionError:
             positions = dict()
             for obj in self.node_objects_list:
