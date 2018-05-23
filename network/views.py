@@ -924,7 +924,8 @@ class PersonalExperiments(LoginRequiredMixin, ExperimentList):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['processing'] = models.Experiment.objects.filter(
-            owners__in=[self.my_user], dataset__processed=False)
+            owners=self.my_user, dataset__processed=False, processed=False,
+        ).distinct()
         return context
 
 
