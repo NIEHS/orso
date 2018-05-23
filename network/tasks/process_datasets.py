@@ -12,6 +12,8 @@ from analysis.utils import \
 from network import models
 from network.tasks.data_recommendations import \
     update_primary_data_sims_and_recs
+from network.tasks.dendrogram import update_dendrogram
+from network.tasks.network import update_organism_network
 
 
 def process_dataset_batch(datasets, chunk=100):
@@ -98,6 +100,26 @@ def update_and_clean(dataset_pks, experiment_pk=None):
 
     if experiment_pk:
         update_primary_data_sims_and_recs(experiment_pk)
+
+        experiment = models.Experiment.objects.get(pk=experiment_pk)
+        organism = models.Organism.objects.get(
+            assembly__dataset__experiment=experiment)
+
+        for my_user in models.MyUser.objects.filter(experiment=experiment):
+
+            update_organism_network(
+                organism.pk,
+                experiment.experiment_type.pk,
+                my_user_pk=my_user.pk,
+            )
+            update_dendrogram(
+                organism.pk,
+                experiment.experiment_type.pk,
+                my_user_pk=my_user.pk,
+            )
+
+        experiment.processed = True
+        experiment.save()
 
 
 def set_pca_transformed_values(dataset, pca):
