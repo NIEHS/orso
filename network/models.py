@@ -19,6 +19,9 @@ from scipy.stats import variation as coeff_variance
 from analysis.ontology import Ontology as OntologyObject
 from analysis.metaplot import generate_metaplot_bed
 from analysis.transcript_coverage import generate_locusgroup_bed
+from network.management.commands.update_dendrogram import \
+    call_update_dendrogram
+from network.tasks.network import update_organism_network
 from network.tasks.utils import rgba_to_string, string_to_rgba
 
 STRANDS = (('+', '+'), ('-', '-'))
@@ -407,6 +410,20 @@ class Experiment(models.Model):
     class Meta:
         get_latest_by = 'created'
         unique_together = ('project', 'consortial_id')
+
+    def delete(self):
+        organism = Organism.objects.get(assembly__dataset__experiment=self)
+        exp_type = self.experiment_type
+        my_users = list(self.owners.all())
+
+        super().delete()
+
+        # Update user networks and dendrograms after delete
+        for my_user in my_users:
+            update_organism_network.si(
+                organism.pk, exp_type.pk, my_user_pk=my_user.pk).delay()
+            call_update_dendrogram.si(
+                organism.pk, exp_type.pk, my_user_pk=my_user.pk).delay()
 
     def get_absolute_url(self):
         return reverse('experiment', kwargs={'pk': self.pk})
