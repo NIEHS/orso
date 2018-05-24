@@ -58,6 +58,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'network.middleware.RecordDataAccess',
 ]
+X_FRAME_OPTIONS = 'DENY'
 
 ROOT_URLCONF = 'genomics_network.urls'
 
