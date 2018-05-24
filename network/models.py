@@ -665,9 +665,13 @@ class Experiment(models.Model):
 
         organism = Organism.objects.filter(
             assembly__dataset__experiment=self)[0]
-        network = OrganismNetwork.objects.get(
-            organism=organism, experiment_type=self.experiment_type,
-            my_user=my_user)
+        try:
+            network = OrganismNetwork.objects.get(
+                organism=organism, experiment_type=self.experiment_type,
+                my_user=my_user)
+        except OrganismNetwork.DoesNotExist:
+            network = OrganismNetwork.objects.get(
+                organism=organism, experiment_type=self.experiment_type)
 
         plot = json.loads(network.network_plot)
 
