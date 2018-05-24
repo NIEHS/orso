@@ -656,7 +656,7 @@ class Experiment(models.Model):
 
         return tags
 
-    def get_network(self):
+    def get_network(self, my_user=None):
         '''
         Grabs the organism-level network plot. Adds a hidden 'center' node
         used to move the camera to capture all nodes connected to the
@@ -666,7 +666,8 @@ class Experiment(models.Model):
         organism = Organism.objects.filter(
             assembly__dataset__experiment=self)[0]
         network = OrganismNetwork.objects.get(
-            organism=organism, experiment_type=self.experiment_type)
+            organism=organism, experiment_type=self.experiment_type,
+            my_user=my_user)
 
         plot = json.loads(network.network_plot)
 

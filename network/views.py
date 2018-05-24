@@ -737,7 +737,7 @@ class Experiment(CheckPublicExperimentMixin, AddMyUserMixin, DetailView):
 
         context['data_lookup'] = dict(data_lookup)
         context['datasets'] = models.Dataset.objects.filter(experiment=exp)
-        context['network'] = exp.get_network()
+        context['network'] = exp.get_network(my_user=context['login_user'])
 
         if context['login_user']:
             context['is_favorite'] = models.Favorite.objects.filter(
