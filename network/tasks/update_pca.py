@@ -513,7 +513,7 @@ def get_plot(pca):
             'label': key,
             'tags': [key],
         })
-        vector_tags['Cell types'].append((key, cell_type_to_color[key]))
+        vector_tags['Cell types'].append((key, color))
 
     for key, values in sorted(
             target_values.items(), key=lambda x: -len(x[1])):
@@ -527,7 +527,7 @@ def get_plot(pca):
             'label': key,
             'tags': [key],
         })
-        vector_tags['Targets'].append((key, target_to_color[key]))
+        vector_tags['Targets'].append((key, color))
 
     # Set points
     points = []
