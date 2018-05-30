@@ -22,7 +22,6 @@ from analysis.transcript_coverage import generate_locusgroup_bed
 from network.management.commands.update_dendrogram import \
     call_update_dendrogram
 from network.tasks.network import update_organism_network
-from network.tasks.utils import rgba_to_string, string_to_rgba
 
 STRANDS = (('+', '+'), ('-', '-'))
 LOCUS_GROUP_TYPES = (
@@ -683,78 +682,27 @@ class Experiment(models.Model):
         if not in_plot:
             return None
 
-        connection_pks = Experiment.objects.filter(
-            sim_experiment_1__experiment_2=self
-        ).distinct().values_list('pk', flat=True)
-        pk_set = set([self.pk] + list(connection_pks))
+        nodes = []
+        edges = []
 
-        max_total_x = float('-inf')
-        min_total_x = float('inf')
-        max_total_y = float('-inf')
-        min_total_y = float('inf')
-
-        max_field_x = float('-inf')
-        min_field_x = float('inf')
-        max_field_y = float('-inf')
-        min_field_y = float('inf')
-
-        for node in plot['nodes']:
-
-            max_total_x = max(max_total_x, node['x'])
-            min_total_x = min(min_total_x, node['x'])
-            max_total_y = max(max_total_y, node['y'])
-            min_total_y = min(min_total_y, node['y'])
-
-            if node['id'] in pk_set:
-                max_field_x = max(max_field_x, node['x'])
-                min_field_x = min(min_field_x, node['x'])
-                max_field_y = max(max_field_y, node['y'])
-                min_field_y = min(min_field_y, node['y'])
-            else:
-                rgba = string_to_rgba(node['color'])
-                rgba[3] = 0.2
-                node['color'] = rgba_to_string(rgba)
+        connected_pks = set([self.pk])
 
         for edge in plot['edges']:
-            if all([
-                edge['source'] != self.pk,
-                edge['target'] != self.pk,
-            ]):
-                rgba = string_to_rgba(edge['color'])
-                rgba[3] = 0.2
-                edge['color'] = rgba_to_string(rgba)
+            if edge['source'] == self.pk:
+                edges.append(edge)
+                connected_pks.add(edge['target'])
+            elif edge['target'] == self.pk:
+                edges.append(edge)
+                connected_pks.add(edge['source'])
 
-        x_position = numpy.mean([max_field_x, min_field_x])
-        y_position = numpy.mean([max_field_y, min_field_y])
-        zoom_ratio = max(
-            (max_field_x - min_field_x) / (max_total_x - min_total_x),
-            (max_field_y - min_field_y) / (max_total_y - min_total_y),
-        )
-        if zoom_ratio == 0:
-            zoom_ratio = 1
-
-        center_added = False
         for node in plot['nodes']:
-            if node['id'] == 'center':
-                node['x'] = x_position
-                node['y'] = y_position
-                node['color'] = rgba_to_string((0, 0, 0, 0))
-                center_added = True
+            if node['id'] in connected_pks:
+                nodes.append(node)
 
-        if not center_added:
-            plot['nodes'].append({
-                'x': x_position,
-                'y': y_position,
-                'id': 'center',
-                'color': rgba_to_string((0, 0, 0, 0)),
-                'size': 0,
-            })
-
-        plot['camera'] = {
-            'zoom_ratio': zoom_ratio,
+        return {
+            'nodes': nodes,
+            'edges': edges,
         }
-
-        return plot
 
 
 class ExperimentNetwork(models.Model):
