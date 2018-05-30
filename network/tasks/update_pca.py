@@ -410,18 +410,6 @@ def set_pca_plot(pca):
 
 
 def get_plot(pca):
-    plot = {
-        'color_choices': [
-            'Cell type',
-            'Target',
-        ],
-        'points': {
-            'Histone': [],
-            'Control': [],
-            'Other': [],
-        },
-        'vectors': {},
-    }
 
     datasets = list(models.Dataset.objects.filter(
         pcatransformedvalues__pca=pca,
@@ -434,6 +422,7 @@ def get_plot(pca):
 
     cmap = plt.get_cmap('hsv')
 
+    # Set target color scheme
     target_color_path = os.path.join(
         settings.COLOR_KEY_DIR, 'target.json')
     if os.path.exists(target_color_path):
@@ -447,6 +436,7 @@ def get_plot(pca):
             index = ((j % 2) * (50) + (j // 2) * (5)) / 100
             target_to_color[target] = rgb2hex(cmap(index))
 
+    # Set cell type color scheme
     cell_type_color_path = os.path.join(
         settings.COLOR_KEY_DIR, 'cell_type.json')
     if os.path.exists(cell_type_color_path):
@@ -460,25 +450,87 @@ def get_plot(pca):
             index = ((j % 2) * (50) + (j // 2) * (5)) / 100
             cell_type_to_color[cell_type] = rgb2hex(cmap(index))
 
-    vector_categories = defaultdict(list)
+    # Create point tag lists
+    cell_type_tags = defaultdict(int)
+    target_tags = defaultdict(int)
+    for ds in datasets:
+        cell_type_tags[ds.experiment.cell_type] += 1
+        if ds.experiment.target:
+            target_tags[ds.experiment.target] += 1
+        else:
+            target_tags['None'] += 1
+
+    cell_type_tag_list = list([x[0] for x in sorted(
+        cell_type_tags.items(), key=lambda x: -x[1])])
+    target_tag_list = list([x[0] for x in sorted(
+        target_tags.items(), key=lambda x: -x[1])])
+
+    cell_type_tag_colors = []
+    for cell_type in cell_type_tag_list:
+        if cell_type in cell_type_to_color:
+            cell_type_tag_colors.append(cell_type_to_color[cell_type])
+        else:
+            cell_type_tag_colors.append('#A9A9A9')
+
+    target_tag_colors = []
+    for target in target_tag_list:
+        if target in target_to_color:
+            target_tag_colors.append(target_to_color[target])
+        else:
+            target_tag_colors.append('#A9A9A9')
+
+    point_tags = {
+        'Cell types': list(zip(cell_type_tag_list, cell_type_tag_colors)),
+        'Targets': list(zip(target_tag_list, target_tag_colors)),
+    }
+
+    # Set available color options
+    color_options = ['Cell type']
+    if list(target_tags.keys()) != ['None']:
+        color_options.append('Target')
+
+    # Set vectors and vector tags
+    cell_type_values = defaultdict(list)
+    target_values = defaultdict(list)
+
     for ds, values in zip(datasets, transformed_values):
-        target = ds.experiment.target
-        if target in TARGET_VECTORS:
-            vector_categories[target].append(values)
-    for vector, values in vector_categories.items():
-        if vector in target_to_color:
-            color = target_to_color[vector]
+        cell_type_values[ds.experiment.cell_type].append(values)
+        if ds.experiment.target:
+            target_values[ds.experiment.target].append(values)
+
+    vectors = []
+    vector_tags = {'Cell types': [], 'Targets': []}
+
+    for key, values in sorted(
+            cell_type_values.items(), key=lambda x: -len(x[1])):
+        if key in cell_type_to_color:
+            color = cell_type_to_color[key]
         else:
             color = rgb2hex(cmap(0))
-        plot['vectors'].update(
-            {
-                vector: {
-                    'point': numpy.mean(values, axis=0).tolist(),
-                    'color': color,
-                    'label': vector,
-                }
-            })
+        vectors.append({
+            'point': numpy.mean(values, axis=0).tolist(),
+            'color': color,
+            'label': key,
+            'tags': [key],
+        })
+        vector_tags['Cell types'].append((key, cell_type_to_color[key]))
 
+    for key, values in sorted(
+            target_values.items(), key=lambda x: -len(x[1])):
+        if key in target_to_color:
+            color = target_to_color[key]
+        else:
+            color = rgb2hex(cmap(0))
+        vectors.append({
+            'point': numpy.mean(values, axis=0).tolist(),
+            'color': color,
+            'label': key,
+            'tags': [key],
+        })
+        vector_tags['Targets'].append((key, target_to_color[key]))
+
+    # Set points
+    points = []
     for ds, values in zip(datasets, transformed_values):
         colors = dict()
         colors.update({'None': '#A9A9A9'})
@@ -487,17 +539,15 @@ def get_plot(pca):
         if target in target_to_color:
             colors.update({'Target': target_to_color[target]})
         else:
-            # print('Target not found: \"{}\"'.format(target))
             colors.update({'Target': '#A9A9A9'})
 
         cell_type = ds.experiment.cell_type
         if cell_type in cell_type_to_color:
             colors.update({'Cell type': cell_type_to_color[cell_type]})
         else:
-            # print('Cell type not found: \"{}\"'.format(cell_type))
             colors.update({'Cell type': '#A9A9A9'})
 
-        point = {
+        points.append({
             'experiment_name': ds.experiment.name,
             'dataset_name': ds.name,
             'experiment_pk': ds.experiment.pk,
@@ -506,16 +556,16 @@ def get_plot(pca):
             'experiment_target': ds.experiment.target,
             'transformed_values': values,
             'colors': colors,
-        }
+            'tags': [ds.experiment.target, ds.experiment.cell_type],
+        })
 
-        if target in ['Control']:
-            plot['points']['Control'].append(point)
-        elif target in TOTAL_HISTONE_MARKS:
-            plot['points']['Histone'].append(point)
-        else:
-            plot['points']['Other'].append(point)
-
-    return plot
+    return {
+        'points': points,
+        'vectors': vectors,
+        'point_tags': point_tags,
+        'vector_tags': vector_tags,
+        'color_options': color_options,
+    }
 
 
 def get_explained_variance(pca):
