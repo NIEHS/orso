@@ -13,12 +13,24 @@ def call_update_pca(pca_pk):
     ])
 
 
+def call_update_pca_plot(pca_pk):
+    print('Running PCA: {}'.format(str(pca_pk)))
+    call([
+        'python', 'manage.py', 'update_pca', '--plot_only', str(pca_pk),
+    ])
+
+
 class Command(BaseCommand):
     help = '''
         Update PCA models.
     '''
 
     def add_arguments(self, parser):
+        parser.add_argument(
+            '--plot_only',
+            action='store_true',
+            help='Only update the PCA plot',
+        )
         parser.add_argument(
             '--threads',
             action='store',
@@ -44,5 +56,8 @@ class Command(BaseCommand):
         pool = Pool(options['threads'])
 
         print('Updating PCAs...')
-        pool.map(call_update_pca, [pca.pk for pca in pcas])
+        if options['plot_only']:
+            pool.map(call_update_pca_plot, [pca.pk for pca in pcas])
+        else:
+            pool.map(call_update_pca, [pca.pk for pca in pcas])
         print('Done.')
