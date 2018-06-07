@@ -33,4 +33,10 @@
 
 {% block extra-js %}
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script>
+    $('#id_color').prop('disabled', $('#id_use_default_color').is(':checked'));
+    $('#id_use_default_color').click(function() {
+        $('#id_color').prop('disabled', $('#id_use_default_color').is(':checked'));
+    });
+</script>
 {% endblock %}

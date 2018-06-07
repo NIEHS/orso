@@ -25,6 +25,7 @@ from functools import wraps
 from . import models, forms
 from analysis.utils import generate_intersection_df
 from network.tasks.process_experiments import process_experiment
+from network.tasks.utils import get_target_color, get_cell_type_color
 
 
 def get_name(request):
@@ -356,8 +357,20 @@ class ExplorePCA(TemplateView, AddMyUserMixin):
 
             for trans in models.PCATransformedValues.objects.filter(
                     dataset__experiment__owners=context['login_user']):
+
+                if trans.dataset.experiment.color:
+                    colors = {'Default': trans.dataset.experiment.color}
+                else:
+                    colors = {
+                        'Default': '#A9A9A9',
+                        'Target': get_target_color(
+                            trans.dataset.experiment.target),
+                        'Cell type': get_cell_type_color(
+                            trans.dataset.experiment.cell_type),
+                    }
+
                 user_dict[trans.pca.pk].append({
-                    'colors': {'Default': '#A9A9A9'},
+                    'colors': colors,
                     'dataset_name': trans.dataset.name,
                     'dataset_pk': trans.dataset.pk,
                     'experiment_cell_type': trans.dataset.experiment.cell_type,

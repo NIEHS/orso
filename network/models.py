@@ -398,6 +398,9 @@ class Experiment(models.Model):
     last_updated = models.DateTimeField(auto_now=True, null=True)
     consortial_id = models.CharField(max_length=128, null=True, default=None)
 
+    use_default_color = models.BooleanField(default=True)
+    color = models.CharField(max_length=7, blank=True, null=True, default=None)
+
     public = models.BooleanField(default=True)
 
     processed = models.BooleanField(default=False)

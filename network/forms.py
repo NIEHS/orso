@@ -2,6 +2,7 @@ import requests
 from django import forms
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.forms.widgets import TextInput
 from selectable.forms import AutoCompleteWidget
 
 from . import lookups
@@ -267,11 +268,17 @@ class ExperimentForm(BootstrapModelForm):
         model = models.Experiment
         fields = (
             'name', 'experiment_type', 'cell_type', 'target', 'description',
-            'public',
+            'use_default_color', 'color', 'public',
         )
+        widgets = {
+            'color': TextInput(attrs={'type': 'color'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['use_default_color'].widget.attrs.update({
+            'class': 'checkbox',
+        })
         self.fields['public'].widget.attrs.update({
             'class': 'checkbox',
         })

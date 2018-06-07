@@ -71,17 +71,41 @@ def blend_colors(colors):
     return (red, green, blue, alpha)
 
 
-def get_exp_color(experiment):
+def retrieve_color_guide(target_color_guide, json_path):
+    guide = cache.get(target_color_guide, None)
+    if guide:
+        return guide
+    else:
+        with open(json_path) as f:
+            guide = json.load(f)
+        cache.set(target_color_guide, guide)
+        return guide
 
-    def retrieve_color_guide(target_color_guide, json_path):
-        guide = cache.get(target_color_guide, None)
-        if guide:
-            return guide
-        else:
-            with open(json_path) as f:
-                guide = json.load(f)
-            cache.set(target_color_guide, guide)
-            return guide
+
+def get_target_color(target):
+    target_color_guide = 'target_color_guide'
+    json_path = os.path.join(settings.COLOR_KEY_DIR, 'target.json')
+    color_guide = retrieve_color_guide(target_color_guide, json_path)
+    try:
+        color = color_guide[target]
+    except KeyError:
+        color = '#A9A9A9'
+    return color
+
+
+def get_cell_type_color(cell_type):
+    target_color_guide = 'cell_type_color_guide'
+    json_path = os.path.join(settings.COLOR_KEY_DIR, 'cell_type.json')
+    color_guide = retrieve_color_guide(target_color_guide, json_path)
+
+    try:
+        color = color_guide[cell_type]
+    except KeyError:
+        color = '#A9A9A9'
+    return color
+
+
+def get_exp_color(experiment):
 
     if experiment.experiment_type.name in TARGET_RELEVANT_EXP_TYPES:
         color_guide = retrieve_color_guide(
