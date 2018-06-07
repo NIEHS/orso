@@ -8,9 +8,10 @@ class PCA extends React.Component {
 
         var color_by = this.props.plot['color_options'][0];
 
+        var points = this.props.plot['points'].concat(this.props.user_data);
         var point_tags = {};
-        for (var i = 0; i < this.props.plot['points'].length; i++) {
-            var point = this.props.plot['points'][i];
+        for (var i = 0; i < points.length; i++) {
+            var point = points[i];
             for (var key in point['tags']) {
                 if (!point_tags.hasOwnProperty(key)) point_tags[key] = {};
                 var tag = point['tags'][key];
@@ -32,7 +33,7 @@ class PCA extends React.Component {
         var data = [];
         var x = [], y = [], z = [], names = [], colors = [];
 
-        var points = this.props.plot['points'];
+        var points = this.props.plot['points'].concat(this.props.user_data);
         for (var i = 0; i < points.length; i++) {
 
             var point = points[i];

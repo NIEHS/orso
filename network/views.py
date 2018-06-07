@@ -378,8 +378,10 @@ class ExplorePCA(TemplateView, AddMyUserMixin):
                     'experiment_pk': trans.dataset.experiment.pk,
                     'experiment_target': trans.dataset.experiment.target,
                     'transformed_values': trans.transformed_values,
-                    'tags': [trans.dataset.experiment.target,
-                             trans.dataset.experiment.cell_type],
+                    'tags': {
+                        'Cell type': trans.dataset.experiment.cell_type,
+                        'Target': trans.dataset.experiment.target,
+                    },
                 })
 
         context['user_data'] = dict(user_dict)
