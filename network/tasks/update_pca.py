@@ -511,7 +511,7 @@ def get_plot(pca):
             'point': numpy.mean(values, axis=0).tolist(),
             'color': color,
             'label': key,
-            'tags': [key],
+            'tags': {'Cell type': key},
         })
         vector_tags['Cell types'].append((key, color))
 
@@ -525,7 +525,7 @@ def get_plot(pca):
             'point': numpy.mean(values, axis=0).tolist(),
             'color': color,
             'label': key,
-            'tags': [key],
+            'tags': {'Target': key},
         })
         vector_tags['Targets'].append((key, color))
 
@@ -533,7 +533,6 @@ def get_plot(pca):
     points = []
     for ds, values in zip(datasets, transformed_values):
         colors = dict()
-        colors.update({'None': '#A9A9A9'})
 
         target = ds.experiment.target
         if target in target_to_color:
@@ -556,7 +555,10 @@ def get_plot(pca):
             'experiment_target': ds.experiment.target,
             'transformed_values': values,
             'colors': colors,
-            'tags': [ds.experiment.target, ds.experiment.cell_type],
+            'tags': {
+                'Cell type': ds.experiment.cell_type,
+                'Target': ds.experiment.target,
+            },
         })
 
     return {

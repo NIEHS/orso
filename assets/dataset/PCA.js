@@ -8,38 +8,42 @@ class PCA extends React.Component {
 
         var color_by = this.props.plot['color_options'][0];
 
-        var point_visibility = []
-        var point_num = this.props.plot['points'].length +
-            this.props.user_data.length;
-        for (var i = 0; i < point_num; i++) {
-            point_visibility.push(true);
-        }
-
-        var vector_visibility = []
-        var vector_num = this.props.plot['vectors'].length;
-        for (var i = 0; i < vector_num; i ++) {
-            vector_visibility.push(false);
+        var point_tags = {};
+        for (var i = 0; i < this.props.plot['points'].length; i++) {
+            var point = this.props.plot['points'][i];
+            for (var key in point['tags']) {
+                if (!point_tags.hasOwnProperty(key)) point_tags[key] = {};
+                var tag = point['tags'][key];
+                if (!point_tags[key].hasOwnProperty(tag)) point_tags[key][tag] = {
+                    color: point['colors'][key],
+                    visibility: true,
+                };
+            }
         }
 
         this.state = {
             color_by: color_by,
-            point_visibility: point_visibility,
-            vector_visibility: vector_visibility,
+            point_tags: point_tags,
         };
     }
 
     plotPCA() {
 
         var data = [];
-
-        var points = this.props.plot['points'].concat(this.props.user_data);
         var x = [], y = [], z = [], names = [], colors = [];
 
+        var points = this.props.plot['points'];
         for (var i = 0; i < points.length; i++) {
-            if (this.state.point_visibility[i]) {
 
-                var point = points[i];
+            var point = points[i];
 
+            let visible = false;
+            for (var key in point.tags) {
+                let tag = point.tags[key];
+                if (this.state.point_tags[key][tag].visibility) visible = true;
+            }
+
+            if (visible) {
                 if (point['colors'].hasOwnProperty(this.state.color_by)) {
                     var color = point['colors'][this.state.color_by];
                 } else if (point['colors'].hasOwnProperty('Default')) {
@@ -71,27 +75,6 @@ class PCA extends React.Component {
             },
             type: 'scatter3d',
         })
-
-        var vectors = this.props.plot['vectors'];
-        for (var i = 0; i < vectors.length; i++) {
-
-            var vector = vectors[i];
-
-            if (this.state.vector_visibility[i]) {
-                data.push({
-                    x: [0, vector['point'][0]],
-                    y: [0, vector['point'][1]],
-                    z: [0, vector['point'][2]],
-                    type: 'scatter3d',
-                    mode: 'lines+text',
-                    line: {
-                        width: 6,
-                        color: vector['color'],
-                    },
-                    text: ['', vector['label']],
-                });
-            }
-        }
 
         var layout = {
             showlegend: false,
@@ -196,68 +179,29 @@ class PCA extends React.Component {
         $(divElement).empty();
     }
 
-    updatePointVisibility() {
-        var tags = [];
-        var inputs = $(this.refs.point_visibility_dropdown).find('input');
-        for (var i = 0; i < inputs.length; i++) {
-            var input = inputs[i];
-            if ($(input).is(':checked')) {
-                tags.push($(input).val());
-            }
-        }
-
-        var points = this.props.plot['points'].concat(this.props.user_data);
-        var visibilities = [];
-        for (var i = 0; i < points.length; i++) {
-            var point = points[i];
-            var visibility = true;
-            for (var j = 0; j < tags.length; j++) {
-                var tag_1 = tags[j];
-                for (var k = 0; k < point['tags'].length; k++) {
-                    var tag_2 = point['tags'][k];
-                    if (tag_1 == tag_2) {
-                        visibility = false;
-                    }
-                }
-            }
-            visibilities.push(visibility);
-        }
-
-        this.setState({point_visibility: visibilities});
-    }
-
-    updateVectorVisibility() {
-        var tags = [];
-        var inputs = $(this.refs.vector_visibility_dropdown).find('input');
-        for (var i = 0; i < inputs.length; i++) {
-            var input = inputs[i];
-            if ($(input).is(':checked')) {
-                tags.push($(input).val());
-            }
-        }
-
-        var vectors = this.props.plot['vectors'];
-        var visibilities = [];
-        for (var i = 0; i < vectors.length; i++) {
-            var vector = vectors[i];
-            var visibility = false;
-            for (var j = 0; j < tags.length; j++) {
-                var tag_1 = tags[j];
-                for (var k = 0; k < vector['tags'].length; k++) {
-                    var tag_2 = vector['tags'][k];
-                    if (tag_1 == tag_2) {
-                        visibility = true;
-                    }
-                }
-            }
-            visibilities.push(visibility);
-        }
-
-        this.setState({vector_visibility: visibilities});
-    }
-
     changeColor(event){
         this.setState({color_by: event.target.value});
+    }
+
+    invertSelection(event){
+        let point_tags = Object.assign({}, this.state.point_tags);
+        let group = event.target.getAttribute('data-group');
+
+        for (var tag in point_tags[group]) {
+            let visibility = point_tags[group][tag].visibility;
+            point_tags[group][tag].visibility = !visibility;
+        }
+
+        this.setState({point_tags});
+    }
+
+    updatePointVisibility(event){
+        let point_tags = Object.assign({}, this.state.point_tags);
+        let group = event.target.getAttribute('data-group');
+
+        point_tags[group][event.target.value].visibility = event.target.checked;
+
+        this.setState({point_tags});
     }
 
     componentDidMount(){
@@ -265,64 +209,6 @@ class PCA extends React.Component {
         var $color_select = $(this.refs.color_select);
         for (let i in this.props.plot['color_options']) {
             $color_select.append('<option val="' + i + '">' + this.props.plot['color_options'][i] + '</option>');
-        }
-
-        var $point_visibility_dropdown = $(this.refs.point_visibility_dropdown)
-        var point_tag_keys = Object.keys(this.props.plot['point_tags']);
-
-        for (var i = 0; i < point_tag_keys.length; i++){
-            var point_tag_key = point_tag_keys[i];
-            var $div = $(
-                '<li className="dropdown-header">' + point_tag_key + '</li>'
-            );
-            $point_visibility_dropdown.append($div);
-
-            var tags = this.props.plot['point_tags'][point_tag_key];
-            for (var j = 0; j < tags.length; j++) {
-                var tag = tags[j];
-                var $div = $(
-                    '<span> \
-                        <input type="checkbox" id="vector_tag_' + i + '" value="' + tag[0] + '"></input> \
-                        <label style="display:inline"><span class="glyphicon glyphicon-stop" style="color:' + tag[1] + '"></span>&nbsp;' + tag[0] + '</label> \
-                        </br>\
-                    </span>'
-                );
-                $div.on('click', this.updatePointVisibility.bind(this));
-                $point_visibility_dropdown.append($div);
-            }
-
-            if (i < point_tag_keys.length - 1) {
-                $point_visibility_dropdown.append($('<li role="separator" class="divider"></li>'));
-            }
-        }
-
-        var $vector_visibility_dropdown = $(this.refs.vector_visibility_dropdown);
-        var vector_tag_keys = Object.keys(this.props.plot['vector_tags']);
-
-        for (var i = 0; i < vector_tag_keys.length; i++){
-            var vector_tag_key = vector_tag_keys[i];
-            var $div = $(
-                '<li className="dropdown-header">' + vector_tag_key + '</li>'
-            );
-            $vector_visibility_dropdown.append($div);
-
-            var tags = this.props.plot['vector_tags'][vector_tag_key];
-            for (var j = 0; j < tags.length; j++) {
-                var tag = tags[j];
-                var $div = $(
-                    '<span> \
-                        <input type="checkbox" id="vector_tag_' + i + '" value="' + tag[0] + '"></input> \
-                        <label style="display:inline"><span class="glyphicon glyphicon-stop" style="color:' + tag[1] + '"></span>&nbsp;' + tag[0] + '</label> \
-                        </br>\
-                    </span>'
-                );
-                $div.on('click', this.updateVectorVisibility.bind(this));
-                $vector_visibility_dropdown.append($div);
-            }
-
-            if (i < vector_tag_keys.length - 1) {
-                $vector_visibility_dropdown.append($('<li role="separator" class="divider"></li>'));
-            }
         }
 
         this.plotPCA();
@@ -350,6 +236,56 @@ class PCA extends React.Component {
 
     render(){
 
+        var point_dropdowns = Object.keys(this.state.point_tags)
+                                    .sort(function(a, b) {
+                                        return a.toLowerCase().localeCompare(b.toLowerCase());
+                                    }).map((key) => {
+            var list = Object.keys(this.state.point_tags[key])
+                             .sort(function(a, b) {
+                                 return a.toLowerCase().localeCompare(b.toLowerCase());
+                             }).map((tag) =>
+                <span key={tag}>
+                    <input
+                        key={tag}
+                        type='checkbox'
+                        data-group={key}
+                        value={tag}
+                        checked={this.state.point_tags[key][tag].visibility}
+                        onChange={this.updatePointVisibility.bind(this)}>
+                    </input>
+                    <label
+                        style={{display: 'inline'}}>
+                        <span
+                            className="glyphicon glyphicon-stop"
+                            style={{color: this.state.point_tags[key][tag].color}}>
+                        </span>
+                        {tag}
+                    </label>
+                    <br></br>
+                </span>
+            );
+            return <div key={key} className="dropdown">
+                <button
+                    className="btn btn-default btn-block dropdown-toggle"
+                    type="button"
+                    data-toggle="dropdown">
+                        Select points by {key.toLowerCase()}&nbsp;
+                        <span className="caret"></span>
+                </button>
+                <ul className="dropdown-menu pre-scrollable" ref="point_visibility_dropdown">
+                    <input
+                        type="button"
+                        className="btn btn-primary"
+                        data-group={key}
+                        value="Invert selection"
+                        onClick={this.invertSelection.bind(this)}>
+                    </input>
+                    <br></br>
+                    {list}
+                </ul>
+            </div>
+        });
+
         return <div>
             <div className='pca' style={{paddingTop: '20px'}}>
                 <h2>Plot</h2>
@@ -367,22 +303,7 @@ class PCA extends React.Component {
                                 value={this.state.color_by}>
                             </select>
                         </div>
-                        <div className="dropdown">
-                            <button className="btn btn-default btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-                                Hide dataset&nbsp;
-                                <span className="caret"></span>
-                            </button>
-                            <ul className="dropdown-menu pre-scrollable" ref="point_visibility_dropdown">
-                            </ul>
-                        </div>
-                        <div className="dropdown">
-                            <button className="btn btn-default btn-block dropdown-toggle" type="button" data-toggle="dropdown" >
-                                Show vector&nbsp;
-                                <span className="caret"></span>
-                            </button>
-                            <ul className="dropdown-menu pre-scrollable" ref="vector_visibility_dropdown">
-                            </ul>
-                        </div>
+                        {point_dropdowns}
                     </div>
                 </div>
             </div>
