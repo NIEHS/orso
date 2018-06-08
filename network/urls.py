@@ -33,6 +33,7 @@ router.register('feature-values',
 urlpatterns = [
 
     url(r'^home/$', views.Home.as_view(), name='home'),
+    url(r'^network/home/$', views.Home.as_view(), name='home'),
     url(r'^dataset/(?P<pk>\d+)/$', views.Dataset.as_view(),
         name='dataset'),
     url(r'^experiment/(?P<pk>\d+)/$', views.Experiment.as_view(),
