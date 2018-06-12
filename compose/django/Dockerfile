@@ -85,6 +85,7 @@ RUN gzip -df /network/fixtures/annotation.json.gz
 RUN mkdir -p /network/data/
 COPY /data/colors /network/data/colors
 RUN mkdir -p /network/data/bigwig_temp
+RUN mkdir -p /network/nn_models
 
 COPY ontologies.tar.gz /network/data
 RUN tar -xzf /network/data/ontologies.tar.gz -C /network/ && \
