@@ -1,6 +1,7 @@
 version: '2'
 
 volumes:
+  django_data: {}
   postgres_data: {}
   postgres_backup: {}
   public_data: {}
@@ -30,6 +31,7 @@ services:
       - redis
     env_file: .env
     volumes:
+      - django_data:/network/data
       - public_data:/network/public
       - postgres_backup:/network/backups
 
