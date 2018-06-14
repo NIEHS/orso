@@ -1,3 +1,4 @@
+import random
 import requests
 import pyBigWig
 import numpy
@@ -7,11 +8,13 @@ import string
 import os
 from collections import defaultdict
 
+import networkx as nx
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField, ArrayField
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
+from fa2 import ForceAtlas2
 from nltk.corpus import stopwords
 from picklefield.fields import PickledObjectField
 from scipy.stats import variation as coeff_variance
@@ -685,22 +688,48 @@ class Experiment(models.Model):
         if not in_plot:
             return None
 
+        connected_pks = set([self.pk])
+        for edge in plot['edges']:
+            if edge['source'] == self.pk:
+                connected_pks.add(edge['target'])
+            elif edge['target'] == self.pk:
+                connected_pks.add(edge['source'])
+
+        g = nx.Graph()
+
+        for pk in connected_pks:
+            g.add_node(pk)
+        for edge in plot['edges']:
+            if all([
+                edge['source'] in connected_pks,
+                edge['target'] in connected_pks,
+            ]):
+                g.add_edge(edge['source'], edge['target'])
+
+        fa2 = ForceAtlas2()
+        try:
+            positions = fa2.forceatlas2_networkx_layout(
+                g, pos=None, iterations=50)
+        except ZeroDivisionError:
+            positions = dict()
+            for pk in connected_pks:
+                positions[pk] = (random.random(), random.random())
+
         nodes = []
         edges = []
 
-        connected_pks = set([self.pk])
-
-        for edge in plot['edges']:
-            if edge['source'] == self.pk:
-                edges.append(edge)
-                connected_pks.add(edge['target'])
-            elif edge['target'] == self.pk:
-                edges.append(edge)
-                connected_pks.add(edge['source'])
-
         for node in plot['nodes']:
             if node['id'] in connected_pks:
+                node['x'] = positions[node['id']][0]
+                node['y'] = positions[node['id']][1]
                 nodes.append(node)
+
+        for edge in plot['edges']:
+            if all([
+                edge['source'] in connected_pks,
+                edge['target'] in connected_pks,
+            ]):
+                edges.append(edge)
 
         return {
             'nodes': nodes,
