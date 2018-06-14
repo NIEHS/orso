@@ -63,7 +63,7 @@ RELEVANT_CATEGORIES = set([
 ])
 
 
-def generate_metadata_sims_df(experiments):
+def generate_metadata_sims_df(experiments, identity_only=False):
 
     # Get BRENDA ontology object
     brenda_ont = (models.Ontology.objects.get(name='brenda_tissue_ontology')
@@ -153,18 +153,24 @@ def generate_metadata_sims_df(experiments):
                     _interaction_partners = interaction_partners[organism]
 
                     if 'target' in relevant_fields:
-                        sim_comparisons.append(any([
-                            target_1 == target_2,
-                            target_1 in _interaction_partners[target_2],
-                            target_1 in _interaction_partners[target_2],
-                        ]))
+                        if identity_only:
+                            sim_comparisons.append(target_1 == target_2)
+                        else:
+                            sim_comparisons.append(any([
+                                target_1 == target_2,
+                                target_1 in _interaction_partners[target_2],
+                                target_2 in _interaction_partners[target_1],
+                            ]))
 
                     if 'cell_type' in relevant_fields:
-                        sim_comparisons.append(any([
-                            cell_type_1 == cell_type_2,
-                            cell_type_to_relevant_categories[cell_type_1] &
-                            cell_type_to_relevant_categories[cell_type_2],
-                        ]))
+                        if identity_only:
+                            sim_comparisons.append(cell_type_1 == cell_type_2)
+                        else:
+                            sim_comparisons.append(any([
+                                cell_type_1 == cell_type_2,
+                                cell_type_to_relevant_categories[cell_type_1] &
+                                cell_type_to_relevant_categories[cell_type_2],
+                            ]))
 
                     if sim_comparisons:
                         is_similar = all(sim_comparisons)
@@ -182,10 +188,11 @@ def generate_metadata_sims_df(experiments):
     return pd.DataFrame(d)
 
 
-def generate_metadata_sims_df_for_datasets(datasets):
+def generate_metadata_sims_df_for_datasets(datasets, identity_only=False):
     experiments = \
         models.Experiment.objects.filter(dataset__in=datasets).distinct()
-    exp_sims = generate_metadata_sims_df(experiments)
+    exp_sims = generate_metadata_sims_df(experiments,
+                                         identity_only=identity_only)
 
     ds_pks = [ds.pk for ds in datasets]
     ds_sims = pd.DataFrame(index=[ds_pks], columns=[ds_pks])

@@ -954,6 +954,8 @@ class PCA(models.Model):
     scikit-learn PCA object. Used to transform locus intersections and
     find pairwise distances between datasets.
     '''
+    NN_MODEL_DIR = 'nn_models/'
+
     locus_group = models.ForeignKey('LocusGroup')
     experiment_type = models.ForeignKey('ExperimentType')
 
@@ -968,6 +970,8 @@ class PCA(models.Model):
     inverse_covariation_matrix = PickledObjectField(null=True, blank=True)
 
     neural_network = PickledObjectField(null=True, blank=True)
+    neural_network_file = models.FileField(
+        null=True, blank=True, max_length=256, upload_to=NN_MODEL_DIR)
     neural_network_scaler = PickledObjectField(null=True, blank=True)
 
     last_updated = models.DateTimeField(auto_now=True, null=True)
@@ -978,6 +982,10 @@ class PCA(models.Model):
     class Meta:
         verbose_name = 'PCA'
         verbose_name_plural = 'PCAs'
+
+    def get_nn_model_path(self):
+        return os.path.join(settings.MEDIA_ROOT, self.NN_MODEL_DIR,
+                            '{}.hd5'.format(str(self.pk)))
 
 
 class PCATransformedValues(models.Model):

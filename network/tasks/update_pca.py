@@ -11,9 +11,12 @@ from django.db.models import Q
 from matplotlib.colors import rgb2hex
 from scipy.spatial.distance import mahalanobis
 
+from keras import backend as K
+from keras import layers
+from keras.models import Sequential
+from keras.optimizers import SGD
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 
 from analysis.utils import (
@@ -122,10 +125,12 @@ def fit_and_set_neural_network(pca):
     datasets = get_datasets(pca)
 
     values = generate_pca_transformed_df(pca, datasets)
-    sims = generate_metadata_sims_df_for_datasets(datasets)
+    sims = generate_metadata_sims_df_for_datasets(datasets, identity_only=True)
 
-    clf, scaler = fit_nn(values, sims)
-    set_nn(pca, clf, scaler)
+    model, scaler = fit_nn(values, sims)
+    set_nn(pca, model, scaler)
+
+    K.clear_session()
 
 
 def get_datasets(pca):
@@ -317,47 +322,72 @@ def set_pca_loci(pca_object, df):
 # Incompatible with Celery
 def fit_nn(values_df, sims_df, sample_num=100000):
 
-    vector_list = []
-    sims_list = []
+    positive_vector_list = []
+    negative_vector_list = []
 
     for pk_1 in list(sims_df):
         for pk_2 in list(sims_df):
 
             vec_1 = list(values_df[pk_1])
             vec_2 = list(values_df[pk_2])
-            sim = sims_df[pk_1][pk_2]
 
-            # Get both "forwards" and "backwards" cases
-            vector_list.append(vec_1 + vec_2)
-            sims_list.append(sim)
-            vector_list.append(vec_2 + vec_1)
-            sims_list.append(sim)
+            if sims_df[pk_1][pk_2]:
+                positive_vector_list.append(vec_1 + vec_2)
+                positive_vector_list.append(vec_2 + vec_1)
+            else:
+                negative_vector_list.append(vec_1 + vec_2)
+                negative_vector_list.append(vec_2 + vec_1)
 
-    if sample_num > len(vector_list):
-        sample_num = len(vector_list)
+    vector_list = []
+    sim_list = []
 
-    vector_training = []
-    sims_training = []
-    for x, y in random.sample(list(zip(
-            vector_list, sims_list)), sample_num):
-        vector_training.append(x)
-        sims_training.append(y)
-
-    scaler = StandardScaler()
-    scaler.fit(vector_training)
-
-    clf = MLPClassifier(
-        solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1)
-    clf.fit(
-        scaler.transform(vector_training),
-        sims_training,
+    _sample_num = min(
+        sample_num / 2,
+        len(positive_vector_list),
+        len(negative_vector_list),
     )
 
-    return clf, scaler
+    vector_list.extend(random.sample(positive_vector_list, _sample_num))
+    sim_list.extend([True] * _sample_num)
+
+    vector_list.extend(random.sample(negative_vector_list, _sample_num))
+    sim_list.extend([False] * _sample_num)
+
+    zipped = list(zip(vector_list, sim_list))
+    random.shuffle(zipped)
+    x_training, y_training = zip(*zipped)
+
+    scaler = StandardScaler()
+    scaler.fit(x_training)
+
+    model = Sequential()
+
+    model.add(layers.Dense(units=24, activation='softsign', input_dim=6))
+    model.add(layers.Dense(units=24, activation='softsign'))
+    model.add(layers.Dense(units=1, activation='sigmoid'))
+
+    sgd = SGD(lr=0.1)
+
+    model.compile(loss='binary_crossentropy',
+                  optimizer=sgd,
+                  metrics=['binary_accuracy'])
+    model.fit(
+        scaler.transform(x_training),
+        numpy.array(y_training),
+        epochs=200,
+        batch_size=64,
+        verbose=0,
+    )
+
+    return model, scaler
 
 
-def set_nn(pca, clf, scaler):
-    pca.neural_network = clf
+def set_nn(pca, model, scaler):
+
+    fn = pca.get_nn_model_path()
+    model.save(fn)
+
+    pca.neural_network_file = fn
     pca.neural_network_scaler = scaler
     pca.save()
 

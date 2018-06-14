@@ -1,7 +1,9 @@
+import numpy
 from celery import group
 from celery.decorators import task
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from keras.models import load_model
 
 from network import models
 from network.tasks.recommendations import update_recommendations
@@ -58,9 +60,11 @@ def update_primary_data_similarities(experiment_pk):
         else:
 
             if all([
-                pca.neural_network is not None,
+                pca.neural_network_file is not None,
                 pca.neural_network_scaler is not None,
             ]):
+
+                nn_model = load_model(pca.neural_network_file.path)
 
                 other_datasets = models.Dataset.objects.filter(
                     assembly=assembly,
@@ -97,10 +101,10 @@ def update_primary_data_similarities(experiment_pk):
                                 pca.neural_network_scaler.transform(
                                     [vec_2 + vec_1])
 
-                            sim_1 = \
-                                pca.neural_network.predict(combined_vec_1)[0]
-                            sim_2 = \
-                                pca.neural_network.predict(combined_vec_2)[0]
+                            sim_1 = nn_model.predict_classes(
+                                numpy.array(combined_vec_1))[0][0]
+                            sim_2 = nn_model.predict_classes(
+                                numpy.array(combined_vec_2))[0][0]
 
                             if bool(sim_1) and bool(sim_2):
                                 try:
