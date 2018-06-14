@@ -341,11 +341,11 @@ def fit_nn(values_df, sims_df, sample_num=100000):
     vector_list = []
     sim_list = []
 
-    _sample_num = min(
+    _sample_num = int(min(
         sample_num / 2,
         len(positive_vector_list),
         len(negative_vector_list),
-    )
+    ))
 
     vector_list.extend(random.sample(positive_vector_list, _sample_num))
     sim_list.extend([True] * _sample_num)
