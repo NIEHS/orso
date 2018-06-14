@@ -35,7 +35,7 @@ def follow_pre_delete_update(sender, instance, **kwargs):
               .si(instance.following.pk, instance.followed.pk).delay())
 
     try:
-        models.Activity.objects.get(
+        models.Activity.objects.filter(
             user=instance.following,
             followed_user=instance.followed,
         ).delete()
@@ -67,7 +67,7 @@ def favorite_pre_delete_update(sender, instance, **kwargs):
               .si(instance.experiment.pk).delay())
 
     try:
-        models.Activity.objects.get(
+        models.Activity.objects.filter(
             user=instance.user,
             favorited_experiment=instance.experiment,
         ).delete()
