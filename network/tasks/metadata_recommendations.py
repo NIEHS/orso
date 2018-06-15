@@ -84,6 +84,7 @@ def generate_metadata_sims_df(experiments, identity_only=False):
     cell_type_to_relevant_categories = dict()
     for cell_type in cell_types:
 
+        brenda_term = None
         if cell_type in encode_cell_type_to_brenda_name:
             brenda_term_name = encode_cell_type_to_brenda_name[cell_type]
             for term, name in brenda_ont.term_to_name.items():
@@ -93,8 +94,6 @@ def generate_metadata_sims_df(experiments, identity_only=False):
             terms = brenda_ont.get_terms(cell_type)
             if terms:
                 brenda_term = sorted(terms)[0]
-            else:
-                brenda_term = None
 
         if brenda_term:
             parent_set = set([brenda_term]) \
