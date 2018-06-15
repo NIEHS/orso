@@ -346,6 +346,8 @@ def fit_nn(values_df, sims_df, sample_num=100000):
         len(positive_vector_list),
         len(negative_vector_list),
     ))
+    if not _sample_num:
+        return None, None
 
     vector_list.extend(random.sample(positive_vector_list, _sample_num))
     sim_list.extend([True] * _sample_num)
@@ -384,11 +386,14 @@ def fit_nn(values_df, sims_df, sample_num=100000):
 
 def set_nn(pca, model, scaler):
 
-    fn = pca.get_nn_model_path()
-    model.save(fn)
-
-    pca.neural_network_file = fn
-    pca.neural_network_scaler = scaler
+    if model and scaler:
+        fn = pca.get_nn_model_path()
+        model.save(fn)
+        pca.neural_network_file = fn
+        pca.neural_network_scaler = scaler
+    else:
+        pca.neural_network_file = None
+        pca.neural_network_scaler = None
     pca.save()
 
 
