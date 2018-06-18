@@ -9,7 +9,8 @@ django-picklefield==1.0.0
 django-crispy-forms==1.7.0
 
 # tasks
-celery==4.0.0
+celery==4.1.0
+kombu==4.1.0
 
 # utilities
 click==6.6
