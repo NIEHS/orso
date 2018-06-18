@@ -322,40 +322,31 @@ def set_pca_loci(pca_object, df):
 # Incompatible with Celery
 def fit_nn(values_df, sims_df, sample_num=100000):
 
-    positive_vector_list = []
-    negative_vector_list = []
+    vector_list = []
+    sims_list = []
 
     for pk_1 in list(sims_df):
         for pk_2 in list(sims_df):
 
             vec_1 = list(values_df[pk_1])
             vec_2 = list(values_df[pk_2])
+            sim = sims_df[pk_1][pk_2]
 
-            if sims_df[pk_1][pk_2]:
-                positive_vector_list.append(vec_1 + vec_2)
-                positive_vector_list.append(vec_2 + vec_1)
-            else:
-                negative_vector_list.append(vec_1 + vec_2)
-                negative_vector_list.append(vec_2 + vec_1)
+            # Get both "forwards" and "backwards" cases
+            vector_list.append(vec_1 + vec_2)
+            sims_list.append(sim)
+            vector_list.append(vec_2 + vec_1)
+            sims_list.append(sim)
 
-    vector_list = []
-    sim_list = []
+    class_weight = {
+        0: 1,
+        1: 1 / (sum(sims_list) / len(sims_list)),
+    }
 
-    _sample_num = int(min(
-        sample_num / 2,
-        len(positive_vector_list),
-        len(negative_vector_list),
-    ))
-    if not _sample_num:
-        return None, None
+    if sample_num > len(vector_list):
+        sample_num = len(vector_list)
 
-    vector_list.extend(random.sample(positive_vector_list, _sample_num))
-    sim_list.extend([True] * _sample_num)
-
-    vector_list.extend(random.sample(negative_vector_list, _sample_num))
-    sim_list.extend([False] * _sample_num)
-
-    zipped = list(zip(vector_list, sim_list))
+    zipped = list(zip(vector_list, sims_list))
     random.shuffle(zipped)
     x_training, y_training = zip(*zipped)
 
@@ -379,6 +370,7 @@ def fit_nn(values_df, sims_df, sample_num=100000):
         epochs=200,
         batch_size=64,
         verbose=0,
+        class_weight=class_weight,
     )
 
     return model, scaler
