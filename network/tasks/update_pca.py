@@ -125,7 +125,7 @@ def fit_and_set_neural_network(pca):
     datasets = get_datasets(pca)
 
     values = generate_pca_transformed_df(pca, datasets)
-    sims = generate_metadata_sims_df_for_datasets(datasets, identity_only=True)
+    sims = generate_metadata_sims_df_for_datasets(datasets)
 
     model, scaler = fit_nn(values, sims)
     set_nn(pca, model, scaler)
@@ -338,11 +338,6 @@ def fit_nn(values_df, sims_df, sample_num=100000):
             vector_list.append(vec_2 + vec_1)
             sims_list.append(sim)
 
-    class_weight = {
-        0: 1,
-        1: 1 / (sum(sims_list) / len(sims_list)),
-    }
-
     if sample_num > len(vector_list):
         sample_num = len(vector_list)
 
@@ -367,10 +362,8 @@ def fit_nn(values_df, sims_df, sample_num=100000):
     model.fit(
         scaler.transform(x_training),
         numpy.array(y_training),
-        epochs=200,
-        batch_size=64,
+        epochs=100,
         verbose=0,
-        class_weight=class_weight,
     )
 
     return model, scaler
