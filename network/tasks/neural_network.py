@@ -124,6 +124,7 @@ def fit_neural_network(network_pk):
     # Save
     fn = network.get_nn_model_path()
     model.save(fn)
+    network.neural_network_file = fn
 
     network.neural_network_scaler = scaler
     network.neural_network_label_binarizer = label_binarizer
