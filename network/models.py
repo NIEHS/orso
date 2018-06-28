@@ -978,6 +978,31 @@ class Annotation(models.Model):
         return self.name
 
 
+class NeuralNetwork(models.Model):
+    NN_MODEL_DIR = 'neural_networks/'
+
+    locus_group = models.ForeignKey('LocusGroup')
+    experiment_type = models.ForeignKey('ExperimentType')
+    metadata_field = models.CharField(
+        max_length=24,
+        choices=(('cell_type', 'cell_type'), ('target', 'target'),),
+    )
+
+    neural_network_file = models.FileField(
+        null=True, blank=True, max_length=256, upload_to=NN_MODEL_DIR)
+    neural_network_scaler = PickledObjectField(null=True, blank=True)
+    neural_network_label_binarizer = PickledObjectField(null=True, blank=True)
+
+    accuracy = models.FloatField(null=True, blank=True)
+    training_history = PickledObjectField(null=True, blank=True)
+
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+
+    def get_nn_model_path(self):
+        return os.path.join(settings.MEDIA_ROOT, self.NN_MODEL_DIR,
+                            '{}.hd5'.format(str(self.pk)))
+
+
 class PCA(models.Model):
     '''
     scikit-learn PCA object. Used to transform locus intersections and
@@ -1265,6 +1290,26 @@ class DatasetIntersectionJson(models.Model):
 
     class Meta:
         unique_together = ('locus_group', 'dataset')
+
+    def get_norm_vector(self):
+        intersection_dict = json.loads(self.intersection_values)
+
+        locus_values = dict()
+        for val, locus_pk in zip(
+            intersection_dict['normalized_values'],
+            intersection_dict['locus_pks'],
+        ):
+            locus_values[locus_pk] = val
+
+        vector = []
+        for locus in Locus.objects.filter(
+                group=self.locus_group).order_by('pk'):
+            try:
+                vector.append(locus_values[locus.pk])
+            except KeyError:
+                vector.append(0.0)
+
+        return vector
 
 
 class ExperimentIntersection(models.Model):

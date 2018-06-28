@@ -86,6 +86,7 @@ RUN mkdir -p /network/data/
 COPY /data/colors /network/data/colors
 RUN mkdir -p /network/data/bigwig_temp
 RUN mkdir -p /network/data/nn_models
+RUN mkdir -p /network/data/neural_networks
 
 COPY ontologies.tar.gz /network/data
 RUN tar -xzf /network/data/ontologies.tar.gz -C /network/ && \
