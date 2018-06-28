@@ -104,7 +104,10 @@ def fit_neural_network(network_pk):
     label_binarizer = LabelBinarizer()
     label_binarizer.fit(y)
 
-    model = _get_model(len(x[0]), len(label_binarizer.classes_))
+    if len(label_binarizer.classes_) <= 2:
+        model = _get_model(len(x[0]), 1, loss='binary_crossentropy')
+    else:
+        model = _get_model(len(x[0]), len(label_binarizer.classes_))
 
     history = model.fit(
         scaler.transform(x_training),
@@ -129,7 +132,7 @@ def fit_neural_network(network_pk):
     network.save()
 
 
-def _get_model(input_dims, output_dims):
+def _get_model(input_dims, output_dims, loss='categorical_crossentropy'):
 
     model = Sequential()
 
@@ -144,8 +147,6 @@ def _get_model(input_dims, output_dims):
 
     sgd = SGD(lr=0.0001)
 
-    model.compile(loss='categorical_crossentropy',
-                  optimizer=sgd,
-                  metrics=['accuracy'])
+    model.compile(loss=loss, optimizer=sgd, metrics=['accuracy'])
 
     return model
