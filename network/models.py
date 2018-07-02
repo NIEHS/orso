@@ -993,14 +993,24 @@ class NeuralNetwork(models.Model):
     neural_network_scaler = PickledObjectField(null=True, blank=True)
     neural_network_label_binarizer = PickledObjectField(null=True, blank=True)
 
+    loss = models.FloatField(null=True, blank=True)
     accuracy = models.FloatField(null=True, blank=True)
     training_history = PickledObjectField(null=True, blank=True)
 
     last_updated = models.DateTimeField(auto_now=True, null=True)
 
-    def get_nn_model_path(self):
+    def _get_path(self, file_name):
         return os.path.join(settings.MEDIA_ROOT, self.NN_MODEL_DIR,
-                            '{}.hd5'.format(str(self.pk)))
+                            file_name.format(str(self.pk)))
+
+    def get_nn_model_path(self):
+        return self._get_path('{}.hd5')
+
+    def get_accuracy_plot_path(self):
+        return self._get_path('{}_training_accuracy.png')
+
+    def get_loss_plot_path(self):
+        return self._get_path('{}_training_loss.png')
 
 
 class PCA(models.Model):

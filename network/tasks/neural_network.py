@@ -3,6 +3,7 @@ import os
 import random
 from collections import defaultdict
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from celery import group
@@ -143,10 +144,10 @@ def fit_neural_network(network_pk):
         verbose=0,
         callbacks=[early_stopping],
     )
-    accuracy = model.evaluate(
+    loss, accuracy = model.evaluate(
         scaler.transform(x_test),
         label_binarizer.transform(y_test),
-    )[1]
+    )
 
     # Save
     fn = network.get_nn_model_path()
@@ -155,6 +156,7 @@ def fit_neural_network(network_pk):
 
     network.neural_network_scaler = scaler
     network.neural_network_label_binarizer = label_binarizer
+    network.loss = loss
     network.accuracy = accuracy
     network.training_history = history.history
     network.save()
@@ -182,6 +184,54 @@ def _get_model(input_dims, output_dims, unit_count,
     model.compile(loss=loss, optimizer=sgd, metrics=['accuracy'])
 
     return model
+
+
+@task
+def generate_training_plots(nn_pk):
+    nn = models.NeuralNetwork.objects.get(pk=nn_pk)
+
+    generate_accuracy_training_plot(nn)
+    generate_loss_training_plot(nn)
+
+
+def generate_accuracy_training_plot(neural_network):
+
+    epochs = list(range(len(neural_network.training_history['acc'])))
+
+    plt.plot(epochs, neural_network.training_history['acc'],
+             label='Training accuracy')
+    plt.plot(epochs, neural_network.training_history['val_acc'],
+             label='Validation accuracy')
+    plt.axhline(y=neural_network.accuracy, color='black', linestyle='--',
+                label='Test accuracy')
+
+    plt.title('Accuracy over training')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend(loc='best')
+
+    plt.savefig(neural_network.get_accuracy_plot_path())
+    plt.close()
+
+
+def generate_loss_training_plot(neural_network):
+
+    epochs = list(range(len(neural_network.training_history['loss'])))
+
+    plt.plot(epochs, neural_network.training_history['loss'],
+             label='Training loss')
+    plt.plot(epochs, neural_network.training_history['val_loss'],
+             label='Validation loss')
+    plt.axhline(y=neural_network.loss, color='black', linestyle='--',
+                label='Test loss')
+
+    plt.title('Loss over training')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend(loc='best')
+
+    plt.savefig(neural_network.get_loss_plot_path())
+    plt.close()
 
 
 def predict_all_dataset_fields():
