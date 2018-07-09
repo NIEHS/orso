@@ -30,8 +30,13 @@ def create_neural_networks():
     for lg in models.LocusGroup.objects.all():
         for exp_type in models.ExperimentType.objects.all():
             if models.Dataset.objects.filter(
-                assembly=lg.assembly, experiment__experiment_type=exp_type,
+                assembly=lg.assembly,
+                experiment__experiment_type=exp_type,
                 experiment__project__name='ENCODE',
+                experiment__processed=True,
+                experiment__revoked=False,
+                processed=True,
+                revoked=False,
             ).count() >= 100:
 
                 models.NeuralNetwork.objects.get_or_create(
@@ -53,8 +58,13 @@ def fit_neural_networks():
     for lg in models.LocusGroup.objects.all():
         for exp_type in models.ExperimentType.objects.all():
             if models.Dataset.objects.filter(
-                assembly=lg.assembly, experiment__experiment_type=exp_type,
+                assembly=lg.assembly,
+                experiment__experiment_type=exp_type,
                 experiment__project__name='ENCODE',
+                experiment__processed=True,
+                experiment__revoked=False,
+                processed=True,
+                revoked=False,
             ).count() >= 100:
 
                 nn = models.NeuralNetwork.objects.get_or_create(
@@ -86,6 +96,10 @@ def fit_neural_network(network_pk):
         assembly=network.locus_group.assembly,
         experiment__experiment_type=network.experiment_type,
         experiment__project__name='ENCODE',
+        experiment__processed=True,
+        experiment__revoked=False,
+        processed=True,
+        revoked=False,
     )
 
     # Get x and y arrays
