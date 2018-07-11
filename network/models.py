@@ -762,6 +762,11 @@ class Dataset(models.Model):
     processed = models.BooleanField(default=False)
     revoked = models.BooleanField(default=False)
 
+    predicted_cell_type = \
+        models.CharField(max_length=128, null=True, blank=True)
+    predicted_target = \
+        models.CharField(max_length=128, null=True, blank=True)
+
     class Meta:
         get_latest_by = 'created'
         unique_together = ('experiment', 'consortial_id')
