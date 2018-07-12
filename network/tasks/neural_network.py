@@ -296,10 +296,12 @@ def predict_dataset_field(dataset, metadata_field):
         model = load_model(nn.neural_network_file.path)
 
         if len(nn.neural_network_label_binarizer.classes_) == 1:
-            predicted_class = nn.neural_network_label_binarizer.classes_[0]
+            index = 0
+        elif len(nn.neural_network_label_binarizer.classes_) == 2:
+            index = model.predict_classes(np.array([scaled_vector]))[0][0]
         else:
             index = model.predict_classes(np.array([scaled_vector]))[0]
-            predicted_class = nn.neural_network_label_binarizer.classes_[index]
+        predicted_class = nn.neural_network_label_binarizer.classes_[index]
 
         if not predicted_class:
             predicted_class = None
