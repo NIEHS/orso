@@ -103,7 +103,7 @@ class PCA extends React.Component {
 
         var config = {
             displaylogo: false,
-            displayModeBar: false,
+            displayModeBar: true,
             modeBarButtonsToRemove: [
                 'sendDataToCloud',
                 'resetCameraLastSave3d',
