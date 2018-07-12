@@ -10,6 +10,7 @@ from celery import group
 from celery.decorators import task
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from keras import backend as K
 from keras import layers
 from keras.callbacks import EarlyStopping
@@ -23,6 +24,7 @@ from analysis.string_db import (
 from network import models
 from network.tasks.metadata_recommendations import \
     EXPERIMENT_TYPE_TO_RELEVANT_FIELDS, RELEVANT_CATEGORIES
+from network.tasks.recommendations import update_recommendations
 
 
 def create_neural_networks():
@@ -426,9 +428,21 @@ def generate_predicted_sims_df(datasets, identity_only=False):
     return pd.DataFrame(d)
 
 
-def update_all_similarities():
+def update_all_similarities_and_recommendations():
     datasets = models.Dataset.objects.all()
     update_bulk_similarities([ds.pk for ds in datasets])
+
+    user_experiments = models.Experiment.objects.filter(
+        Q(owners=True) | Q(favorite__user=True))
+
+    tasks = []
+    for experiment in user_experiments:
+        tasks.append(update_recommendations.si(
+            experiment.pk, sim_types=['primary']))
+
+    job = group(tasks)
+    results = job.apply_async()
+    results.join()
 
 
 def update_bulk_similarities(dataset_pks):
