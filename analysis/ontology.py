@@ -1,10 +1,35 @@
+import json
 import math
+import os
 import re
 from collections import defaultdict
 
+from django.conf import settings
 from fuzzywuzzy import fuzz
 
-tag_prefixes = ['eGFP-', 'FLAG-', 'HA-']
+from network import models
+
+TAG_PREFIXES = ['eGFP-', 'FLAG-', 'HA-']
+RELEVANT_CATEGORIES = [
+    'adult stem cell',
+    'embryonic structure',
+    'hematopoietic system',
+    'immune system',
+    'integument',
+    'connective tissue',
+    'skeletal system',
+    'muscular system',
+    'limb',
+    'respiratory system',
+    'cardiovascular system',
+    'urogenital system',
+    'gland',
+    'viscus',
+    'nervous system',
+    'head',
+    'sense organ',
+    'whole organism',
+]
 
 
 class Ontology:
@@ -331,7 +356,7 @@ class Ontology:
         word = input_word  # word to be modified
 
         if self.ontology_type == 'GO':
-            for prefix in tag_prefixes:
+            for prefix in TAG_PREFIXES:
                 word = re.sub('^{}'.format(prefix), '', word)
         elif self.ontology_type in ['CLO', 'CL', 'BTO']:
             word = re.sub(' (cell|cells)$', '', word)
@@ -374,3 +399,49 @@ class Ontology:
 
         self.word_to_terms_cache[cache_key] = terms
         return terms
+
+
+def cell_types_to_categories(cell_types):
+    cell_type_categories = []
+
+    # Get BRENDA ontology object
+    brenda_ont = (models.Ontology.objects.get(name='brenda_tissue_ontology')
+                                         .get_ontology_object())
+
+    # Get ENCODE to BRENDA dict
+    encode_to_brenda_path = os.path.join(
+        settings.ONTOLOGY_DIR, 'encode_to_brenda.json')
+    try:
+        with open(encode_to_brenda_path) as f:
+            encode_cell_type_to_brenda_name = json.load(f)
+    except FileNotFoundError:
+        print('ENCODE to BRENDA file not found.')
+        encode_cell_type_to_brenda_name = dict()
+
+    for cell_type in cell_types:
+
+        brenda_term = None
+        if cell_type in encode_cell_type_to_brenda_name:
+            brenda_term_name = encode_cell_type_to_brenda_name[cell_type]
+            for term, name in brenda_ont.term_to_name.items():
+                if name == brenda_term_name:
+                    brenda_term = term
+        else:
+            terms = brenda_ont.get_terms(cell_type)
+            if terms:
+                brenda_term = sorted(terms)[0]
+
+        if brenda_term:
+            parent_set = set([brenda_term]) \
+                | brenda_ont.get_all_parents(brenda_term)
+            cell_type_categories.append(
+                set([brenda_ont.term_to_name[term] for term in parent_set]) &
+                set(RELEVANT_CATEGORIES)
+            )
+        else:
+            cell_type_categories.append(set())
+
+    _categories = []
+    for x in cell_type_categories:
+        _categories.append([int(cat in x) for cat in RELEVANT_CATEGORIES])
+    cell_type_categories = _categories
