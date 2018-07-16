@@ -19,12 +19,14 @@ from keras.models import load_model, Sequential
 from keras.optimizers import SGD
 from sklearn.preprocessing import LabelBinarizer, StandardScaler
 
+from analysis.ontology import cell_types_to_categories
 from analysis.string_db import (
     ASSEMBLY_TO_ORGANISM, get_organism_to_interaction_partners_dict)
 from network import models
 from network.tasks.metadata_recommendations import \
     EXPERIMENT_TYPE_TO_RELEVANT_FIELDS, RELEVANT_CATEGORIES
 from network.tasks.recommendations import update_recommendations
+from network.tasks.update_pca import generate_selected_loci_df
 
 
 def create_neural_networks():
@@ -108,13 +110,14 @@ def fit_neural_network(network_pk):
     x = []
     y = []
 
+    pca = models.PCA.objects.get(locus_group=network.locus_group,
+                                 experiment_type=network.experiment_type)
+    df = generate_selected_loci_df(pca, datasets)
+
     for ds in datasets:
-
-        dij = models.DatasetIntersectionJson.objects.get(
-            dataset=ds, locus_group=network.locus_group)
-
-        x.append(dij.get_norm_vector())
+        x.append(df[ds.pk])
         y.append(getattr(ds.experiment, network.metadata_field))
+    y = cell_types_to_categories(y)
 
     # Generate training and test groups
     z = list(zip(x, y))

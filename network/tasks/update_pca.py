@@ -5,6 +5,7 @@ from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy
+import pandas as pd
 from celery.decorators import task
 from django.conf import settings
 from django.db.models import Q
@@ -380,6 +381,42 @@ def set_nn(pca, model, scaler):
         pca.neural_network_file = None
         pca.neural_network_scaler = None
     pca.save()
+
+
+def generate_selected_loci_df(pca, datasets):
+
+    order = models.PCALocusOrder.objects.filter(pca=pca).order_by('order')
+    loci = [x.locus for x in order]
+
+    d = {}
+    for dij in models.DatasetIntersectionJson.objects.filter(
+        locus_group=pca.locus_group,
+        dataset__in=datasets,
+    ):
+
+        intersection_values = json.loads(dij.intersection_values)
+
+        locus_values = dict()
+        for val, pk in zip(
+            intersection_values['normalized_values'],
+            intersection_values['locus_pks']
+        ):
+            locus_values[pk] = val
+
+        normalized_values = []
+        for locus in loci:
+            try:
+                normalized_values.append(locus_values[locus.pk])
+            except IndexError:
+                normalized_values.append(0)
+
+        series = pd.Series(normalized_values)
+        d.update({dij.dataset.pk: series})
+
+    df = pd.DataFrame(d)
+    df.sort_index(axis=1, inplace=True)
+
+    return df
 
 
 @task
