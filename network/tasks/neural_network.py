@@ -69,7 +69,7 @@ def fit_neural_networks():
                 experiment__revoked=False,
                 processed=True,
                 revoked=False,
-            ).count() >= 10:
+            ).count() >= 100:
 
                 nn = models.NeuralNetwork.objects.get_or_create(
                     locus_group=lg,
