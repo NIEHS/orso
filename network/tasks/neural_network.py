@@ -141,7 +141,7 @@ def fit_neural_network(network_pk):
                   network.locus_group.group_type,
                   network.metadata_field,
               ])))
-        break
+        return
 
     # Generate training and test groups
     z = list(zip(x, y))
