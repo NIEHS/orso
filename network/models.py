@@ -767,6 +767,9 @@ class Dataset(models.Model):
     predicted_target = \
         models.CharField(max_length=128, null=True, blank=True)
 
+    predicted_cell_type_json = JSONField(blank=True, null=True)
+    predicted_target_json = JSONField(blank=True, null=True)
+
     class Meta:
         get_latest_by = 'created'
         unique_together = ('experiment', 'consortial_id')
@@ -1325,6 +1328,38 @@ class DatasetIntersectionJson(models.Model):
                 vector.append(0.0)
 
         return vector
+
+    def get_filtered_vector(self):
+
+        try:
+            pca = PCA.objects.get(
+                locus_group=self.locus_group,
+                experiment_type=self.dataset.experiment.experiment_type,
+            )
+        except PCA.DoesNotExist:
+            return None
+        else:
+
+            order = PCALocusOrder.objects.filter(pca=pca).order_by('order')
+            loci = [x.locus for x in order]
+
+            intersection_values = json.loads(self.intersection_values)
+
+            locus_values = dict()
+            for val, pk in zip(
+                intersection_values['normalized_values'],
+                intersection_values['locus_pks']
+            ):
+                locus_values[pk] = val
+
+            filtered_values = []
+            for locus in loci:
+                try:
+                    filtered_values.append(locus_values[locus.pk])
+                except IndexError:
+                    filtered_values.append(0)
+
+            return filtered_values
 
 
 class ExperimentIntersection(models.Model):

@@ -1,7 +1,6 @@
 import json
 import os
 import random
-from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,16 +16,17 @@ from keras.callbacks import EarlyStopping
 from keras.constraints import max_norm
 from keras.models import load_model, Sequential
 from keras.optimizers import SGD
-from sklearn.preprocessing import LabelBinarizer, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
-from analysis.ontology import cell_types_to_categories
-from analysis.string_db import (
-    ASSEMBLY_TO_ORGANISM, get_organism_to_interaction_partners_dict)
 from network import models
 from network.tasks.metadata_recommendations import \
-    EXPERIMENT_TYPE_TO_RELEVANT_FIELDS, RELEVANT_CATEGORIES
+    RELEVANT_CELL_TYPE_CATEGORIES, RELEVANT_EPI_CATEGORIES, \
+    RELEVANT_GO_CATEGORIES
 from network.tasks.recommendations import update_recommendations
 from network.tasks.update_pca import generate_selected_loci_df
+
+RELEVANT_TARGET_CATEGORIES = \
+    RELEVANT_GO_CATEGORIES + RELEVANT_EPI_CATEGORIES + ['No target']
 
 
 def create_neural_networks():
@@ -69,7 +69,7 @@ def fit_neural_networks():
                 experiment__revoked=False,
                 processed=True,
                 revoked=False,
-            ).count() >= 100:
+            ).count() >= 10:
 
                 nn = models.NeuralNetwork.objects.get_or_create(
                     locus_group=lg,
@@ -117,7 +117,21 @@ def fit_neural_network(network_pk):
     for ds in datasets:
         x.append(df[ds.pk])
         y.append(getattr(ds.experiment, network.metadata_field))
-    y = cell_types_to_categories(y)
+
+    if network.metadata_field == 'cell_type':
+        y = cell_types_to_one_hot(y)
+    elif network.metadata_field == 'target':
+        y = targets_to_one_hot(y)
+
+    # If one hot vectors contain no categories, remove
+    _x = []
+    _y = []
+    for vec, one_hot in zip(x, y):
+        if sum(one_hot) > 0:
+            _x.append(vec)
+            _y.append(one_hot)
+    x = _x
+    y = _y
 
     # Generate training and test groups
     z = list(zip(x, y))
@@ -134,18 +148,17 @@ def fit_neural_network(network_pk):
     scaler = StandardScaler()
     scaler.fit(x_training)
 
-    label_binarizer = LabelBinarizer()
-    label_binarizer.fit(y)
-
     input_dims = len(x[0])
-    if len(label_binarizer.classes_) <= 2:
-        output_dims = 1
-        loss = 'binary_crossentropy'
-    else:
-        output_dims = len(label_binarizer.classes_)
-        loss = 'categorical_crossentropy'
+
+    if network.metadata_field == 'cell_type':
+        output_dims = \
+            len(RELEVANT_CELL_TYPE_CATEGORIES)
+    elif network.metadata_field == 'target':
+        output_dims = \
+            len(RELEVANT_TARGET_CATEGORIES)
+
     unit_count = min(2000, int((input_dims + output_dims) / 2))
-    model = _get_model(input_dims, output_dims, unit_count, loss=loss)
+    model = _get_model(input_dims, output_dims, unit_count)
 
     early_stopping = EarlyStopping(
         monitor='val_loss',
@@ -157,15 +170,15 @@ def fit_neural_network(network_pk):
 
     history = model.fit(
         scaler.transform(x_training),
-        label_binarizer.transform(y_training),
-        epochs=2000,
+        np.array(y_training),
+        epochs=100,
         validation_split=0.11,
         verbose=0,
         callbacks=[early_stopping],
     )
     loss, accuracy = model.evaluate(
         scaler.transform(x_test),
-        label_binarizer.transform(y_test),
+        np.array(y_test),
     )
 
     # Save
@@ -174,7 +187,6 @@ def fit_neural_network(network_pk):
     network.neural_network_file = fn
 
     network.neural_network_scaler = scaler
-    network.neural_network_label_binarizer = label_binarizer
     network.loss = loss
     network.accuracy = accuracy
     network.training_history = history.history
@@ -184,8 +196,7 @@ def fit_neural_network(network_pk):
         K.clear_session()
 
 
-def _get_model(input_dims, output_dims, unit_count,
-               loss='categorical_crossentropy'):
+def _get_model(input_dims, output_dims, unit_count):
 
     model = Sequential()
 
@@ -200,7 +211,8 @@ def _get_model(input_dims, output_dims, unit_count,
 
     sgd = SGD(lr=0.0001)
 
-    model.compile(loss=loss, optimizer=sgd, metrics=['accuracy'])
+    model.compile(loss='binary_crossentropy', optimizer=sgd,
+                  metrics=['categorical_accuracy'])
 
     return model
 
@@ -268,8 +280,10 @@ def predict_all_dataset_fields():
 def predict_dataset_fields(dataset_pk):
     dataset = models.Dataset.objects.get(pk=dataset_pk)
 
-    dataset.predicted_cell_type = predict_dataset_field(dataset, 'cell_type')
-    dataset.predicted_target = predict_dataset_field(dataset, 'target')
+    dataset.predicted_cell_type_json = json.dumps(
+        predict_dataset_field(dataset, 'cell_type'))
+    dataset.predicted_target_json = json.dumps(
+        predict_dataset_field(dataset, 'target'))
 
     dataset.save()
 
@@ -286,7 +300,7 @@ def predict_dataset_field(dataset, metadata_field):
         intersection_vector = models.DatasetIntersectionJson.objects.get(
             dataset=dataset,
             locus_group=nn.locus_group,
-        ).get_norm_vector()
+        ).get_filtered_vector()
 
     except (
         IndexError,
@@ -296,133 +310,64 @@ def predict_dataset_field(dataset, metadata_field):
         return None
 
     else:
-        scaled_vector = nn.neural_network_scaler.transform(intersection_vector)
-
+        scaled = nn.neural_network_scaler.transform([intersection_vector])
         model = load_model(nn.neural_network_file.path)
 
-        if len(nn.neural_network_label_binarizer.classes_) == 1:
-            index = 0
-        elif len(nn.neural_network_label_binarizer.classes_) == 2:
-            index = model.predict_classes(np.array([scaled_vector]))[0][0]
-        else:
-            index = model.predict_classes(np.array([scaled_vector]))[0]
-        predicted_class = nn.neural_network_label_binarizer.classes_[index]
+        predictions = model.predict(scaled)[0]
 
-        if not predicted_class:
-            predicted_class = None
+        predicted_classes = []
+        if metadata_field == 'cell_type':
+            for pred, _class in zip(
+                    predictions, RELEVANT_CELL_TYPE_CATEGORIES):
+                if pred > 0.9:
+                    predicted_classes.append(_class)
+        elif metadata_field == 'target':
+            for pred, _class in zip(
+                    predictions, RELEVANT_TARGET_CATEGORIES):
+                if pred > 0.9:
+                    predicted_classes.append(_class)
 
         if K.backend() == 'tensorflow':
             K.clear_session()
 
-        return predicted_class
+        return predicted_classes
 
 
 def generate_predicted_sims_df(datasets, identity_only=False):
 
     datasets = list(datasets)
 
-    # Get BRENDA ontology object
-    brenda_ont = (models.Ontology.objects.get(name='brenda_tissue_ontology')
-                                         .get_ontology_object())
-
-    # Get ENCODE to BRENDA dict
-    encode_to_brenda_path = os.path.join(
-        settings.ONTOLOGY_DIR, 'encode_to_brenda.json')
-    try:
-        with open(encode_to_brenda_path) as f:
-            encode_cell_type_to_brenda_name = json.load(f)
-    except FileNotFoundError:
-        print('ENCODE to BRENDA file not found.')
-        encode_cell_type_to_brenda_name = dict()
-
-    # Get relevant categories for each cell type
-    cell_types = set([ds.predicted_cell_type for ds in datasets
-                      if ds.predicted_cell_type is not None])
-    cell_type_to_relevant_categories = dict()
-    for cell_type in cell_types:
-
-        brenda_term = None
-        if cell_type in encode_cell_type_to_brenda_name:
-            brenda_term_name = encode_cell_type_to_brenda_name[cell_type]
-            for term, name in brenda_ont.term_to_name.items():
-                if name == brenda_term_name:
-                    brenda_term = term
-        else:
-            terms = brenda_ont.get_terms(cell_type)
-            if terms:
-                brenda_term = sorted(terms)[0]
-
-        if brenda_term:
-            parent_set = set([brenda_term]) \
-                | brenda_ont.get_all_parents(brenda_term)
-            cell_type_to_relevant_categories[cell_type] = \
-                set([brenda_ont.term_to_name[term] for term in parent_set]) \
-                & RELEVANT_CATEGORIES
-        else:
-            cell_type_to_relevant_categories[cell_type] = set()
-
-    # Get STRING interaction partners
-    gene_dict = defaultdict(set)
+    cell_type_list = []
+    target_list = []
     for ds in datasets:
-        if ds.predicted_target:
-            gene_dict[ds.assembly.name].add(ds.predicted_target)
-    interaction_partners = get_organism_to_interaction_partners_dict(gene_dict)
+        try:
+            cell_type_list.append(set(json.loads(ds.predicted_cell_type_json)))
+        except TypeError:
+            cell_type_list.append(set([]))
+        try:
+            target_list.append(set(json.loads(ds.predicted_target_json)))
+        except TypeError:
+            target_list.append(set([]))
 
     d = {}
-    for ds_1 in datasets:
+    for ds_1, cell_type_set_1, target_set_1 in zip(
+            datasets, cell_type_list, target_list):
+
         comp_values = []
-        for ds_2 in datasets:
-            if all([
-                ds_1.assembly == ds_2.assembly,
-                ds_1.experiment.experiment_type ==
-                ds_2.experiment.experiment_type,
-            ]):
-                if ds_1 == ds_2:
-                    comp_values.append(True)
-                else:
-                    target_1 = ds_1.predicted_target
-                    target_2 = ds_2.predicted_target
 
-                    cell_type_1 = ds_1.predicted_cell_type
-                    cell_type_2 = ds_2.predicted_cell_type
+        for ds_2, cell_type_set_2, target_set_2 in zip(
+                datasets, cell_type_list, target_list):
 
-                    exp_type = ds_1.experiment.experiment_type.name
-                    organism = ASSEMBLY_TO_ORGANISM[ds_1.assembly.name]
-
-                    if exp_type in EXPERIMENT_TYPE_TO_RELEVANT_FIELDS:
-                        relevant_fields = \
-                            EXPERIMENT_TYPE_TO_RELEVANT_FIELDS[exp_type]
-                    else:
-                        relevant_fields = \
-                            EXPERIMENT_TYPE_TO_RELEVANT_FIELDS['Other']
-
-                    sim_comparisons = []
-                    _interaction_partners = interaction_partners[organism]
-
-                    if 'target' in relevant_fields:
-                        if target_1 and target_2:
-                            sim_comparisons.append(any([
-                                target_1 == target_2,
-                                target_1 in _interaction_partners[target_2],
-                                target_2 in _interaction_partners[target_1],
-                            ]))
-
-                    if 'cell_type' in relevant_fields:
-                        if cell_type_1 and cell_type_2:
-                            sim_comparisons.append(any([
-                                cell_type_1 == cell_type_2,
-                                cell_type_to_relevant_categories[cell_type_1] &
-                                cell_type_to_relevant_categories[cell_type_2],
-                            ]))
-
-                    if sim_comparisons:
-                        is_similar = all(sim_comparisons)
-                    else:
-                        is_similar = False
-
-                    comp_values.append(is_similar)
+            if ds_1 == ds_2:
+                comp_values.append(True)
             else:
-                comp_values.append(False)
+                comp_values.append(all([
+                    ds_1.assembly == ds_2.assembly,
+                    ds_1.experiment.experiment_type ==
+                    ds_2.experiment.experiment_type,
+                    cell_type_set_1 & cell_type_set_2,
+                    target_set_1 & target_set_2,
+                ]))
 
         series = pd.Series(
             comp_values, index=[ds.pk for ds in datasets])
@@ -506,3 +451,109 @@ def _update_similarity(ds_pk, other_ds_pks, sims):
                     dataset_2=ds_1,
                     sim_type='primary',
                 ).delete()
+
+
+def cell_types_to_one_hot(cell_types):
+
+    cell_type_categories = []
+
+    # Get BRENDA ontology object
+    brenda_ont = (models.Ontology.objects.get(name='brenda_tissue_ontology')
+                                         .get_ontology_object())
+    relevant_cell_type_set = set(RELEVANT_CELL_TYPE_CATEGORIES)
+
+    # Get ENCODE to BRENDA dict
+    encode_to_brenda_path = os.path.join(
+        settings.ONTOLOGY_DIR, 'encode_to_brenda.json')
+    try:
+        with open(encode_to_brenda_path) as f:
+            encode_cell_type_to_brenda_name = json.load(f)
+    except FileNotFoundError:
+        print('ENCODE to BRENDA file not found.')
+        encode_cell_type_to_brenda_name = dict()
+
+    for cell_type in cell_types:
+
+        brenda_term = None
+        if cell_type in encode_cell_type_to_brenda_name:
+            brenda_term_name = encode_cell_type_to_brenda_name[cell_type]
+            for term, name in brenda_ont.term_to_name.items():
+                if name == brenda_term_name:
+                    brenda_term = term
+        else:
+            terms = brenda_ont.get_terms(cell_type)
+            if terms:
+                brenda_term = sorted(terms)[0]
+
+        if brenda_term:
+            parent_set = set([brenda_term]) \
+                | brenda_ont.get_all_parents(brenda_term)
+            cell_type_categories.append(
+                set([brenda_ont.term_to_name[term] for term in parent_set]) &
+                relevant_cell_type_set
+            )
+        else:
+            cell_type_categories.append(set())
+
+    _categories = []
+    for x in cell_type_categories:
+        _categories.append([
+            int(cat in x) for cat in RELEVANT_CELL_TYPE_CATEGORIES])
+    cell_type_categories = _categories
+
+    return cell_type_categories
+
+
+def targets_to_one_hot(targets):
+
+    target_categories = []
+
+    gene_ont = models.Ontology.objects.get(
+        name='gene_ontology').get_ontology_object()
+    epi_ont = models.Ontology.objects.get(
+        name='epigenetic_modification_ontology').get_ontology_object()
+    relevant_go_set = set(RELEVANT_GO_CATEGORIES)
+    relevant_epi_set = set(RELEVANT_EPI_CATEGORIES)
+
+    for target in targets:
+
+        categories = set()
+
+        if target:
+
+            go_terms = gene_ont.get_terms(target)
+            epi_terms = epi_ont.get_terms(target)
+
+            if go_terms:
+
+                parent_set = set(go_terms)
+                for term in go_terms:
+                    parent_set.update(set(gene_ont.get_all_parents(term)))
+                categories.update(
+                    set([gene_ont.term_to_name[term] for term in parent_set]) &
+                    relevant_go_set
+                )
+
+            if epi_terms:
+
+                parent_set = set(epi_terms)
+                for term in epi_terms:
+                    parent_set.update(set(epi_ont.get_all_parents(term)))
+                categories.update(
+                    set([epi_ont.term_to_name[term] for term in parent_set]) &
+                    relevant_epi_set
+                )
+
+        else:
+
+            categories.add('No target')
+
+        target_categories.append(categories)
+
+    _categories = []
+    for x in target_categories:
+        _categories.append([
+            int(cat in x) for cat in RELEVANT_TARGET_CATEGORIES])
+    target_categories = _categories
+
+    return target_categories

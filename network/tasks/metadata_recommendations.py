@@ -1,6 +1,5 @@
 import json
 import os
-from collections import defaultdict
 
 import pandas as pd
 from celery import group
@@ -9,8 +8,6 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
-from analysis.string_db import (
-    ASSEMBLY_TO_ORGANISM, get_organism_to_interaction_partners_dict)
 from network import models
 from network.tasks.recommendations import update_recommendations
 
@@ -41,7 +38,7 @@ EXPERIMENT_TYPE_TO_RELEVANT_FIELDS = {
     'MNase-seq': ['cell_type'],
     'Other': ['cell_type'],
 }
-RELEVANT_CATEGORIES = set([
+RELEVANT_CELL_TYPE_CATEGORIES = [
     'adult stem cell',
     'embryonic structure',
     'hematopoietic system',
@@ -60,14 +57,35 @@ RELEVANT_CATEGORIES = set([
     'head',
     'sense organ',
     'whole organism',
-])
+]
+RELEVANT_EPI_CATEGORIES = [
+    'At active promoters',
+    'At inactive promoters',
+    'At poised promoters',
+    'At active enhancers',
+    'At inactive enhancers',
+    'At active genes',
+    'At inactive genes',
+]
+RELEVANT_GO_CATEGORIES = [
+    'positive regulation of transcription from RNA polymerase II promoter',
+    'negative regulation of transcription from RNA polymerase II promoter',
+]
 
 
 def generate_metadata_sims_df(experiments, identity_only=False):
 
-    # Get BRENDA ontology object
-    brenda_ont = (models.Ontology.objects.get(name='brenda_tissue_ontology')
-                                         .get_ontology_object())
+    relevant_cell_type_set = set(RELEVANT_CELL_TYPE_CATEGORIES)
+    relevant_epi_set = set(RELEVANT_EPI_CATEGORIES)
+    relevant_go_set = set(RELEVANT_GO_CATEGORIES)
+
+    # Get ontology objects
+    brenda_ont = models.Ontology.objects.get(
+        name='brenda_tissue_ontology').get_ontology_object()
+    epi_ont = models.Ontology.objects.get(
+        name='epigenetic_modification_ontology').get_ontology_object()
+    gene_ont = models.Ontology.objects.get(
+        name='gene_ontology').get_ontology_object()
 
     # Get ENCODE to BRENDA dict
     encode_to_brenda_path = os.path.join(
@@ -100,16 +118,41 @@ def generate_metadata_sims_df(experiments, identity_only=False):
                 | brenda_ont.get_all_parents(brenda_term)
             cell_type_to_relevant_categories[cell_type] = \
                 set([brenda_ont.term_to_name[term] for term in parent_set]) \
-                & RELEVANT_CATEGORIES
+                & relevant_cell_type_set
         else:
             cell_type_to_relevant_categories[cell_type] = set()
 
-    # Get STRING interaction partners
-    gene_dict = defaultdict(set)
-    for exp in experiments:
-        for ds in models.Dataset.objects.filter(experiment=exp):
-            gene_dict[ds.assembly.name].add(exp.target)
-    interaction_partners = get_organism_to_interaction_partners_dict(gene_dict)
+    # Get relevant categories for each target
+    targets = set([exp.target for exp in experiments])
+    target_to_relevant_categories = dict()
+    for target in targets:
+
+        categories = set()
+
+        go_terms = gene_ont.get_terms(target)
+        epi_terms = epi_ont.get_terms(target)
+
+        if go_terms:
+
+            parent_set = set(go_terms)
+            for term in go_terms:
+                parent_set.update(set(gene_ont.get_all_parents(term)))
+            categories.update(
+                set([gene_ont.term_to_name[term] for term in parent_set]) &
+                relevant_go_set
+            )
+
+        if epi_terms:
+
+            parent_set = set(epi_terms)
+            for term in epi_terms:
+                parent_set.update(set(epi_ont.get_all_parents(term)))
+            categories.update(
+                set([epi_ont.term_to_name[term] for term in parent_set]) &
+                relevant_epi_set
+            )
+
+        target_to_relevant_categories[target] = categories
 
     # Get experiment to assemblies
     experiment_to_assemblies = dict()
@@ -137,31 +180,19 @@ def generate_metadata_sims_df(experiments, identity_only=False):
                     cell_type_1 = exp_1.cell_type
                     cell_type_2 = exp_2.cell_type
 
-                    exp_type = exp_1.experiment_type.name
-                    _assembly = list(experiment_to_assemblies[exp_1])[0]
-                    organism = ASSEMBLY_TO_ORGANISM[_assembly.name]
-
-                    if exp_type in EXPERIMENT_TYPE_TO_RELEVANT_FIELDS:
-                        relevant_fields = \
-                            EXPERIMENT_TYPE_TO_RELEVANT_FIELDS[exp_type]
-                    else:
-                        relevant_fields = \
-                            EXPERIMENT_TYPE_TO_RELEVANT_FIELDS['Other']
-
                     sim_comparisons = []
-                    _interaction_partners = interaction_partners[organism]
 
-                    if 'target' in relevant_fields:
+                    if target_1 or target_2:
                         if identity_only:
                             sim_comparisons.append(target_1 == target_2)
                         else:
                             sim_comparisons.append(any([
                                 target_1 == target_2,
-                                target_1 in _interaction_partners[target_2],
-                                target_2 in _interaction_partners[target_1],
+                                target_to_relevant_categories[target_1] &
+                                target_to_relevant_categories[target_2],
                             ]))
 
-                    if 'cell_type' in relevant_fields:
+                    if cell_type_1 or cell_type_2:
                         if identity_only:
                             sim_comparisons.append(cell_type_1 == cell_type_2)
                         else:
