@@ -133,6 +133,16 @@ def fit_neural_network(network_pk):
     x = _x
     y = _y
 
+    if not x and not y:
+        print('After filtering \'no category\' data, '
+              'no datasets remain: {}'.format(':'.join([
+                  network.locus_group.assembly.name,
+                  network.experiment_type.name,
+                  network.locus_group.group_type,
+                  network.metadata_field,
+              ])))
+        break
+
     # Generate training and test groups
     z = list(zip(x, y))
     random.shuffle(z)
