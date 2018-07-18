@@ -210,16 +210,16 @@ def _get_model(input_dims, output_dims, unit_count):
 
     model = Sequential()
 
-    model.add(layers.Dropout(0.2, input_shape=(input_dims,)))
+    model.add(layers.Dropout(0.5, input_shape=(input_dims,)))
     model.add(layers.Dense(units=unit_count, activation='relu',
               kernel_constraint=max_norm(3)))
-    model.add(layers.Dropout(0.2))
+    model.add(layers.Dropout(0.5))
     model.add(layers.Dense(units=unit_count, activation='relu',
               kernel_constraint=max_norm(3)))
-    model.add(layers.Dropout(0.2))
-    model.add(layers.Dense(units=output_dims, activation='softmax'))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Dense(units=output_dims, activation='sigmoid'))
 
-    sgd = SGD(lr=0.0001)
+    sgd = SGD(lr=0.1)
 
     model.compile(loss='binary_crossentropy', optimizer=sgd,
                   metrics=['categorical_accuracy'])
