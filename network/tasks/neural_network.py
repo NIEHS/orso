@@ -320,6 +320,13 @@ def predict_dataset_field(dataset, metadata_field):
         return None
 
     else:
+
+        if any([
+            nn.neural_network_file is None,
+            nn.neural_network_scaler is None,
+        ]):
+            return None
+
         scaled = nn.neural_network_scaler.transform([intersection_vector])
         model = load_model(nn.neural_network_file.path)
 
