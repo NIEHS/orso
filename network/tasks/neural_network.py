@@ -336,12 +336,12 @@ def predict_dataset_field(dataset, metadata_field):
         if metadata_field == 'cell_type':
             for pred, _class in zip(
                     predictions, RELEVANT_CELL_TYPE_CATEGORIES):
-                if pred > 0.9:
+                if pred > 0.5:
                     predicted_classes.append(_class)
         elif metadata_field == 'target':
             for pred, _class in zip(
                     predictions, RELEVANT_TARGET_CATEGORIES):
-                if pred > 0.9:
+                if pred > 0.5:
                     predicted_classes.append(_class)
 
         if K.backend() == 'tensorflow':
