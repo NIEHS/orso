@@ -143,7 +143,7 @@ def create_dendrogram_plot(nodes):
         'y': list([dot['y'] for dot in dots]),
         'mode': 'markers',
         'marker': {
-            'size': 16,
+            'opacity': 0,
             'color': list(['rgba({}, {}, {}, {})'.format(
                 *dot['color']) for dot in dots]),
         },
