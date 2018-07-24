@@ -174,10 +174,11 @@ def update_dendrogram(organism_pk, exp_type_pk, my_user_pk=None):
         my_user = None
         experiment_query &= Q(owners=None)
 
-    experiments = models.Experiment.objects.filter(experiment_query).distinct()
-    similarities = models.Similarity.objects.filter(
+    experiments = list(models.Experiment.objects.filter(
+        experiment_query).distinct())
+    similarities = list(models.Similarity.objects.filter(
         experiment_1__in=experiments,
-        experiment_2__in=experiments)
+        experiment_2__in=experiments))
 
     try:
         link, dend = cluster(experiments, similarities)
