@@ -25,6 +25,7 @@ from analysis.transcript_coverage import generate_locusgroup_bed
 from network.management.commands.update_dendrogram import \
     call_update_dendrogram
 from network.tasks.network import update_organism_network
+from network.tasks.utils import get_exp_tag
 
 STRANDS = (('+', '+'), ('-', '-'))
 LOCUS_GROUP_TYPES = (
@@ -680,19 +681,22 @@ class Experiment(models.Model):
 
         plot = json.loads(network.network_plot)
 
+        exp_tag = get_exp_tag(self)
+
         in_plot = False
         for node in plot['nodes']:
-            if node['id'] == self.pk:
+            if node['exp_tag'] == exp_tag:
                 in_plot = True
+                exp_node = node['id']
 
         if not in_plot:
             return None
 
-        connected_pks = set([self.pk])
+        connected_pks = set([exp_node])
         for edge in plot['edges']:
-            if edge['source'] == self.pk:
+            if edge['source'] == exp_node:
                 connected_pks.add(edge['target'])
-            elif edge['target'] == self.pk:
+            elif edge['target'] == exp_node:
                 connected_pks.add(edge['source'])
 
         g = nx.Graph()
@@ -722,6 +726,8 @@ class Experiment(models.Model):
             if node['id'] in connected_pks:
                 node['x'] = positions[node['id']][0]
                 node['y'] = positions[node['id']][1]
+                if node['id'] == exp_node:
+                    node['selected'] = 'True'
                 nodes.append(node)
 
         for edge in plot['edges']:
