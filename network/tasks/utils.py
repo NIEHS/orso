@@ -107,20 +107,44 @@ def get_cell_type_color(cell_type):
 
 def get_exp_color(experiment):
 
-    if experiment.experiment_type.name in TARGET_RELEVANT_EXP_TYPES:
-        color_guide = retrieve_color_guide(
-            'target_color_guide',
-            os.path.join(settings.COLOR_KEY_DIR, 'target.json'))
-        color_key = 'target'
+    color = None
+    priority_list = ['target', 'cell_type']
+
+    for attr in priority_list:
+
+        value = getattr(experiment, attr)
+
+        if value:
+            if attr == 'cell_type':
+                json_path = os.path.join(
+                    settings.COLOR_KEY_DIR, 'cell_type.json')
+                color_guide = retrieve_color_guide(
+                    'cell_type_color_guide', json_path)
+            elif attr == 'target':
+                json_path = os.path.join(
+                    settings.COLOR_KEY_DIR, 'target.json')
+                color_guide = retrieve_color_guide(
+                    'target_color_guide', json_path)
+
+            try:
+                color = color_guide[value]
+            except KeyError:
+                pass
+            else:
+                break
+
+    if color:
+        return hex_to_rgba(color)
     else:
-        color_guide = retrieve_color_guide(
-            'cell_type_color_guide',
-            os.path.join(settings.COLOR_KEY_DIR, 'cell_type.json'))
-        color_key = 'cell_type'
+        return hex_to_rgba('#A9A9A9')
 
-    try:
-        color = color_guide[getattr(experiment, color_key)]
-    except KeyError:
-        color = '#A9A9A9'
 
-    return color
+def get_exp_tag(experiment):
+    tag_list = []
+
+    for attr in ['cell_type', 'target']:
+        value = getattr(experiment, attr)
+        if value:
+            tag_list.append(value)
+
+    return ', '.join(tag_list)
