@@ -9,13 +9,50 @@ class Network extends React.Component {
             edges: this.props.network['edges'],
         };
 
+        sigma.canvas.nodes.border = function(node, context, settings) {
+            var prefix = settings('prefix') || '';
+
+            context.fillStyle = node.color || settings('defaultNodeColor');
+            context.beginPath();
+            context.arc(
+                node[prefix + 'x'],
+                node[prefix + 'y'],
+                node[prefix + 'size'],
+                0,
+                Math.PI * 2,
+                true
+            );
+            context.closePath();
+            context.fill();
+            context.lineWidth = node.borderWidth || 1;
+            context.strokeStyle = node.borderColor || 'rgb(0, 0, 0)';
+            context.stroke();
+
+            if (node.selected || 'False' == 'True') {
+                context.beginPath();
+                context.arc(
+                    node[prefix + 'x'],
+                    node[prefix + 'y'],
+                    node[prefix + 'size'] * 1.2,
+                    0,
+                    Math.PI * 2,
+                    true
+                );
+                context.closePath();
+                context.lineWidth = node.borderWidth || 1;
+                context.strokeStyle = node.borderColor || 'rgb(0, 0, 0)';
+                context.stroke();
+            }
+        };
+
         var s = new sigma({
             graph: g,
             container: 'network',
             settings: {
                 drawLabels: false,
-                minNodeSize: 1,
-                maxNodeSize: 8,
+                minNodeSize: 2,
+                maxNodeSize: 24,
+                defaultNodeType: 'border',
             },
             renderer: {
                 container: document.getElementById('network'),
