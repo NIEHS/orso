@@ -8,7 +8,7 @@ from django.db.models import Q
 from scipy.cluster.hierarchy import dendrogram, linkage
 
 from network import models
-from network.tasks.utils import blend_colors, get_exp_color, hex_to_rgba
+from network.tasks.utils import blend_colors, get_exp_color
 
 
 def cluster(experiments, similarities):
@@ -79,14 +79,14 @@ def create_and_annotate_nodes(experiments, link, dend):
     # Annotate
     for index, node in nodes.items():
         if node['leaf']:
-            node['color'] = hex_to_rgba(get_exp_color(experiments[index]))
+            node['color'] = get_exp_color(experiments[index])
             node['name'] = experiments[index].name
         else:
             children = get_all_children(index, nodes)
             child_leaves = [
                 child for child in children if nodes[child]['leaf']]
             colors = [
-                hex_to_rgba(get_exp_color(experiments[i]))
+                get_exp_color(experiments[i])
                 for i in child_leaves]
             node['color'] = blend_colors(colors)
             node['x'] = get_x_position(index, nodes)
