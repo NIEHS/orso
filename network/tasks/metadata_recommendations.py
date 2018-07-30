@@ -1,5 +1,6 @@
 import json
 import os
+from collections import defaultdict
 
 import pandas as pd
 from celery import group
@@ -8,6 +9,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
+from analysis.string_db import (
+    ASSEMBLY_TO_ORGANISM, get_organism_to_interaction_partners_dict)
 from network import models
 from network.tasks.recommendations import update_recommendations
 
@@ -160,6 +163,13 @@ def generate_metadata_sims_df(experiments, identity_only=False):
         experiment_to_assemblies[exp] = set(
             models.Assembly.objects.filter(dataset__experiment=exp))
 
+    # Get STRING interaction partners
+    gene_dict = defaultdict(set)
+    for exp in experiments:
+        for ds in models.Dataset.objects.filter(experiment=exp):
+            gene_dict[ds.assembly.name].add(exp.target)
+    interaction_partners = get_organism_to_interaction_partners_dict(gene_dict)
+
     d = {}
     exp_list = list(experiments)
     for exp_1 in exp_list:
@@ -183,13 +193,34 @@ def generate_metadata_sims_df(experiments, identity_only=False):
                     sim_comparisons = []
 
                     if target_1 or target_2:
+
+                        is_tf = bool(
+                            relevant_go_set &
+                            target_to_relevant_categories[target_1] &
+                            target_to_relevant_categories[target_2]
+                        )
+                        is_hist = bool(
+                            relevant_epi_set &
+                            target_to_relevant_categories[target_1] &
+                            target_to_relevant_categories[target_2]
+                        )
+
+                        # Check if interacting STRING
+                        organism = ASSEMBLY_TO_ORGANISM[
+                            list(experiment_to_assemblies[exp_1])[0].name]
+                        _interaction_partners = interaction_partners[organism]
+                        interacting = any([
+                            target_1 in _interaction_partners[target_2],
+                            target_2 in _interaction_partners[target_1],
+                        ])
+
                         if identity_only:
                             sim_comparisons.append(target_1 == target_2)
                         else:
                             sim_comparisons.append(any([
                                 target_1 == target_2,
-                                target_to_relevant_categories[target_1] &
-                                target_to_relevant_categories[target_2],
+                                (is_tf and interacting),
+                                is_hist,
                             ]))
 
                     if cell_type_1 or cell_type_2:

@@ -1,6 +1,7 @@
 import json
 import os
 import random
+from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,6 +19,8 @@ from keras.models import load_model, Sequential
 from keras.optimizers import SGD
 from sklearn.preprocessing import StandardScaler
 
+from analysis.string_db import (
+    ASSEMBLY_TO_ORGANISM, get_organism_to_interaction_partners_dict)
 from network import models
 from network.tasks.metadata_recommendations import \
     RELEVANT_CELL_TYPE_CATEGORIES, RELEVANT_EPI_CATEGORIES, \
@@ -336,13 +339,11 @@ def predict_dataset_field(dataset, metadata_field):
         if metadata_field == 'cell_type':
             for pred, _class in zip(
                     predictions, RELEVANT_CELL_TYPE_CATEGORIES):
-                if pred > 0.5:
-                    predicted_classes.append(_class)
+                predicted_classes.append((_class, float(pred)))
         elif metadata_field == 'target':
             for pred, _class in zip(
                     predictions, RELEVANT_TARGET_CATEGORIES):
-                if pred > 0.5:
-                    predicted_classes.append(_class)
+                predicted_classes.append((_class, float(pred)))
 
         if K.backend() == 'tensorflow':
             K.clear_session()
@@ -350,21 +351,44 @@ def predict_dataset_field(dataset, metadata_field):
         return predicted_classes
 
 
+def get_predicted_classes(dataset, predicted_field, threshold=0.5):
+    class_set = set()
+
+    if predicted_field == 'cell_type':
+        prediction_json = dataset.predicted_cell_type_json
+    elif predicted_field == 'target':
+        prediction_json = dataset.predicted_target_json
+    else:
+        raise ValueError('Improper predicted_field value.')
+
+    try:
+        predictions = json.loads(prediction_json)
+        for predicted_class, prediction_value in predictions:
+            if prediction_value > threshold:
+                class_set.add(predicted_class)
+    except TypeError:
+        pass
+
+    return class_set
+
+
 def generate_predicted_sims_df(datasets, identity_only=False):
+
+    relevant_epi_set = set(RELEVANT_EPI_CATEGORIES)
+    relevant_go_set = set(RELEVANT_GO_CATEGORIES)
+
+    # Get STRING interaction partners
+    gene_dict = defaultdict(set)
+    for ds in datasets:
+        gene_dict[ds.assembly.name].add(ds.experiment.target)
+    interaction_partners = get_organism_to_interaction_partners_dict(gene_dict)
 
     datasets = list(datasets)
 
-    cell_type_list = []
-    target_list = []
-    for ds in datasets:
-        try:
-            cell_type_list.append(set(json.loads(ds.predicted_cell_type_json)))
-        except TypeError:
-            cell_type_list.append(set([]))
-        try:
-            target_list.append(set(json.loads(ds.predicted_target_json)))
-        except TypeError:
-            target_list.append(set([]))
+    cell_type_list = \
+        [get_predicted_classes(ds, 'cell_type') for ds in datasets]
+    target_list = \
+        [get_predicted_classes(ds, 'target') for ds in datasets]
 
     d = {}
     for ds_1, cell_type_set_1, target_set_1 in zip(
@@ -378,12 +402,34 @@ def generate_predicted_sims_df(datasets, identity_only=False):
             if ds_1 == ds_2:
                 comp_values.append(True)
             else:
+
+                is_tf = bool(target_set_1 & target_set_2 & relevant_go_set)
+                is_hist = bool(target_set_1 & target_set_2 & relevant_epi_set)
+                is_none = bool(target_set_1 & target_set_2 &
+                               set(['No target']))
+
+                organism = ASSEMBLY_TO_ORGANISM[ds_1.assembly.name]
+                _interaction_partners = interaction_partners[organism]
+                target_1 = ds_1.experiment.target
+                target_2 = ds_2.experiment.target
+                interacting = any([
+                    target_1 in _interaction_partners[target_2],
+                    target_2 in _interaction_partners[target_1],
+                ])
+
+                cell_type_sim = bool(cell_type_set_1 & cell_type_set_2)
+                target_sim = any([
+                    (is_tf and interacting),
+                    is_hist,
+                    is_none,
+                ])
+
                 comp_values.append(all([
                     ds_1.assembly == ds_2.assembly,
                     ds_1.experiment.experiment_type ==
                     ds_2.experiment.experiment_type,
-                    cell_type_set_1 & cell_type_set_2,
-                    target_set_1 & target_set_2,
+                    cell_type_sim,
+                    target_sim,
                 ]))
 
         series = pd.Series(
