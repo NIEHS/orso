@@ -11,6 +11,7 @@ from collections import defaultdict
 import networkx as nx
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField, ArrayField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
@@ -356,10 +357,17 @@ class Similarity(models.Model):
     created = models.DateTimeField(auto_now_add=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
 
-    class Meta:
-        unique_together = (
-            'sim_type', 'experiment_1', 'experiment_2', 'dataset_1',
-            'dataset_2')
+    def save(self, **kwargs):
+        self.clean()
+        return super().save(**kwargs)
+
+    def clean(self):
+        super().clean()
+        if any([
+            self.dataset_1 is not None and self.dataset_2 is None,
+            self.dataset_2 is not None and self.dataset_1 is None,
+        ]):
+            raise ValidationError('Similarity requires paired datasets.')
 
 
 class Project(models.Model):
