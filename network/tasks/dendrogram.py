@@ -4,6 +4,7 @@ matplotlib.use('Agg')  # noqa
 import json
 
 import numpy as np
+from celery.decorators import task
 from django.db.models import Q
 from scipy.cluster.hierarchy import dendrogram, linkage
 
@@ -159,6 +160,7 @@ def create_dendrogram_plot(nodes):
     }
 
 
+@task
 def update_dendrogram(organism_pk, exp_type_pk, my_user_pk=None):
 
     organism = models.Organism.objects.get(pk=organism_pk)
