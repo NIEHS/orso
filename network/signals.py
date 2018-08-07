@@ -1,9 +1,11 @@
 # from django.core.cache import cache
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save, pre_delete
+from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
 from . import tasks, models
+from network.tasks.dendrogram import update_dendrogram
+from network.tasks.network import update_organism_network
 
 # Note: post save experiment actions are relegated to tasks executed from
 # forms and management commands.
@@ -79,3 +81,23 @@ def favorite_pre_delete_update(sender, instance, **kwargs):
 def user_pre_delete(sender, instance, **kwargs):
     my_user = models.MyUser.objects.get(user=instance)
     my_user.delete()
+
+
+@receiver(post_delete, sender=models.Experiment)
+def experiment_post_delete(sender, instance, **kwargs):
+
+    organism = models.Organism.objects.get(
+        assembly__dataset__experiment=instance)
+
+    for my_user in models.MyUser.objects.filter(experiment=instance):
+
+        update_organism_network.si(
+            organism.pk,
+            instance.experiment_type.pk,
+            my_user_pk=my_user.pk,
+        ).delay()
+        update_dendrogram.si(
+            organism.pk,
+            instance.experiment_type.pk,
+            my_user_pk=my_user.pk,
+        ).delay()
