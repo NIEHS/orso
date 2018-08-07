@@ -439,6 +439,72 @@ def generate_predicted_sims_df(datasets, identity_only=False):
     return pd.DataFrame(d)
 
 
+def update_primary_data_sims_and_recs(experiment_pk):
+    update_primary_data_similarities(experiment_pk)
+    update_recommendations(experiment_pk, sim_types=['primary'], lock=False)
+
+
+def update_primary_data_similarities(experiment_pk):
+    experiment = models.Experiment.objects.get(pk=experiment_pk)
+    datasets = models.Dataset.objects.filter(experiment=experiment)
+
+    # Get relevant datasets
+    assemblies = models.Assembly.objects.filter(dataset__in=datasets)
+    other_datasets = models.Dataset.objects.filter(
+        assembly__in=assemblies,
+        experiment__experiment_type=experiment.experiment_type,
+    )
+    total_datasets = set(datasets) | set(other_datasets)
+
+    sims_df = generate_predicted_sims_df(total_datasets)
+
+    for ds_1 in datasets:
+        for ds_2 in other_datasets:
+            if all([
+                ds_1.experiment != ds_2.experiment,
+                ds_1.experiment.experiment_type ==
+                ds_2.experiment.experiment_type,
+                ds_1.assembly == ds_2.assembly,
+            ]):
+                if sims_df[ds_1.pk][ds_2.pk]:
+                    try:
+                        models.Similarity.objects.update_or_create(
+                            experiment_1=ds_1.experiment,
+                            experiment_2=ds_2.experiment,
+                            dataset_1=ds_1,
+                            dataset_2=ds_2,
+                            sim_type='primary',
+                        )
+                    except ValidationError:
+                        pass
+
+                    try:
+                        models.Similarity.objects.update_or_create(
+                            experiment_1=ds_2.experiment,
+                            experiment_2=ds_1.experiment,
+                            dataset_1=ds_2,
+                            dataset_2=ds_1,
+                            sim_type='primary',
+                        )
+                    except ValidationError:
+                        pass
+                else:
+                    models.Similarity.objects.filter(
+                        experiment_1=ds_1.experiment,
+                        experiment_2=ds_2.experiment,
+                        dataset_1=ds_1,
+                        dataset_2=ds_2,
+                        sim_type='primary',
+                    ).delete()
+                    models.Similarity.objects.filter(
+                        experiment_1=ds_2.experiment,
+                        experiment_2=ds_1.experiment,
+                        dataset_1=ds_2,
+                        dataset_2=ds_1,
+                        sim_type='primary',
+                    ).delete()
+
+
 def update_all_similarities_and_recommendations():
     datasets = models.Dataset.objects.all()
     update_bulk_similarities([ds.pk for ds in datasets])

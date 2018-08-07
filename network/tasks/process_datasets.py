@@ -10,8 +10,9 @@ from analysis.normalization import normalize_locus_intersection_values
 from analysis.utils import \
     download_dataset_bigwigs, generate_intersection_df, remove_dataset_bigwigs
 from network import models
-from network.tasks.data_recommendations import \
-    update_primary_data_sims_and_recs
+from network.tasks.neural_network import \
+    predict_dataset_fields, update_primary_data_sims_and_recs
+
 from network.tasks.dendrogram import update_dendrogram
 from network.tasks.network import update_organism_network
 
