@@ -21,9 +21,42 @@
         </ul>
         <ul class="nav navbar-nav navbar-right">
             <li><a href="{% url 'create_experiment' %}"><span class="glyphicon glyphicon-plus"></span> Add new experiment</a></li>
+            <li><a data-toggle="popover" data-placement="left" data-html="true" title="
+                    <div>Experiment Help</div>
+                " data-content="
+                    <ul>
+                        <li>
+                            <b>All experiments</b><br>
+                            All public experiments.
+                        </li>
+                        <li>
+                            <b>Recommended</b><br>
+                            All recommended experiments. These recommendations
+                            are tailored to you based on your personal
+                            experiments and favorites. Recommendations
+                            consider both primary read coverage values and
+                            annotated metadata.
+                        </li>
+                        <li>
+                            <b>Favorites</b><br>
+                            Favorited experiments.
+                        </li>
+                        <li>
+                            <b>Your experiments</b><br>
+                            Personal experiments.
+                        </li>
+                    </ul>
+                " href="#"><span class="glyphicon glyphicon-question-sign"></span></a></li>
         </ul>
     </div>
 </nav>
+
+<script type='text/javascript'>
+    $(function () {
+      $('[data-toggle="popover"]').popover()
+    })
+</script>
+
 {% endif %}
 
 {% block sub-nav-js %}

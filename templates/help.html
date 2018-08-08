@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block sub-content %}
+<div class="container">
+    <h1>Frequently Asked Questions</h1>
+    <h2>What is ORSO?</h2>
+    <p>
+        ORSO is the Online Resource for Social Omics. It is a network of next
+        generation sequencing datasets that are connected on the basis of
+        similarity between primary read coverage values and annotated metadata.
+        These connections allow for discovery of datasets that may be important
+        to your research interests. ORSO is a social network. Your interactions
+        with data play an important part in shaping our network. Actions like
+        favoriting a dataset or following a user create new links that
+        influence how ORSO presents data to users.
+    </p>
+    <h2>What can ORSO do for me?</h2>
+    <p>
+        ORSO is a tool for discovering next generation sequencing data relevant
+        to your interests. Each dataset hosted by ORSO is connected to the ORSO
+        data network, where datasets are connected based on read coverage and
+        metadata similarity. By selecting an individual dataset through the
+        Experiment tab, you can find primary analytics about that dataset, such
+        as relative gene coverage information, and a list of similar datasets.
+        You can also explore the ORSO network in a top-down fashion through the
+        Explore tab, enabling discovery of associated dataset groups.
+    </p>
+    <p>
+        Additional features become available once you create your own ORSO
+        account. With an account, ORSO will make dataset recommendations
+        tailored to you based on your history of favoriting experiments and
+        following other users.  You can also add datasets to the ORSO network.
+        If set to 'Public', these datasets can be found by other users.
+    </p>
+    <h2>What data can I find on ORSO?</h2>
+    <p>
+        ORSO was launched hosting data from the ENCODE consortium, totaling more
+        than 20,000 datasets. Users may also upload data for hosting by ORSO.
+        The total number of datasets can be checked on the Overview page under
+        the Explore tab.
+    </p>
+    <p>
+        In the future, we hope to add additional consortial data and to mine
+        data repositories such as the GEO databank for public datasets. Watch
+        the activity stream on your Home page for more details.
+    </p>
+    <h2>How can I add my own next generation sequencing dataset to ORSO?</h2>
+    <p>
+        For a dataset to be added, ORSO needs access to its read coverage
+        information and metadata. Metadata is added by submitting a standard
+        web-form. Regardless of the kind of next generation sequencing
+        experiment, ORSO expects read coverage to be given in bigWig format.
+        We recommend following the ENCODE consortium's protocols for generating
+        bigWig signal files.
+    </p>
+    <p>
+        In order for ORSO to access coverage files, those files must be hosted
+        and publicly available on a web server. This is similar to UCSC's
+        requirements for bigWig hosting. If you do not have web hosting services
+        available at your institute, UCSC provides guidelines about using third-
+        party services to host your data. Once ready, you can provide the public
+        URL in the experiment submission form.
+    </p>
+    <h2>What is the ORSO data network?</h2>
+    <p>
+        The ORSO data network is comprised of datasets, which make up the nodes,
+        and similarities, which make up the edges. In short, it is a web of
+        datasets where similar datasets are linked together. The ORSO web page
+        is used to investigate and analyze the ORSO data network. Top-down views
+        available under the Explore tab allow for the overall topology of the
+        network to examined. Individual experiments may also be selected to
+        generate lists of similar datasets.
+    </p>
+    <h2>How are datasets connected in the ORSO network?</h2>
+    <p>
+        Similar datasets in the ORSO network are linked together, so a connection
+        in the ORSO network represents similarity between two datasets. ORSO uses
+        two systems to create connections. The first considers metadata. We
+        consider cell type and protein target when deciding whether or not two
+        datasets are similar. We use the BRENDA Tissue and Enzyme Source Ontology
+        and the STRING database to decide if two datasets are similar. If two
+        cell types or protein targets share ontological parents or interaction
+        partners, respectively, their associated datasets would be considered
+        similar. The second system considers dataset read coverage values. To do
+        this, we use a neural network classifier. This classifier is trained
+        using coverage values from experiments with shared metadata information,
+        such as the same cell type or protein target. After training, this
+        classifier to applied to the read coverage values from two datasets to
+        evaluate similarity.
+    </p>
+    <p>
+        User interactions also provide connections for the ORSO data network.
+        By favoriting a dataset, similar experiments will be recommended to the
+        user under the Experiment tab. By following a user, that user's personal
+        datasets will also be recommended. Favoriting and following will also
+        cause associated updates to be posted to your personal activity log on
+        your Home page.
+    </p>
+    <h2>Where can I learn more?</h2>
+    <p>
+        Additional details can be found on ORSO's GitHub page. There, we include
+        detailed documentation and the complete codebase for ORSO.
+    </p>
+    <a href="https://github.com/lavenderca/genomics-network">
+    https://github.com/lavenderca/genomics-network
+    </a>
+</div>
+{% endblock sub-content %}

@@ -46,11 +46,13 @@
             {% if user.is_authenticated %}
             <ul class="nav navbar-nav navbar-right">
                 <li id='self_tab'><a href="{% url 'user' user.pk %}">{{user.username}}</a></li>
+                <li><a href="{% url 'help' %}">Help</a></li>
                 <li><a href="{% url 'logout' %}"><span class="glyphicon glyphicon-log-out"></span> Log out</a></li>
             </ul>
             {% else %}
             <ul class="nav navbar-nav navbar-right">
                 <li id='register_tab'><a href="{% url 'register' %}"><span class="glyphicon glyphicon-user"></span> Sign Up</a></li>
+                <li><a href="{% url 'help' %}">Help</a></li>
                 <li id='login_tab'><a href="{% url 'login' %}"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
             </ul>
             {% endif %}

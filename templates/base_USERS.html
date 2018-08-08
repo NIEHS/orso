@@ -17,10 +17,36 @@
             <li id='all_users_tab'><a href="{% url 'all_users' %}">All users</a></li>
             <li id='following_tab'><a href="{% url 'followed' %}">Following</a></li>
             <li id='followers_tab'><a href="{% url 'followers' %}">Followers</a></li>
-            <!-- <li><a href="{% url 'followed' %}">Following <span id="followed_counts" class="badge">{{user_counts.followed_counts}}</span></a></li> -->
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+            <li><a data-toggle="popover" data-placement="left" data-html="true" title="
+                    <div>Users Help</div>
+                " data-content="
+                    <ul>
+                        <li>
+                            <b>All users</b><br>
+                            All public users.
+                        </li>
+                        <li>
+                            <b>Following</b><br>
+                            All users you are currently following.
+                        </li>
+                        <li>
+                            <b>Followers</b><br>
+                            All users that are currently following you.
+                        </li>
+                    </ul>
+                " href="#"><span class="glyphicon glyphicon-question-sign"></span></a></li>
         </ul>
     </div>
 </nav>
+
+<script type='text/javascript'>
+    $(function () {
+      $('[data-toggle="popover"]').popover()
+    })
+</script>
+
 {% endif %}
 
 {% block sub-nav-js %}

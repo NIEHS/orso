@@ -19,8 +19,49 @@
             <li id='explore_network_tab'><a href="{% url 'explore_network' %}">Network</a></li>
             <li id='explore_pca_tab'><a href="{% url 'explore_pca' %}">PCA</a></li>
         </ul>
+        <ul class="nav navbar-nav navbar-right">
+            <li><a data-toggle="popover" data-placement="left" data-html="true" title="
+                    <div>Explore Help</div>
+                " data-content="
+                    <ul>
+                        <li>
+                            <b>Overview</b><br>
+                            An overview of all hosted experiments. Gives basic
+                            information about the number and source of ORSO's
+                            hosted datasets.
+                        </li>
+                        <li>
+                            <b>Dendrogram</b><br>
+                            Dendrograms of hierarchical relationships found in
+                            hosted data. Relationships are found using
+                            hierarchical clustering considering read coverage-
+                            and metadata-based similarities.
+                        </li>
+                        <li>
+                            <b>Network</b><br>
+                            Network of connections across datasets. Connections
+                            indicate similarities derived considering read
+                            coverage and metadata. Datasets from the same cell
+                            type or targeting the same protein are combined
+                            into the same node.
+                        </li>
+                        <li>
+                            <b>PCA</b><br>
+                            Three-dimensional PCA plot of read coverage values.
+                            Read coverage values are considered for each gene
+                            or enhancer.
+                        </li>
+                    </ul>
+                " href="#"><span class="glyphicon glyphicon-question-sign"></span></a></li>
+        </ul>
     </div>
 </nav>
+
+<script type='text/javascript'>
+    $(function () {
+      $('[data-toggle="popover"]').popover()
+    })
+</script>
 
 {% block sub-nav-js %}
 {% endblock sub-nav-js %}
