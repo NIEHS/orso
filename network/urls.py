@@ -1,4 +1,5 @@
 from django.conf.urls import include, url
+from django.views.generic import TemplateView
 from django.views.generic.base import RedirectView
 from rest_framework.routers import DefaultRouter
 
@@ -34,6 +35,9 @@ urlpatterns = [
 
     url(r'^home/$', views.Home.as_view(), name='home'),
     url(r'^network/home/$', views.Home.as_view(), name='home'),
+    url(r'^help/$', TemplateView.as_view(template_name='help.html'),
+        name='help'),
+
     url(r'^dataset/(?P<pk>\d+)/$', views.Dataset.as_view(),
         name='dataset'),
     url(r'^experiment/(?P<pk>\d+)/$', views.Experiment.as_view(),
