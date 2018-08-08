@@ -221,3 +221,15 @@ input[type=number] {
   filter: progid: none !important;
   outline: 0;
  }
+
+ .popover {
+    position: fixed;
+ }
+
+.popover-title {
+    color: black;
+}
+
+.popover-content {
+    color: black;
+}
