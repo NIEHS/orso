@@ -1080,8 +1080,9 @@ class UserList(AddMyUserMixin, ListView):
             pass
         return val
 
-    def get_page_objs(self, qs):
-        paginator = Paginator(qs, self.get_paginate_by(qs))
+    def get_page_objs(self):
+        paginator = Paginator(self.object_list,
+                              self.get_paginate_by(self.object_list))
         page = self.request.GET.get('page')
 
         try:
@@ -1100,28 +1101,7 @@ class UserList(AddMyUserMixin, ListView):
         if self.form.is_valid():
             query &= self.form.get_query()
 
-        qs = models.MyUser.objects.filter(query).distinct().order_by('pk')
-
-        paginator = Paginator(qs, self.get_paginate_by(qs))
-        page = self.request.GET.get('page')
-
-        try:
-            current_objects = paginator.page(page)
-        except PageNotAnInteger:
-            current_objects = paginator.page(1)
-        except EmptyPage:
-            current_objects = paginator.page(paginator.num_pages)
-
-        for obj in qs:
-            if obj in current_objects:
-
-                display_data = obj.get_display_data(self.my_user)
-
-                obj.plot_data = display_data['plot_data']
-                obj.meta_data = display_data['meta_data']
-                obj.urls = display_data['urls']
-
-        return qs
+        return models.MyUser.objects.filter(query).distinct().order_by('pk')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1133,6 +1113,17 @@ class UserList(AddMyUserMixin, ListView):
         for field in self.form:
             if field.name != 'search':
                 context['other_fields'].append(field)
+
+        context['page_objects'] = []
+
+        for obj in self.get_page_objs():
+            display_data = obj.get_display_data(self.my_user)
+
+            obj.plot_data = display_data['plot_data']
+            obj.meta_data = display_data['meta_data']
+            obj.urls = display_data['urls']
+
+            context['page_objects'].append(obj)
 
         return context
 

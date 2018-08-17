@@ -18,7 +18,7 @@
 
 {% block extra-js %}
 <script type='text/javascript'>
-{% for user in object_list %}
+{% for user in page_objects %}
 $(document).ready(function(){
     window.apps.appendSmallUserView(
         $('#user_container')[0],
