@@ -22,7 +22,7 @@
 
 {% block extra-js %}
 <script type='text/javascript'>
-{% for experiment in object_list %}
+{% for experiment in page_objects %}
     $(document).ready(function(){
         window.apps.appendSmallDataView(
             $('#experiment_container')[0],
