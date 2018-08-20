@@ -1,7 +1,7 @@
 from collections import defaultdict
 from tempfile import NamedTemporaryFile
 
-from analysis.utils import call_bigwig_average_over_bed
+from network.tasks.analysis.utils import call_bigwig_average_over_bed
 from network import models
 
 

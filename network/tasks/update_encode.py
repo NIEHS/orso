@@ -1,7 +1,7 @@
 from django.db.models import Q
 
 from network import models
-from analysis.encode import EncodeProject
+from network.tasks.analysis.encode import EncodeProject
 from network.tasks.process_datasets import process_dataset_batch
 
 

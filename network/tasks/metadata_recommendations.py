@@ -9,7 +9,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
-from analysis.string_db import (
+from network.tasks.analysis.string_db import (
     ASSEMBLY_TO_ORGANISM, get_organism_to_interaction_partners_dict)
 from network import models
 from network.tasks.recommendations import update_recommendations

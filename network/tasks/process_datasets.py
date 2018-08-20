@@ -5,9 +5,9 @@ from celery import group, chain, chord
 from celery.decorators import task
 from django.db.models import Q
 
-from analysis import metaplot, transcript_coverage
-from analysis.normalization import normalize_locus_intersection_values
-from analysis.utils import \
+from network.tasks.analysis import metaplot, transcript_coverage
+from network.tasks.analysis.normalization import normalize_locus_intersection_values
+from network.tasks.analysis.utils import \
     download_dataset_bigwigs, generate_intersection_df, remove_dataset_bigwigs
 from network import models
 from network.tasks.neural_network import \

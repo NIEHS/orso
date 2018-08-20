@@ -19,7 +19,7 @@ from keras.models import load_model, Sequential
 from keras.optimizers import SGD
 from sklearn.preprocessing import StandardScaler
 
-from analysis.string_db import (
+from network.tasks.analysis.string_db import (
     ASSEMBLY_TO_ORGANISM, get_organism_to_interaction_partners_dict)
 from network import models
 from network.tasks.metadata_recommendations import \

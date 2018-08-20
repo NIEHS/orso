@@ -20,9 +20,9 @@ from nltk.corpus import stopwords
 from picklefield.fields import PickledObjectField
 from scipy.stats import variation as coeff_variance
 
-from analysis.ontology import Ontology as OntologyObject
-from analysis.metaplot import generate_metaplot_bed
-from analysis.transcript_coverage import generate_locusgroup_bed
+from network.tasks.analysis.ontology import Ontology as OntologyObject
+from network.tasks.analysis.metaplot import generate_metaplot_bed
+from network.tasks.analysis.transcript_coverage import generate_locusgroup_bed
 from network.management.commands.update_dendrogram import \
     call_update_dendrogram
 from network.tasks.network import update_organism_network

@@ -1,4 +1,4 @@
-from analysis.metaplot import MetaPlot
+from network.tasks.analysis.metaplot import MetaPlot
 from collections import defaultdict
 from datetime import datetime
 import json

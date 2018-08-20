@@ -2,7 +2,7 @@ import numpy as np
 from celery import group
 from celery.decorators import task
 
-from analysis.utils import generate_intersection_df
+from network.tasks.analysis.utils import generate_intersection_df
 from network import models
 
 

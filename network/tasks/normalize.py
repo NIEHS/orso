@@ -3,7 +3,7 @@ import json
 from celery import group
 from celery.decorators import task
 
-from analysis.normalization import normalize_locus_intersection_values
+from network.tasks.analysis.normalization import normalize_locus_intersection_values
 from network import models
 
 

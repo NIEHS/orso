@@ -23,7 +23,7 @@ from rest_framework.response import Response
 from functools import wraps
 
 from . import models, forms
-from analysis.utils import generate_intersection_df
+from network.tasks.analysis.utils import generate_intersection_df
 from network.tasks.process_experiments import process_experiment
 from network.tasks.utils import get_target_color, get_cell_type_color
 

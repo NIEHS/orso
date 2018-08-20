@@ -20,7 +20,7 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
-from analysis.utils import (
+from network.tasks.analysis.utils import (
     generate_intersection_df, generate_pca_transformed_df)
 from network import models
 from network.tasks.metadata_recommendations import \

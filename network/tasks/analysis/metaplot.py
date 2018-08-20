@@ -3,7 +3,7 @@ import json
 import math
 from tempfile import NamedTemporaryFile
 
-from analysis.utils import call_bigwig_average_over_bed
+from network.tasks.analysis.utils import call_bigwig_average_over_bed
 from network import models
 
 # BIN_VALUES give the associated bins for metaplot values
