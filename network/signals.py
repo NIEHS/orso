@@ -4,8 +4,9 @@ from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
 from . import tasks, models
-from network.tasks.dendrogram import update_dendrogram
-from network.tasks.network import update_organism_network
+from network.management.commands.update_dendrogram import \
+    call_update_dendrogram
+from network.tasks.analysis.network import update_organism_network
 
 # Note: post save experiment actions are relegated to tasks executed from
 # forms and management commands.
@@ -86,18 +87,27 @@ def user_pre_delete(sender, instance, **kwargs):
 @receiver(post_delete, sender=models.Experiment)
 def experiment_post_delete(sender, instance, **kwargs):
 
-    organism = models.Organism.objects.get(
-        assembly__dataset__experiment=instance)
+    if instance.project:
+        if instance.project.name in ['ENCODE']:
+
+            update_organism_network.si(
+                instance.organism.pk,
+                instance.experiment_type.pk,
+            ).delay()
+            call_update_dendrogram.si(
+                instance.organism.pk,
+                instance.experiment_type.pk,
+            ).delay()
 
     for my_user in models.MyUser.objects.filter(experiment=instance):
 
         update_organism_network.si(
-            organism.pk,
+            instance.organism.pk,
             instance.experiment_type.pk,
             my_user_pk=my_user.pk,
         ).delay()
-        update_dendrogram.si(
-            organism.pk,
+        call_update_dendrogram.si(
+            instance.organism.pk,
             instance.experiment_type.pk,
             my_user_pk=my_user.pk,
         ).delay()

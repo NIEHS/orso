@@ -267,8 +267,8 @@ class ExperimentForm(BootstrapModelForm):
     class Meta:
         model = models.Experiment
         fields = (
-            'name', 'experiment_type', 'cell_type', 'target', 'description',
-            'use_default_color', 'color', 'public',
+            'name', 'organism', 'experiment_type', 'cell_type', 'target',
+            'description', 'use_default_color', 'color', 'public',
         )
         widgets = {
             'color': TextInput(attrs={'type': 'color'}),

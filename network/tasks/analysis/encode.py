@@ -1,6 +1,11 @@
 import dateutil.parser
 import requests
 
+from django.db.models import Q
+
+from network import models
+from network.tasks.processing import process_dataset_batch
+
 HEADERS = {'accept': 'application/json'}
 SELECTION_HIERARCHY = [
     ['plus strand signal of unique reads',
@@ -150,6 +155,23 @@ class EncodeExperiment(object):
         fields = [x for x in fields if x is not None]
         self.name = '-'.join(fields)
 
+    def set_organism(self):
+        potential_organisms = set()
+        for ds in self.datasets:
+            if ds.assembly in ['hg19', 'GRCh38']:
+                potential_organisms.add('Homo sapiens')
+            elif ds.assembly in ['mm9', 'mm10']:
+                potential_organisms.add('Mus musculus')
+            elif ds.assembly in ['dm3', 'dm6']:
+                potential_organisms.add('Drosophila melanogaster')
+            elif ds.assembly in ['ce10', 'ce11']:
+                potential_organisms.add('Caenorhabditis elegans')
+        if len(potential_organisms) > 1:
+            raise ValueError('More than one possible organism.')
+        elif len(potential_organisms) == 0:
+            raise ValueError('No assembly associated with experiment.')
+        self.organism = list(potential_organisms)[0]
+
 
 class EncodeDataset(object):
 
@@ -294,6 +316,7 @@ class EncodeProject(object):
         self._filter_datasets_by_missing_strand_data()
         self._filter_experiments_without_datasets()
         self._set_empty_replicate_values()
+        self._set_experiment_organisms()
 
     def _retrieve_experiments(self):
         URL = (
@@ -414,3 +437,159 @@ class EncodeProject(object):
             for dataset in experiment.datasets:
                 if dataset.replicate is None:
                     dataset.replicate = (1,)
+
+    def _set_experiment_organisms(self):
+        for experiment in self.experiments:
+            experiment.set_organism()
+
+
+def add_or_update_encode():
+
+    project = models.Project.objects.get_or_create(
+        name='ENCODE',
+    )[0]
+
+    encode = EncodeProject()
+    print('{} experiments found in ENCODE!!'.format(len(encode.experiments)))
+
+    experiments_to_process = set()
+    datasets_to_process = set()
+
+    # Create experiment and dataset objects; process datasets
+    for experiment in encode.experiments[:100]:
+
+        organism_obj = models.Organism.objects.get(name=experiment.organism)
+
+        try:
+            experiment_type_obj = models.ExperimentType.objects.get(
+                name=experiment.experiment_type)
+        except models.ExperimentType.DoesNotExist:
+            experiment_type_obj = models.ExperimentType.objects.create(
+                name=experiment.experiment_type,
+                short_name=experiment.short_experiment_type,
+                relevant_regions='genebody',
+            )
+
+        # Update or create experiment object
+        exp_obj, exp_created = models.Experiment.objects.update_or_create(
+            project=project,
+            consortial_id=experiment.id,
+            defaults={
+                'name': experiment.name,
+                'organism': organism_obj,
+                'project': project,
+                'description': experiment.description,
+                'experiment_type': experiment_type_obj,
+                'cell_type': experiment.cell_type,
+                'slug': experiment.name,
+            },
+        )
+        if experiment.target:
+            exp_obj.target = experiment.target
+            exp_obj.save()
+
+        for dataset in experiment.datasets:
+
+            # Get assembly object
+            try:
+                assembly_obj = \
+                    models.Assembly.objects.get(name=dataset.assembly)
+            except models.Assembly.DoesNotExist:
+                assembly_obj = None
+                print(
+                    'Assembly "{}" does not exist for dataset {}. '
+                    'Skipping dataset.'.format(dataset.assembly, dataset.name)
+                )
+
+            # Add dataset
+            if assembly_obj:
+
+                # Update or create dataset
+                ds_obj, ds_created = models.Dataset.objects.update_or_create(
+                    consortial_id=dataset.id,
+                    experiment=exp_obj,
+                    defaults={
+                        'name': dataset.name,
+                        'assembly': assembly_obj,
+                        'slug': dataset.id,
+                    },
+                )
+
+                # Update URLs, if appropriate
+                updated_url = False
+                if dataset.ambiguous:
+                    if ds_obj.ambiguous_url != dataset.ambiguous.url:
+                        ds_obj.ambiguous_url = dataset.ambiguous.url
+                        updated_url = True
+                elif dataset.plus and dataset.minus:
+                    if any([
+                        ds_obj.plus_url != dataset.plus.url,
+                        ds_obj.minus_url != dataset.minus.url,
+                    ]):
+                        ds_obj.plus_url = dataset.plus.url
+                        ds_obj.minus_url = dataset.minus.url
+                        updated_url = True
+                if updated_url:
+                    ds_obj.processed = False
+                    ds_obj.save()
+
+                if not ds_obj.processed:
+                    datasets_to_process.add(ds_obj)
+
+    print('Processing {} datasets...'.format(len(datasets_to_process)))
+    process_dataset_batch(list(datasets_to_process))
+
+    revoke_missing_experiments(encode, project)
+    revoke_missing_datasets(encode, project)
+    revoke_experiments_with_revoked_datasets(encode, project)
+
+    # Set 'processed' flag for experiments
+    for exp_obj in models.Experiment.objects.filter(project=project):
+        ds_objs = models.Dataset.objects.filter(experiment=exp_obj)
+        exp_obj.processed = all([ds_obj.processed for ds_obj in ds_objs])
+        exp_obj.save()
+
+
+def revoke_missing_experiments(encode_obj, project):
+    query = Q()
+    for experiment in encode_obj.experiments:
+        query |= Q(consortial_id=experiment.id)
+    query_set = (models.Experiment.objects
+                                  .filter(project=project)
+                                  .exclude(query))
+    for experiment in query_set:
+        experiment.revoked = True
+        experiment.save()
+    print('{} experiments missing from query. Revoked!!'.format(
+        str(query_set.count())))
+
+
+def revoke_missing_datasets(encode_obj, project):
+    query = Q()
+    for experiment in encode_obj.experiments:
+        for dataset in experiment.datasets:
+            for attr in ['ambiguous', 'plus', 'minus']:
+                try:
+                    query |= Q(
+                        consortial_id__contains=getattr(dataset, attr).id)
+                except AttributeError:
+                    pass
+    query_set = (models.Dataset.objects
+                               .filter(experiment__project=project)
+                               .exclude(query))
+    for dataset in query_set:
+        dataset.revoked = True
+        dataset.save()
+    print('{} datasets missing from query. Revoked!!'.format(
+        str(query_set.count())))
+
+
+def revoke_experiments_with_revoked_datasets(encode_obj, project):
+    query_set = (models.Experiment.objects
+                                  .filter(revoked=False, project=project)
+                                  .exclude(dataset__revoked=False))
+    for experiment in query_set:
+        experiment.revoked = True
+        experiment.save()
+    print('{} experiments with only revoked datasets. Revoked!!'.format(
+        str(query_set.count())))

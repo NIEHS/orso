@@ -5,11 +5,19 @@ from django.db.models import Q
 
 from network import models
 from network.tasks import locks
+from network.tasks.utils import run_tasks
+
+
+def update_experiment_recommendations(experiments, **kwargs):
+    tasks = []
+    for exp in experiments:
+        tasks.append(_update_experiment_recommendations.si(exp.pk, **kwargs))
+    run_tasks(tasks, **kwargs)
 
 
 @task
-def update_recommendations(experiment_pk, lock=True,
-                           sim_types=['metadata', 'primary']):
+def _update_experiment_recommendations(
+        experiment_pk, lock=True, sim_types=['metadata', 'primary'], **kwargs):
 
     experiment = models.Experiment.objects.get(pk=experiment_pk)
     users = models.MyUser.objects.filter(

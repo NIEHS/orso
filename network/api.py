@@ -17,27 +17,7 @@ def try_int(val, default=None):
         return default
 
 
-class BrowserViewset(viewsets.ViewSet):
-
-    @detail_route(methods=['get'], url_path='view')
-    def browser_view(self, request):
-        query = self.request.GET.get('query')
-        datasets = self.request.GET.get('datasets')
-        return Response(models.Dataset.get_browser_view(query, datasets))
-
-
 class ExperimentViewset(viewsets.ModelViewSet):
-
-    # @detail_route(methods=['get'])
-    # def browser_view(self, request, pk=None):
-    #     query = self.request.GET.get('query')
-    #     datasets = self.request.GET.get('datasets')
-    #     return Response(models.Dataset.get_browser_view(query, datasets))
-    #
-    # @detail_route(methods=['get'], url_path='promoter-intersection')
-    # def promoter_intersection(self, request, pk=None):
-    #     object = self.get_object()
-    #     return Response(object.promoter_intersection.intersection_values)
 
     def get_queryset(self):
         return models.Experiment.objects.all()
@@ -81,12 +61,6 @@ class ExperimentViewset(viewsets.ModelViewSet):
 
 
 class DatasetViewset(viewsets.ModelViewSet):
-
-    # @detail_route(methods=['get'])
-    # def browser_view(self, request, pk=None):
-    #     query = self.request.GET.get('query')
-    #     datasets = self.request.GET.get('datasets')
-    #     return Response(models.Dataset.get_browser_view(query, datasets))
 
     @detail_route(methods=['get'], url_path='promoter-intersection')
     def promoter_intersection(self, request, pk=None):

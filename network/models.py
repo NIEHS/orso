@@ -1,8 +1,6 @@
 import random
 import requests
-import pyBigWig
 import numpy
-import math
 import json
 import string
 import os
@@ -22,10 +20,10 @@ from scipy.stats import variation as coeff_variance
 
 from network.tasks.analysis.ontology import Ontology as OntologyObject
 from network.tasks.analysis.metaplot import generate_metaplot_bed
-from network.tasks.analysis.transcript_coverage import generate_locusgroup_bed
+from network.tasks.analysis.coverage import generate_locusgroup_bed
 from network.management.commands.update_dendrogram import \
     call_update_dendrogram
-from network.tasks.network import update_organism_network
+from network.tasks.analysis.network import update_organism_network
 from network.tasks.utils import get_exp_tag
 
 STRANDS = (('+', '+'), ('-', '-'))
@@ -46,16 +44,9 @@ ONTOLOGY_TYPES = (
 class MyUser(models.Model):
     followed_users = models.ManyToManyField(
         'MyUser', symmetrical=False, blank=True, through='Follow')
-
     favorite_experiments = models.ManyToManyField(
         'Experiment', blank=True, related_name='favorited',
         through='Favorite')
-    primary_data_recommedations = models.ManyToManyField(
-        'Experiment', blank=True, related_name='primary_rec',
-        through='PrimaryDataRec', through_fields=('user', 'experiment'))
-    metadata_recommendations = models.ManyToManyField(
-        'Experiment', blank=True, related_name='metadata_rec',
-        through='MetadataRec', through_fields=('user', 'experiment'))
 
     public = models.BooleanField(default=True)
 
@@ -241,34 +232,6 @@ class DatasetAccess(Access):
         unique_together = ('user', 'dataset')
 
 
-class PrimaryDataRec(models.Model):
-    user = models.ForeignKey('MyUser')
-    experiment = models.ForeignKey(
-        'Experiment', related_name='%(class)s_recommended')
-    dataset = models.ForeignKey(
-        'Dataset', related_name='%(class)s_recommended')
-
-    personal_experiment = models.ForeignKey(
-        'Experiment', related_name='%(class)s_owned')
-    personal_dataset = models.ForeignKey(
-        'Dataset', related_name='%(class)s_owned')
-
-    created = models.DateTimeField(auto_now_add=True, null=True)
-    last_updated = models.DateTimeField(auto_now=True, null=True)
-
-
-class MetadataRec(models.Model):
-    user = models.ForeignKey('MyUser')
-    experiment = models.ForeignKey(
-        'Experiment', related_name='%(class)s_recommended')
-
-    personal_experiment = models.ForeignKey(
-        'Experiment', related_name='%(class)s_owned')
-
-    created = models.DateTimeField(auto_now_add=True, null=True)
-    last_updated = models.DateTimeField(auto_now=True, null=True)
-
-
 class Recommendation(models.Model):
     user = models.ForeignKey('MyUser')
 
@@ -400,6 +363,7 @@ class Experiment(models.Model):
     experiment_type = models.ForeignKey('ExperimentType')
     owners = models.ManyToManyField('MyUser', blank=True)
     project = models.ForeignKey('Project', blank=True, null=True)
+    organism = models.ForeignKey('Organism', models.PROTECT)
 
     cell_type = models.CharField(max_length=128)
     target = models.CharField(max_length=128, blank=True)
@@ -543,56 +507,6 @@ class Experiment(models.Model):
             return False, '{} not found.'.format(url)
         else:
             return resp.ok, '{}: {}'.format(resp.status_code, resp.reason)
-
-    @staticmethod
-    def get_browser_view(chromosome, start, end, datasets):
-        # TODO: iterate through datasets to get browser data
-        start = int(start) - 1
-        end = int(end)
-
-        data_ids = [int(d) for d in datasets.split(',')]
-        out_data = []
-
-        for _id in data_ids:
-            ds = Dataset.objects.get(pk=_id)
-
-            if ds.ambiguous_url:
-                bigwig = pyBigWig.open(ds.ambiguous_url)
-                intervals = bigwig.intervals(chromosome, start, end)
-
-                _range = end - start
-                _interval = _range / 1000
-
-                bins = []
-                for i in range(1000):
-                    bins.append([
-                        math.ceil(start + _interval * i),
-                        math.ceil(start + _interval * (i + 1)),
-                        0,
-                    ])
-
-                interval_n = 0
-                bin_n = 0
-
-                while interval_n < len(intervals) and bin_n < len(bins):
-                    if intervals[interval_n][0] < bins[bin_n][1] and \
-                            bins[bin_n][0] <= intervals[interval_n][1]:
-                        if intervals[interval_n][2] > bins[bin_n][2]:
-                            bins[bin_n][2] = intervals[interval_n][2]
-                        bin_n += 1
-                    elif intervals[interval_n][1] < bins[bin_n][0]:
-                        interval_n += 1
-                    elif bins[bin_n][1] < intervals[interval_n][0] + 1:
-                        bin_n += 1
-
-                out_data.append({
-                    'ambig_intervals': bins,
-                    'id': _id,
-                    'name': ds.name,
-                    'assembly': ds.assembly.name,
-                })
-
-        return out_data
 
     def get_metadata(self, my_user=None):
         metadata = dict()
@@ -751,13 +665,6 @@ class Experiment(models.Model):
         }
 
 
-class ExperimentNetwork(models.Model):
-    experiment = models.ForeignKey('Experiment')
-
-    network_plot = JSONField()
-    last_updated = models.DateTimeField(auto_now=True)
-
-
 class Dataset(models.Model):
     assembly = models.ForeignKey('Assembly')
     experiment = models.ForeignKey('Experiment', blank=True, null=True)
@@ -828,56 +735,6 @@ class Dataset(models.Model):
         else:
             return resp.ok, '{}: {}'.format(resp.status_code, resp.reason)
 
-    @staticmethod
-    def get_browser_view(chromosome, start, end, datasets):
-
-        start = int(start) - 1
-        end = int(end)
-
-        data_ids = [int(d) for d in datasets.split(',')]
-        out_data = []
-
-        for _id in data_ids:
-            ds = Dataset.objects.get(pk=_id)
-
-            if ds.ambiguous_url:
-                bigwig = pyBigWig.open(ds.ambiguous_url)
-                intervals = bigwig.intervals(chromosome, start, end)
-
-                _range = end - start
-                _interval = _range / 1000
-
-                bins = []
-                for i in range(1000):
-                    bins.append([
-                        math.ceil(start + _interval * i),
-                        math.ceil(start + _interval * (i + 1)),
-                        0,
-                    ])
-
-                interval_n = 0
-                bin_n = 0
-
-                while interval_n < len(intervals) and bin_n < len(bins):
-                    if intervals[interval_n][0] < bins[bin_n][1] and \
-                            bins[bin_n][0] <= intervals[interval_n][1]:
-                        if intervals[interval_n][2] > bins[bin_n][2]:
-                            bins[bin_n][2] = intervals[interval_n][2]
-                        bin_n += 1
-                    elif intervals[interval_n][1] < bins[bin_n][0]:
-                        interval_n += 1
-                    elif bins[bin_n][1] < intervals[interval_n][0] + 1:
-                        bin_n += 1
-
-                out_data.append({
-                    'ambig_intervals': bins,
-                    'id': _id,
-                    'name': ds.name,
-                    'assembly': ds.assembly.name,
-                })
-
-        return out_data
-
     def is_stranded(self):
         return bool(self.plus_url) and bool(self.minus_url)
 
@@ -922,21 +779,88 @@ class Dataset(models.Model):
                 'minus': None,
             }
 
+    def get_predicted_classes(self, predicted_field, threshold=0.5):
+        class_set = set()
+
+        if predicted_field == 'cell_type':
+            prediction_json = self.predicted_cell_type_json
+        elif predicted_field == 'target':
+            prediction_json = self.predicted_target_json
+        else:
+            raise ValueError('Improper predicted_field value.')
+
+        try:
+            predictions = json.loads(prediction_json)
+            for predicted_class, prediction_value in predictions:
+                if prediction_value > threshold:
+                    class_set.add(predicted_class)
+        except TypeError:
+            pass
+
+        return class_set
+
+    def get_predicted_cell_types(self, **kwargs):
+        return self.get_predicted_classes('cell_type', **kwargs)
+
+    def get_predicted_targets(self, **kwargs):
+        return self.get_predicted_classes('target', **kwargs)
+
+    def get_filtered_intersection(self):
+
+        relevant_regions = self.experiment.experiment_type.relevant_regions
+        dij = DatasetIntersectionJson.objects.get(
+            dataset=self,
+            locus_group__group_type=relevant_regions,
+        )
+        try:
+            pca = PCA.objects.get(
+                locus_group__group_type=relevant_regions,
+                locus_group__assembly=self.assembly,
+                experiment_type=self.experiment.experiment_type,
+            )
+        except PCA.DoesNotExist:
+            return None
+        else:
+
+            order = PCALocusOrder.objects.filter(pca=pca).order_by('order')
+            loci = [x.locus for x in order]
+
+            intersection_values = json.loads(dij.intersection_values)
+
+            locus_values = dict()
+            for val, pk in zip(
+                intersection_values['normalized_values'],
+                intersection_values['locus_pks']
+            ):
+                locus_values[pk] = val
+
+            normalized_values = []
+            for locus in loci:
+                try:
+                    normalized_values.append(locus_values[locus.pk])
+                except IndexError:
+                    normalized_values.append(0)
+
+            return normalized_values
+
+    def set_filtered_intersection(self):
+
+        intersection = self.get_filtered_intersection()
+        if intersection:
+            self.filtered_intersection_values = intersection
+            self.save()
+
     # def get_network(self):
     #     network = DatasetNetwork.objects.get(dataset=self)
     #     return json.loads(network.network_plot)
 
 
-class DatasetNetwork(models.Model):
-    dataset = models.ForeignKey('Dataset')
-
-    network_plot = JSONField()
-    last_updated = models.DateTimeField(auto_now=True)
-
-
 class Organism(models.Model):
     name = models.CharField(unique=True, max_length=32)
     last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
 
 
 class OrganismNetwork(models.Model):
@@ -1100,28 +1024,6 @@ class PCALocusOrder(models.Model):
     locus = models.ForeignKey('Locus')
 
     order = models.PositiveIntegerField()
-    last_updated = models.DateTimeField(auto_now=True)
-
-
-class IDF(models.Model):
-    '''
-    JSON containing IDF values.
-    '''
-    assembly = models.ForeignKey('Assembly')
-    experiment_type = models.ForeignKey('ExperimentType')
-
-    idf = JSONField()
-    last_updated = models.DateTimeField(auto_now=True)
-
-
-class TfidfVectorizer(models.Model):
-    '''
-    scikit-learn TfidfVectorizer object.
-    '''
-    assembly = models.ForeignKey('Assembly')
-    experiment_type = models.ForeignKey('ExperimentType')
-
-    tfidf_vectorizer = PickledObjectField()
     last_updated = models.DateTimeField(auto_now=True)
 
 
@@ -1376,88 +1278,6 @@ class DatasetIntersectionJson(models.Model):
             return filtered_values
 
 
-class ExperimentIntersection(models.Model):
-    locus = models.ForeignKey('Locus')
-    experiment = models.ForeignKey('Experiment')
-
-    average_value = models.FloatField()
-
-    created = models.DateTimeField(auto_now_add=True, null=True)
-    last_updated = models.DateTimeField(auto_now=True, null=True)
-
-    class Meta:
-        unique_together = ('locus', 'experiment')
-
-
-class DatasetDistance(models.Model):
-    '''
-    Base model for dataset distances.
-    '''
-    dataset_1 = models.ForeignKey(
-        'Dataset', related_name='%(app_label)s_%(class)s_first')
-    dataset_2 = models.ForeignKey(
-        'Dataset', related_name='%(app_label)s_%(class)s_second')
-
-    last_updated = models.DateTimeField(auto_now=True, null=True)
-
-    def __str__(self):
-        return str(self.pk)
-
-    class Meta:
-        abstract = True
-        unique_together = (
-            ('dataset_1', 'dataset_2',),
-        )
-
-
-class DatasetDataDistance(DatasetDistance):
-    '''
-    Distance between datasets considering data values.
-    '''
-    distance = models.FloatField()
-    recommended = models.BooleanField()
-
-
-class DatasetMetadataDistance(DatasetDistance):
-    '''
-    Distance between datasets considering metadata values.
-    '''
-    distance = models.FloatField()
-    recommended = models.BooleanField()
-
-
-class ExperimentDistance(models.Model):
-    '''
-    Base model for experiment distances.
-    '''
-    experiment_1 = models.ForeignKey(
-        'Experiment', related_name='%(app_label)s_%(class)s_first')
-    experiment_2 = models.ForeignKey(
-        'Experiment', related_name='%(app_label)s_%(class)s_second')
-
-    last_updated = models.DateTimeField(auto_now=True, null=True)
-
-    class Meta:
-        abstract = True
-        unique_together = (
-            ('experiment_1', 'experiment_2',),
-        )
-
-
-class ExperimentDataDistance(ExperimentDistance):
-    '''
-    Distance between experiments considering data values.
-    '''
-    distance = models.FloatField()
-
-
-class ExperimentMetadataDistance(ExperimentDistance):
-    '''
-    Distance between experiments considering metadata values.
-    '''
-    distance = models.FloatField()
-
-
 class MetaPlot(models.Model):
     locus_group = models.ForeignKey('LocusGroup')
     dataset = models.ForeignKey('Dataset')
@@ -1511,20 +1331,6 @@ class Ontology(models.Model):
     def get_ontology_object(self):
         return OntologyObject(self.obo_file, self.ac_file,
                               ontology_type=self.ontology_type)
-
-
-class UserToExperimentSimilarity(models.Model):
-    user = models.ForeignKey('MyUser')
-    experiment = models.ForeignKey('Experiment')
-
-    score = models.FloatField()
-
-    last_updated = models.DateTimeField(auto_now=True, null=True)
-
-    class Meta:
-        unique_together = (
-            ('user', 'experiment',),
-        )
 
 
 class AdminNotification(models.Model):

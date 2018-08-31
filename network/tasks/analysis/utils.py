@@ -9,8 +9,7 @@ import pandas as pd
 from network import models
 
 BIGWIG_AVERAGE_OVER_BED_PATH = \
-    os.path.abspath(os.path.join(
-        os.path.dirname(__file__), os.pardir, 'bin', 'bigWigAverageOverBed'))
+    os.path.join(settings.BIN_DIR, 'bigWigAverageOverBed')
 
 
 def call_bigwig_average_over_bed(bigwig_name, bed_name, out_name):

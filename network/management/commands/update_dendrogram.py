@@ -4,7 +4,7 @@ from celery.decorators import task
 from django.core.management.base import BaseCommand
 
 from network import models
-from network.tasks.dendrogram import update_dendrogram
+from network.tasks.analysis.dendrogram import update_dendrogram
 
 
 @task

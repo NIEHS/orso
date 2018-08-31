@@ -172,6 +172,7 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379/2'
 
 CELERY_IMPORTS = (
     'network.management.commands.update_dendrogram',
+    'network.management.commands.update_pca',
 )
 
 CACHES = {
@@ -187,6 +188,12 @@ CACHES = {
 
 DATA_PATH = '/Users/lavenderca/genomics_network/data'
 
+BIN_DIR = os.path.join(PROJECT_PATH, 'bin')
+
+ENHANCERS_DIR = os.path.join(
+    PROJECT_PATH, 'data', 'enhancers')
+CHROM_SIZES_DIR = os.path.join(
+    PROJECT_PATH, 'data', 'chrom_sizes')
 INTERSECTION_BED_DIR = os.path.join(
     PROJECT_PATH, 'data', 'intersection_bed_files')
 METAPLOT_BED_DIR = os.path.join(

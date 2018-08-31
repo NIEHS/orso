@@ -132,28 +132,29 @@ class Ontology:
                     for parent in parents:
                         self.term_to_children[parent].add(term)
 
-    def get_all(self, term, term_to_set):
+    def get_all(self, terms, term_to_set):
         '''
-        Get all objects for a term given a term-to-object dictionary.
+        Get all objects for a term set given a term-to-object dictionary.
         '''
         _all = set()
-        if term in term_to_set:
-            for n in term_to_set[term]:
-                _all.add(n)
-                _all |= self.get_all(n, term_to_set)
+        for term in terms:
+            if term in term_to_set:
+                for n in term_to_set[term]:
+                    _all.add(n)
+                    _all |= self.get_all([n], term_to_set)
         return _all
 
-    def get_all_children(self, term):
+    def get_all_children(self, terms):
         '''
-        Get all children for a term.
+        Get all children for a term set.
         '''
-        return self.get_all(term, self.term_to_children)
+        return self.get_all(terms, self.term_to_children)
 
-    def get_all_parents(self, term):
+    def get_all_parents(self, terms):
         '''
-        Get all parents for a term.
+        Get all parents for a term set.
         '''
-        return self.get_all(term, self.term_to_parents)
+        return self.get_all(terms, self.term_to_parents)
 
     def determine_information_content(self):
         '''
@@ -197,8 +198,8 @@ class Ontology:
 
         Returns a list of shared parents with lowest depth.
         '''
-        term_set_1 = set([term_1]) | self.get_all_parents(term_1)
-        term_set_2 = set([term_2]) | self.get_all_parents(term_2)
+        term_set_1 = set([term_1]) | self.get_all_parents([term_1])
+        term_set_2 = set([term_2]) | self.get_all_parents([term_2])
         intersection = list(term_set_1 & term_set_2)
 
         if intersection:
@@ -248,9 +249,9 @@ class Ontology:
 
         if include_parents:
             for term in term_list_1:
-                term_set_1 |= self.get_all_parents(term)
+                term_set_1 |= self.get_all_parents([term])
             for term in term_list_2:
-                term_set_2 |= self.get_all_parents(term)
+                term_set_2 |= self.get_all_parents([term])
 
         # Define weighting
         if weighting == 'depth':

@@ -4,6 +4,7 @@ import os
 
 import numpy as np
 import parse
+from celery import group
 from django.conf import settings
 from django.core.cache import cache
 
@@ -15,6 +16,16 @@ TARGET_RELEVANT_EXP_TYPES = [
     'CRISPRi followed by RNA-seq',
 ]
 RGBA_STRING = 'rgba({}, {}, {}, {})'
+
+
+def run_tasks(tasks, group_async=False, **kwargs):
+    if group_async:  # Parallel
+        job = group(tasks)
+        results = job.apply_async()
+        results.join()
+    else:  # Serial
+        for t in tasks:
+            t()
 
 
 def string_to_rgba(string):

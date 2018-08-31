@@ -231,38 +231,6 @@ class DatasetAdmin(admin.ModelAdmin):
     _owners.allow_tags = True
 
 
-@admin.register(models.DatasetDataDistance,
-                models.DatasetMetadataDistance)
-class DatasetDistanceAdmin(admin.ModelAdmin):
-    list_display = [
-        'id', '_dataset_1', '_dataset_2', '_assembly', '_experiment_type',
-    ]
-    fields = [
-        'id', '_dataset_1', '_dataset_2', '_assembly', '_experiment_type',
-        'distance',
-    ]
-    readonly_fields = [
-        'id', '_dataset_1', '_dataset_2', '_assembly', '_experiment_type'
-    ]
-
-    _assembly = obj_link(
-        'assembly',
-        pk_attr='dataset_1.assembly.pk',
-        name_attr='dataset_1.assembly.name',
-    )
-    _dataset_1 = obj_link(
-        'dataset_1', reverse_url='admin:network_dataset_change')
-    _dataset_2 = obj_link(
-        'dataset_2', reverse_url='admin:network_dataset_change')
-    _experiment_type = obj_link(
-        'experiment_type',
-        description='Experiment Type',
-        reverse_url='admin:network_experimenttype_change',
-        pk_attr='dataset_1.experiment.experiment_type.pk',
-        name_attr='dataset_1.experiment.experiment_type.name',
-    )
-
-
 @admin.register(models.Enhancer)
 class EnhancerAdmin(admin.ModelAdmin):
     list_display = [
@@ -318,49 +286,6 @@ class ExperimentAdmin(admin.ModelAdmin):
         else:
             return 'None'
     _owners.allow_tags = True
-
-
-@admin.register(models.ExperimentDataDistance,
-                models.ExperimentMetadataDistance)
-class ExperimentDistanceAdmin(admin.ModelAdmin):
-    list_display = [
-        'id', '_experiment_1', '_experiment_2', '_assemblies',
-        '_experiment_type',
-    ]
-    fields = [
-        'id', '_experiment_1', '_experiment_2', '_assemblies',
-        '_experiment_type', 'distance',
-    ]
-    readonly_fields = fields
-
-    _experiment_1 = obj_link(
-        'experiment_1', reverse_url='admin:network_experiment_change')
-    _experiment_2 = obj_link(
-        'experiment_2', reverse_url='admin:network_experiment_change')
-    _experiment_type = obj_link(
-        'experiment_type',
-        description='Experiment Type',
-        reverse_url='admin:network_experimenttype_change',
-        pk_attr='experiment_1.experiment_type.pk',
-        name_attr='experiment_1.experiment_type.name',
-    )
-
-    def _assemblies(self, obj):
-        assemblies_1 = models.Assembly.objects.filter(
-            dataset__experiment=obj.experiment_1).distinct()
-        assemblies_2 = models.Assembly.objects.filter(
-            dataset__experiment=obj.experiment_2).distinct()
-        shared_assemblies = assemblies_1 & assemblies_2
-
-        assembly_links = []
-        for assembly in shared_assemblies:
-            url = reverse('admin:network_assembly_change',
-                          args=(assembly.pk, ))
-            assembly_links.append(
-                '<a href="{}">{}</a>'.format(url, assembly.name))
-
-        return ', '.join(assembly_links)
-    _assemblies.allow_tags = True
 
 
 @admin.register(models.ExperimentType)
