@@ -65,10 +65,9 @@ def process_dataset(dataset_pk, download=True):
 
 @task
 def update_and_clean(dataset_pks, experiment_pk=None):
+
     datasets = models.Dataset.objects.filter(pk__in=dataset_pks)
-
     remove_bigwigs(dataset_pks)
-
     for dataset in datasets:
         assembly = dataset.assembly
         experiment_type = dataset.experiment.experiment_type
@@ -90,6 +89,7 @@ def update_and_clean(dataset_pks, experiment_pk=None):
         dataset.processed = True
         dataset.save()
 
+    datasets = models.Dataset.objects.filter(pk__in=dataset_pks)
     update_dataset_predicted_similarities(datasets)
 
     if experiment_pk:
