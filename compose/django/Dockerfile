@@ -69,7 +69,6 @@ RUN pip3 install \
 
 COPY ./analysis /network/analysis
 COPY ./assets /network/assets
-COPY ./fixtures /network/fixtures
 COPY ./genomics_network /network/genomics_network
 COPY ./network /network/network
 COPY ./static /network/static
