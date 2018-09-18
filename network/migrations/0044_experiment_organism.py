@@ -5,6 +5,8 @@ from __future__ import unicode_literals
 from django.db import migrations, models
 import django.db.models.deletion
 
+from network.models import Organism
+
 
 class Migration(migrations.Migration):
 
@@ -12,11 +14,13 @@ class Migration(migrations.Migration):
         ('network', '0043_auto_20180730_1040'),
     ]
 
+    default_org = Organism.objects.all()[0]
+
     operations = [
         migrations.AddField(
             model_name='experiment',
             name='organism',
-            field=models.ForeignKey(default=9, on_delete=django.db.models.deletion.CASCADE, to='network.Organism'),
+            field=models.ForeignKey(default=default_org.id, on_delete=django.db.models.deletion.CASCADE, to='network.Organism'),
             preserve_default=False,
         ),
     ]
