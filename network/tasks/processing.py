@@ -85,10 +85,11 @@ def update_and_clean(dataset_pks, experiment_pk=None):
         ):
             update_or_create_feature_values(dataset.pk, locus_group.pk)
 
-        predict_dataset_fields(dataset.pk)
+        dataset = predict_dataset_fields(dataset.pk)
 
         dataset.processed = True
         dataset.save()
+
     update_dataset_predicted_similarities(datasets)
 
     if experiment_pk:
