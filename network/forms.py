@@ -57,7 +57,7 @@ class ExperimentFilterForm(forms.Form):
         required=False)
 
     cell_type = forms.CharField(
-        label='Cell type',
+        label='Cell/tissue type',
         help_text='ex: K562',
         required=False)
 
