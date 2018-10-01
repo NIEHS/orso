@@ -167,7 +167,7 @@ class Ontology:
         self.term_information_content = dict()
         term_num = len(self.terms)
         for term in self.terms:
-            children_num = len(self.get_all_children(term))
+            children_num = len(self.get_all_children([term]))
             self.term_information_content[term] = 1 - \
                 math.log(children_num + 1) / math.log(term_num)
 
