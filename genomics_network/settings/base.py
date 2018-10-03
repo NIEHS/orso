@@ -30,10 +30,13 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+NEOMODEL_NEO4J_BOLT_URL = os.environ.get(
+    'NEO4J_BOLT_URL', 'bolt://neo4j:orso@localhost:7687')
 
 # Application definition
 
 INSTALLED_APPS = [
+    'django_neomodel',
     'network.apps.NetworkConfig',
     'django.contrib.admin',
     'django.contrib.auth',
