@@ -14,7 +14,7 @@ from network.tasks.analysis.normalization import \
 from network.tasks.processing import \
     update_or_create_feature_attributes, update_or_create_feature_values
 from network.tasks.recommendations import \
-    update_experiment_recommendations
+    update_experiment_list_recommendations
 from network.tasks.similarity import \
     update_dataset_predicted_similarities, \
     update_experiment_metadata_similarities
@@ -201,7 +201,7 @@ def update_recommendations(**kwargs):
     print('Updating recommendations...')
 
     experiments = models.Experiment.objects.all()
-    update_experiment_recommendations(
+    update_experiment_list_recommendations(
         experiments, sim_types=['metadata', 'primary'], group_async=True)
 
     print('Done.')

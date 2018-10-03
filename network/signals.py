@@ -52,7 +52,7 @@ def favorite_post_save_update(sender, instance, created, **kwargs):
         lock = tasks.locks.ExpRecUpdateQueueLock(instance.experiment)
         if lock.add():
             (tasks.recommendations
-                  .update_recommendations
+                  .update_experiment_recommendations
                   .si(instance.experiment.pk).delay())
 
         models.Activity.objects.get_or_create(
@@ -66,7 +66,7 @@ def favorite_pre_delete_update(sender, instance, **kwargs):
     lock = tasks.locks.ExpRecUpdateQueueLock(instance.experiment)
     if lock.add():
         (tasks.recommendations
-              .update_recommendations
+              .update_experiment_recommendations
               .si(instance.experiment.pk).delay())
 
     try:

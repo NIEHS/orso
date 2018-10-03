@@ -15,7 +15,8 @@ from network.tasks.analysis.utils import \
 from network import models
 
 from network.tasks.analysis.mlp import predict_dataset_fields
-from network.tasks.recommendations import update_experiment_recommendations
+from network.tasks.recommendations import \
+    update_experiment_list_recommendations
 from network.tasks.similarity import (
     update_dataset_predicted_similarities,
     update_experiment_metadata_similarities,
@@ -99,7 +100,7 @@ def update_and_clean(dataset_pks, experiment_pk=None):
             assembly__dataset__experiment=experiment)
 
         update_experiment_metadata_similarities([experiment])
-        update_experiment_recommendations([experiment])
+        update_experiment_list_recommendations([experiment])
 
         for my_user in models.MyUser.objects.filter(experiment=experiment):
 
