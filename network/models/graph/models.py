@@ -1,14 +1,17 @@
 from neomodel import (
-    DateTimeProperty,
     FloatProperty,
     IntegerProperty,
-    Relationship,
     RelationshipFrom,
     RelationshipTo,
     StructuredNode,
     StructuredRel,
     StringProperty,
 )
+
+
+# RELATIONSHIPS
+class RelSimilarity(StructuredRel):
+    score = FloatProperty(required=True)
 
 
 # NODES
@@ -20,12 +23,15 @@ class GraphUser(StructuredNode):
 
     # RELATIONSHIPS
     owned_experiment = RelationshipTo('GraphExperiment', 'OWN')
-    favorited_experiment = RelationshipTo('GraphExperiment', 'FAVORITE')
-    recommended_experiment = \
-        RelationshipFrom('GraphExperiment', 'RECOMMENDATION')
+    favorited_experiment = RelationshipTo(
+        'GraphExperiment', 'FAVORITE')
+    recommended_experiment = RelationshipFrom(
+        'GraphExperiment', 'RECOMMENDATION')
 
-    followed_user = RelationshipTo('GraphUser', 'FOLLOW')
-    following_user = RelationshipFrom('GraphUser', 'FOLLOW')
+    followed_user = RelationshipTo(
+        'GraphUser', 'FOLLOW')
+    following_user = RelationshipFrom(
+        'GraphUser', 'FOLLOW')
 
 
 class GraphExperiment(StructuredNode):
@@ -40,11 +46,16 @@ class GraphExperiment(StructuredNode):
     # RELATIONSHIPS
     dataset = RelationshipFrom('GraphDataset', 'OF')
 
-    sim_experiment = Relationship('GraphExperiment', 'SIMILARITY')
+    sim_to_experiment = RelationshipTo(
+        'GraphExperiment', 'SIMILARITY', model=RelSimilarity)
+    sim_from_experiment = RelationshipFrom(
+        'GraphExperiment', 'SIMILARITY', model=RelSimilarity)
 
-    recommended_user = RelationshipTo('GraphUser', 'RECOMMENDATION')
     owning_user = RelationshipFrom('GraphUser', 'OWN')
-    favoriting_user = RelationshipFrom('GraphUser', 'FAVORITE')
+    recommended_user = RelationshipTo(
+        'GraphUser', 'RECOMMENDATION')
+    favoriting_user = RelationshipFrom(
+        'GraphUser', 'FAVORITE')
 
 
 class GraphDataset(StructuredNode):
@@ -56,33 +67,9 @@ class GraphDataset(StructuredNode):
     assembly_id = IntegerProperty(required=True)
 
     # RELATIONSHIPS
-    sim_dataset = Relationship('GraphDataset', 'SIMILARITY')
+    sim_to_dataset = RelationshipTo(
+        'GraphDataset', 'SIMILARITY', model=RelSimilarity)
+    sim_from_dataset = RelationshipFrom(
+        'GraphDataset', 'SIMILARITY', model=RelSimilarity)
 
     experiment = RelationshipTo('GraphExperiment', 'OF')
-
-
-# RELATIONSHIPS
-class RelFavorite(StructuredRel):
-    created = DateTimeProperty(default_now=True)
-    updated = DateTimeProperty(default_now=True)
-
-
-class RelFollow(StructuredRel):
-    created = DateTimeProperty(default_now=True)
-    updated = DateTimeProperty(default_now=True)
-
-
-class RelSimilarity(StructuredRel):
-    created = DateTimeProperty(default_now=True)
-    updated = DateTimeProperty(default_now=True)
-
-    sim_type = StringProperty(choices={
-        'M': 'metadata',
-        'P': 'primary',
-    }, required=True)
-    score = FloatProperty(required=True)
-
-
-class RelRecommendation(StructuredRel):
-    created = DateTimeProperty(default_now=True)
-    updated = DateTimeProperty(default_now=True)
