@@ -269,6 +269,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         for flag, help_string, func in COMMANDS:
             parser.add_argument(flag, action='store_true', help=help_string)
+        parser.add_argument('--threads', type=int, default=1)
 
     def handle(self, *args, **options):
 

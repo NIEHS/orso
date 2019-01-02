@@ -88,7 +88,7 @@ def user_pre_delete(sender, instance, **kwargs):
 def experiment_post_delete(sender, instance, **kwargs):
 
     if instance.project:
-        if instance.project.name in ['ENCODE']:
+        # if instance.project.name in ['ENCODE']:
 
             update_organism_network.si(
                 instance.organism.pk,

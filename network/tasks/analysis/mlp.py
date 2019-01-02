@@ -271,8 +271,6 @@ def predict_dataset_fields(dataset_pk):
 
     dataset.save()
 
-    return dataset
-
 
 def predict_dataset_field(dataset, metadata_field):
 

@@ -349,7 +349,7 @@ def get_plot(pca):
 
     datasets = list(models.Dataset.objects.filter(
         pcatransformedvalues__pca=pca,
-        experiment__project__name='ENCODE',
+        experiment__project__isnull=False,
     ))
     transformed_values = []
     for ds in datasets:

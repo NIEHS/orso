@@ -67,6 +67,9 @@ def normalize_locus_intersection_values(loci, locus_values):
     cpk_sum = sum(locus_cpk.values())
 
     for locus, value in locus_cpk.items():
-        normalized_values[locus] = value / (cpk_sum / 1E6)
+        try:
+            normalized_values[locus] = value / (cpk_sum / 1E6)
+        except ZeroDivisionError:
+            normalized_values[locus] = 0
 
     return normalized_values

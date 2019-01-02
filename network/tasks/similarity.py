@@ -128,13 +128,15 @@ def get_cell_type_classes_list(cell_type_list):
     brenda_ont = models.Ontology.objects.get(
         name='brenda_tissue_ontology').get_ontology_object()
     brenda_relevant_fields = set(RELEVANT_CELL_TYPE_CATEGORIES)
-    brenda_lookup = json.load(open('data/ontologies/encode_to_brenda.json'))
+
+    encode_lookup = json.load(open('data/ontologies/encode_to_brenda.json'))
+    ihec_lookup = json.load(open('data/ontologies/ihec_to_brenda.json'))
 
     return get_metadata_classes_list(
         cell_type_list,
         [brenda_ont],
         [brenda_relevant_fields],
-        term_lookups=[brenda_lookup],
+        term_lookups=[encode_lookup, ihec_lookup],
     )
 
 

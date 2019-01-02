@@ -81,11 +81,12 @@ def update_and_clean(dataset_pks, experiment_pk=None):
 
         for locus_group in models.LocusGroup.objects.filter(
             assembly=dataset.assembly,
-            featureattributes=True,
-        ):
+            featureattributes__isnull=False,
+        ).distinct():
             update_or_create_feature_values(dataset.pk, locus_group.pk)
 
-        dataset = predict_dataset_fields(dataset.pk)
+        predict_dataset_fields(dataset.pk)
+        dataset = models.Dataset.objects.get(pk=dataset.pk)
 
         dataset.processed = True
         dataset.save()
@@ -102,15 +103,26 @@ def update_and_clean(dataset_pks, experiment_pk=None):
         update_experiment_metadata_similarities([experiment])
         update_experiment_list_recommendations([experiment])
 
+        if experiment.project:
+
+            update_organism_network.si(
+                organism.pk,
+                experiment.experiment_type.pk,
+                my_user_pk=None,
+            )()
+            call_update_dendrogram.si(
+                organism.pk,
+                experiment.experiment_type.pk,
+                my_user_pk=None,
+            )()
+
         for my_user in models.MyUser.objects.filter(experiment=experiment):
 
-            print('updating network')
             update_organism_network.si(
                 organism.pk,
                 experiment.experiment_type.pk,
                 my_user_pk=my_user.pk,
             )()
-            print('updating dendrogram')
             call_update_dendrogram.si(
                 organism.pk,
                 experiment.experiment_type.pk,
@@ -340,32 +352,37 @@ def update_or_create_feature_values(dataset_pk, locus_group_pk):
     )
     feature_attributes = json.loads(feature_attributes.feature_attributes)
 
-    dij = models.DatasetIntersectionJson.objects.get(
-        dataset=dataset, locus_group=locus_group)
-    intersection_values = json.loads(dij.intersection_values)
+    try:
+        dij = models.DatasetIntersectionJson.objects.get(
+            dataset=dataset, locus_group=locus_group)
+        intersection_values = json.loads(dij.intersection_values)
 
-    for locus_pk, value in zip(
-        intersection_values['locus_pks'],
-        intersection_values['normalized_values'],
-    ):
-        if str(locus_pk) in feature_attributes:
-            attributes = feature_attributes[str(locus_pk)]
+        for locus_pk, value in zip(
+            intersection_values['locus_pks'],
+            intersection_values['normalized_values'],
+        ):
+            if str(locus_pk) in feature_attributes:
+                attributes = feature_attributes[str(locus_pk)]
 
-            feature_values['locus_pks'].append(locus_pk)
-            feature_values['values'].append(value)
+                feature_values['locus_pks'].append(locus_pk)
+                feature_values['values'].append(value)
 
-            feature_values['names'].append(attributes['name'])
-            feature_values['min_values'].append(attributes['minimum'])
-            feature_values['max_values'].append(attributes['maximum'])
-            feature_values['medians'].append(attributes['median'])
-            feature_values['means'].append(attributes['mean'])
-            feature_values['standard_deviations'].append(
-                attributes['standard_deviation'])
+                feature_values['names'].append(attributes['name'])
+                feature_values['min_values'].append(attributes['minimum'])
+                feature_values['max_values'].append(attributes['maximum'])
+                feature_values['medians'].append(attributes['median'])
+                feature_values['means'].append(attributes['mean'])
+                feature_values['standard_deviations'].append(
+                    attributes['standard_deviation'])
 
-    models.FeatureValues.objects.update_or_create(
-        dataset=dataset,
-        locus_group=locus_group,
-        defaults={
-            'feature_values': json.dumps(feature_values),
-        },
-    )
+        models.FeatureValues.objects.update_or_create(
+            dataset=dataset,
+            locus_group=locus_group,
+            defaults={
+                'feature_values': json.dumps(feature_values),
+            },
+        )
+
+    except models.DatasetIntersectionJson.DoesNotExist:
+        print('Dataset {}, LG {}: Intersection JSON not found.'.format(
+            str(dataset.pk), str(locus_group.pk)))
