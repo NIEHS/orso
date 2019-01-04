@@ -155,7 +155,7 @@ def process_dataset_intersections(dataset_pks):
     return group(tasks)
 
 
-def process_dataset_batch(datasets, chunk=100):
+def process_dataset_batch(datasets, chunk=100, **kwargs):
 
     for i in range(0, len(datasets), chunk):
 
@@ -163,7 +163,7 @@ def process_dataset_batch(datasets, chunk=100):
         index_2 = min(i + chunk, len(datasets))
         dataset_chunk = datasets[index_1:index_2]
 
-        download_dataset_bigwigs(dataset_chunk)
+        download_dataset_bigwigs(dataset_chunk, **kwargs)
 
         tasks = []
         for dataset in dataset_chunk:

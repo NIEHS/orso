@@ -70,7 +70,7 @@ def generate_pca_transformed_df(pca, datasets=None):
     return df
 
 
-def download_dataset_bigwigs(datasets):
+def download_dataset_bigwigs(datasets, check_certificate=True):
 
     os.makedirs(settings.BIGWIG_TEMP_DIR, exist_ok=True)
 
@@ -113,6 +113,7 @@ def download_dataset_bigwigs(datasets):
             'aria2c',
             '--allow-overwrite=true',
             '--conditional-get=true',
+            '--check-certificate={}'.format(str(check_certificate).lower()),
             '-x', '16',
             '-s', '16',
             '-i', download_list_file.name,

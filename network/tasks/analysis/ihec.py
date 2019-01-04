@@ -26,7 +26,8 @@ skip_projects = ['ENCODE', 'NIH Roadmap']
 
 
 def check_download(download_url):
-    return call(['aria2c', '--dry-run', download_url]) == 0
+    return call(['aria2c', '--dry-run', '--check-certificate=false',
+                 download_url]) == 0
 
 
 def add_ihec(json_path):
@@ -46,7 +47,7 @@ def add_ihec(json_path):
     datasets = []
 
     # Iterate through 'datasets'
-    for dataset_name, info in list(ihec_dict['datasets'].items())[:20]:
+    for dataset_name, info in list(ihec_dict['datasets'].items()):
 
         skip = False
 
@@ -156,24 +157,7 @@ def add_ihec(json_path):
             ds_obj.save()
             datasets.append(ds_obj)
 
-    # for i in range(0, len(experiments), chunk):
-    #
-    #     index_1 = i
-    #     index_2 = min(i + chunk, len(datasets))
-    #     experiment_chunk = experiments[index_1:index_2]
-    #     dataset_chunk = datasets[index_1:index_2]
-    #
-    #     download_dataset_bigwigs(dataset_chunk)
-    #
-    #     tasks = []
-    #     for exp_obj in experiment_chunk:
-    #         tasks.append(process_experiment.s(exp_obj.pk, download=False))
-    #
-    #     job = group(tasks)
-    #     results = job.apply_async()
-    #     results.join()
-
-    process_dataset_batch(list(datasets))
+    process_dataset_batch(list(datasets), check_certificate=False)
     for exp_obj in experiments:
         ds_objs = models.Dataset.objects.filter(experiment=exp_obj)
         exp_obj.processed = all([ds_obj.processed for ds_obj in ds_objs])
