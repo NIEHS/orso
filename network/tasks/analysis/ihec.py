@@ -133,12 +133,14 @@ def add_ihec(json_path):
                     'description': '',
                     'experiment_type': experiment_type_obj,
                     'cell_type': cell_type,
-                    'target': protein_target,
                     'slug': sample_name,
                     'public': True,
                 },
             )
-            # experiments.append(exp_obj)
+            if protein_target:
+                exp_obj.target = protein_target
+                exp_obj.save()
+            experiments.append(exp_obj)
 
             ds_obj, ds_created = models.Dataset.objects.update_or_create(
                 consortial_id=sample_id,
