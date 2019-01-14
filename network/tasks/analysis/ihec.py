@@ -159,7 +159,7 @@ def add_ihec(json_path):
             ds_obj.save()
             datasets.append(ds_obj)
 
-    process_dataset_batch(list(datasets), check_certificate=False)
+    process_dataset_batch(list(datasets), check_certificate=False, chunk=20)
     for exp_obj in experiments:
         ds_objs = models.Dataset.objects.filter(experiment=exp_obj)
         exp_obj.processed = all([ds_obj.processed for ds_obj in ds_objs])
