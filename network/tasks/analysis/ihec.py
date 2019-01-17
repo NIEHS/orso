@@ -1,6 +1,5 @@
 import json
 import re
-from pprint import pprint
 from subprocess import call, DEVNULL
 
 from celery import group
@@ -8,8 +7,6 @@ from celery import group
 from network import models
 from network.tasks.analysis.utils import download_dataset_bigwigs
 from network.tasks.processing import process_dataset_batch
-
-chunk = 100
 
 histone_marks = [
     'H3K27ac',
@@ -57,7 +54,6 @@ def add_ihec(json_path):
 
         sample_id = info['sample_id']
 
-        # projects.add(project_name)
         forward_bigwig = None
         reverse_bigwig = None
         unstranded_bigwig = None
@@ -123,34 +119,40 @@ def add_ihec(json_path):
                 name=assay_type,
             )
 
-            exp_obj, exp_created = models.Experiment.objects.update_or_create(
-                project=project_obj,
-                consortial_id=sample_id,
-                defaults={
-                    'name': sample_name,
-                    'organism': organism_obj,
-                    'project': project_obj,
-                    'description': '',
-                    'experiment_type': experiment_type_obj,
-                    'cell_type': cell_type,
-                    'slug': sample_name,
-                    'public': True,
-                },
-            )
             if protein_target:
-                exp_obj.target = protein_target
-                exp_obj.save()
+                exp_obj = models.Experiment.objects.get_or_create(
+                    name=sample_name,
+                    cell_type=cell_type,
+                    consortial_id=sample_id,
+                    description='',
+                    experiment_type=experiment_type_obj,
+                    organism=organism_obj,
+                    project=project_obj,
+                    public=True,
+                    slug=sample_name,
+                    target=protein_target,
+                )[0]
+            else:
+                exp_obj = models.Experiment.objects.get_or_create(
+                    name=sample_name,
+                    cell_type=cell_type,
+                    consortial_id=sample_id,
+                    description='',
+                    experiment_type=experiment_type_obj,
+                    organism=organism_obj,
+                    project=project_obj,
+                    public=True,
+                    slug=sample_name,
+                )[0]
             experiments.append(exp_obj)
 
-            ds_obj, ds_created = models.Dataset.objects.update_or_create(
+            ds_obj = models.Dataset.objects.get_or_create(
+                assembly=assembly_obj,
                 consortial_id=sample_id,
                 experiment=exp_obj,
-                defaults={
-                    'name': sample_id,
-                    'assembly': assembly_obj,
-                    'slug': sample_id,
-                },
-            )
+                name=sample_id,
+                slug=sample_id,
+            )[0]
             if forward_bigwig and reverse_bigwig:
                 ds_obj.plus_url = forward_bigwig
                 ds_obj.minus_url = reverse_bigwig
@@ -159,7 +161,7 @@ def add_ihec(json_path):
             ds_obj.save()
             datasets.append(ds_obj)
 
-    process_dataset_batch(list(datasets), check_certificate=False, chunk=20)
+    process_dataset_batch(list(datasets), check_certificate=False)
     for exp_obj in experiments:
         ds_objs = models.Dataset.objects.filter(experiment=exp_obj)
         exp_obj.processed = all([ds_obj.processed for ds_obj in ds_objs])

@@ -387,7 +387,8 @@ class Experiment(models.Model):
 
     class Meta:
         get_latest_by = 'created'
-        unique_together = ('project', 'consortial_id')
+        unique_together = ('project', 'consortial_id', 'experiment_type',
+                           'cell_type', 'target')
 
     def delete(self):
         organism = Organism.objects.get(assembly__dataset__experiment=self)
