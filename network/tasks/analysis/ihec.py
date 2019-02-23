@@ -43,6 +43,8 @@ def add_ihec(json_path):
     experiments = []
     datasets = []
 
+    processed = 0
+
     # Iterate through 'datasets'
     for dataset_name, info in list(ihec_dict['datasets'].items()):
 
@@ -144,22 +146,35 @@ def add_ihec(json_path):
                     public=True,
                     slug=sample_name,
                 )[0]
-            experiments.append(exp_obj)
 
-            ds_obj = models.Dataset.objects.get_or_create(
-                assembly=assembly_obj,
-                consortial_id=sample_id,
-                experiment=exp_obj,
-                name=sample_id,
-                slug=sample_id,
-            )[0]
-            if forward_bigwig and reverse_bigwig:
-                ds_obj.plus_url = forward_bigwig
-                ds_obj.minus_url = reverse_bigwig
+            if exp_obj.processed is True:
+
+                processed += 1
+
             else:
-                ds_obj.ambiguous_url = unstranded_bigwig
-            ds_obj.save()
-            datasets.append(ds_obj)
+
+                experiments.append(exp_obj)
+
+                ds_obj = models.Dataset.objects.get_or_create(
+                    assembly=assembly_obj,
+                    consortial_id=sample_id,
+                    experiment=exp_obj,
+                    name=sample_id,
+                    slug=sample_id,
+                )[0]
+                if forward_bigwig and reverse_bigwig:
+                    ds_obj.plus_url = forward_bigwig
+                    ds_obj.minus_url = reverse_bigwig
+                else:
+                    ds_obj.ambiguous_url = unstranded_bigwig
+                ds_obj.save()
+                datasets.append(ds_obj)
+
+    print('{} experiments already processed.'.format(str(processed)))
+
+    print('{} experiments with {} datasets queued for processing'.format(
+        str(len(experiments)), str(len(datasets))))
+    print('Processing {} datasets...'.format(str(len(datasets))))
 
     process_dataset_batch(list(datasets), check_certificate=False)
     for exp_obj in experiments:
