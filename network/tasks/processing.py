@@ -30,6 +30,9 @@ from network.tasks.analysis.network import update_organism_network
 # in series within the update_and_clean function.
 @task
 def process_experiment(experiment_pk, download=True):
+
+    print('Processing experiment {}'.format(str(experiment_pk)))
+
     datasets = models.Dataset.objects.filter(experiment__pk=experiment_pk)
     dataset_pks = [ds.pk for ds in datasets]
     if download:
@@ -49,6 +52,9 @@ def process_experiment(experiment_pk, download=True):
 
 @task
 def process_dataset(dataset_pk, download=True):
+
+    print('Processing dataset {}'.format(str(dataset_pk)))
+
     if download:
         chain(
             download_bigwigs.si([dataset_pk]),
@@ -135,6 +141,9 @@ def update_and_clean(dataset_pks, experiment_pk=None):
 
 @task
 def download_bigwigs(dataset_pks):
+    print('Downloading bigWigs for datasets: {}'.format(
+        ', '.join([str(x) for x in dataset_pks])))
+
     datasets = models.Dataset.objects.filter(pk__in=dataset_pks)
     download_dataset_bigwigs(datasets)
 
@@ -210,12 +219,20 @@ def set_pca_transformed_values(dataset, pca):
 
 @task
 def remove_bigwigs(dataset_pks):
+
+    print('Removing bigWigs for datasets: {}'.format(
+        ', '.join([str(x) for x in dataset_pks])))
+
     datasets = models.Dataset.objects.filter(pk__in=dataset_pks)
     remove_dataset_bigwigs(datasets)
 
 
 @task
 def update_or_create_dataset_intersection(dataset_pk, locus_group_pk):
+
+    print('Updating intersection for dataset {} and locus group {}'.format(
+        str(dataset_pk), str(locus_group_pk)))
+
     dataset = models.Dataset.objects.get(pk=dataset_pk)
     locus_group = models.LocusGroup.objects.get(pk=locus_group_pk)
 
@@ -254,6 +271,10 @@ def update_or_create_dataset_intersection(dataset_pk, locus_group_pk):
 
 @task
 def update_or_create_dataset_metaplot(dataset_pk, locus_group_pk):
+
+    print('Updating metaplot for dataset {} and locus group {}'.format(
+        str(dataset_pk), str(locus_group_pk)))
+
     dataset = models.Dataset.objects.get(pk=dataset_pk)
     locus_group = models.LocusGroup.objects.get(pk=locus_group_pk)
 
@@ -291,6 +312,10 @@ def update_all_feature_attributes():
 
 @task
 def update_or_create_feature_attributes(locus_group_pk, experiment_type_pk):
+
+    print('Updating feature attributes for locus group {} and experiment type {}'.format(  # noqa
+        str(locus_group_pk), str(experiment_type_pk)))
+
     locus_group = models.LocusGroup.objects.get(pk=locus_group_pk)
     experiment_type = models.ExperimentType.objects.get(pk=experiment_type_pk)
 
@@ -332,6 +357,10 @@ def update_all_feature_values():
 
 @task
 def update_or_create_feature_values(dataset_pk, locus_group_pk):
+
+    print('Updating feature values for dataset {} and locus group {}'.format(
+        str(dataset_pk), str(locus_group_pk)))
+
     dataset = models.Dataset.objects.get(pk=dataset_pk)
     locus_group = models.LocusGroup.objects.get(pk=locus_group_pk)
 
