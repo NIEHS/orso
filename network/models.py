@@ -694,7 +694,8 @@ class Dataset(models.Model):
 
     class Meta:
         get_latest_by = 'created'
-        unique_together = ('experiment', 'consortial_id')
+        unique_together = ('experiment', 'consortial_id', 'ambiguous_url',
+                           'plus_url', 'minus_url')
 
     def __str__(self):
         return self.name
