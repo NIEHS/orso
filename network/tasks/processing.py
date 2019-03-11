@@ -29,7 +29,8 @@ from network.tasks.analysis.network import update_organism_network
 # commands. To get around this, many data processing functions are performed
 # in series within the update_and_clean function.
 @task
-def process_experiment(experiment_pk, download=True):
+def process_experiment(experiment_pk, download=True,
+                       update_recs_and_sims=True):
 
     print('Processing experiment {}'.format(str(experiment_pk)))
 
@@ -40,13 +41,15 @@ def process_experiment(experiment_pk, download=True):
             download_bigwigs.si(dataset_pks),
             chord(
                 process_dataset_intersections(dataset_pks),
-                update_and_clean.si(dataset_pks, experiment_pk=experiment_pk),
+                update_and_clean.si(dataset_pks, experiment_pk=experiment_pk,
+                                    update_recs_and_sims=update_recs_and_sims),
             ),
         )()
     else:
         chord(
             process_dataset_intersections(dataset_pks),
-            update_and_clean.si(dataset_pks, experiment_pk=experiment_pk),
+            update_and_clean.si(dataset_pks, experiment_pk=experiment_pk,
+                                update_recs_and_sims=update_recs_and_sims),
         )()
 
 
@@ -71,7 +74,8 @@ def process_dataset(dataset_pk, download=True):
 
 
 @task
-def update_and_clean(dataset_pks, experiment_pk=None):
+def update_and_clean(dataset_pks, experiment_pk=None,
+                     update_recs_and_sims=True):
 
     datasets = models.Dataset.objects.filter(pk__in=dataset_pks)
     remove_bigwigs(dataset_pks)
@@ -103,40 +107,43 @@ def update_and_clean(dataset_pks, experiment_pk=None):
     if experiment_pk:
 
         experiment = models.Experiment.objects.get(pk=experiment_pk)
-        organism = models.Organism.objects.get(
-            assembly__dataset__experiment=experiment)
-
-        update_experiment_metadata_similarities([experiment])
-        update_experiment_list_recommendations([experiment])
-
-        if experiment.project:
-
-            update_organism_network.si(
-                organism.pk,
-                experiment.experiment_type.pk,
-                my_user_pk=None,
-            )()
-            call_update_dendrogram.si(
-                organism.pk,
-                experiment.experiment_type.pk,
-                my_user_pk=None,
-            )()
-
-        for my_user in models.MyUser.objects.filter(experiment=experiment):
-
-            update_organism_network.si(
-                organism.pk,
-                experiment.experiment_type.pk,
-                my_user_pk=my_user.pk,
-            )()
-            call_update_dendrogram.si(
-                organism.pk,
-                experiment.experiment_type.pk,
-                my_user_pk=my_user.pk,
-            )()
-
         experiment.processed = True
         experiment.save()
+
+        if update_recs_and_sims is True:
+
+            experiment = models.Experiment.objects.get(pk=experiment_pk)
+            organism = models.Organism.objects.get(
+                assembly__dataset__experiment=experiment)
+
+            update_experiment_metadata_similarities([experiment])
+            update_experiment_list_recommendations([experiment])
+
+            if experiment.project:
+
+                update_organism_network.si(
+                    organism.pk,
+                    experiment.experiment_type.pk,
+                    my_user_pk=None,
+                )()
+                call_update_dendrogram.si(
+                    organism.pk,
+                    experiment.experiment_type.pk,
+                    my_user_pk=None,
+                )()
+
+            for my_user in models.MyUser.objects.filter(experiment=experiment):
+
+                update_organism_network.si(
+                    organism.pk,
+                    experiment.experiment_type.pk,
+                    my_user_pk=my_user.pk,
+                )()
+                call_update_dendrogram.si(
+                    organism.pk,
+                    experiment.experiment_type.pk,
+                    my_user_pk=my_user.pk,
+                )()
 
 
 @task
