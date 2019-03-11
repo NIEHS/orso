@@ -2,11 +2,10 @@ import json
 import re
 from subprocess import call, DEVNULL
 
-from celery import group
-
 from network import models
 from network.tasks.analysis.utils import download_dataset_bigwigs
-from network.tasks.processing import process_dataset_batch
+from network.tasks.processing import process_experiment
+from network.tasks.utils import run_tasks
 
 histone_marks = [
     'H3K27ac',
@@ -168,16 +167,13 @@ def add_ihec(json_path):
                 else:
                     ds_obj.ambiguous_url = unstranded_bigwig
                 ds_obj.save()
-                datasets.append(ds_obj)
 
     print('{} experiments already processed.'.format(str(processed)))
+    print('{} experiments queued for processing'.format(
+        str(len(experiments))))
 
-    print('{} experiments with {} datasets queued for processing'.format(
-        str(len(experiments)), str(len(datasets))))
-    print('Processing {} datasets...'.format(str(len(datasets))))
-
-    process_dataset_batch(list(datasets), check_certificate=False)
-    for exp_obj in experiments:
-        ds_objs = models.Dataset.objects.filter(experiment=exp_obj)
-        exp_obj.processed = all([ds_obj.processed for ds_obj in ds_objs])
-        exp_obj.save()
+    tasks = []
+    for experiment in experiments:
+        tasks.append(process_experiment.si(
+            experiment.pk, update_recs_and_sims=False))
+    run_tasks(tasks, group_async=True)
