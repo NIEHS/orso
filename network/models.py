@@ -763,9 +763,9 @@ class Dataset(models.Model):
     def generate_local_bigwig_paths(self):
         if self.is_stranded():
             plus_local_path = os.path.join(
-                settings.BIGWIG_TEMP_DIR, os.path.basename(self.plus_url))
+                settings.BIGWIG_TEMP_DIR, '{}.plus.bigWig'.format(str(self.pk)))  # noqa
             minus_local_path = os.path.join(
-                settings.BIGWIG_TEMP_DIR, os.path.basename(self.minus_url))
+                settings.BIGWIG_TEMP_DIR, '{}.minus.bigWig'.format(str(self.pk)))  # noqa
             return {
                 'ambiguous': None,
                 'plus': plus_local_path,
@@ -773,7 +773,7 @@ class Dataset(models.Model):
             }
         else:
             ambiguous_local_path = os.path.join(
-                settings.BIGWIG_TEMP_DIR, os.path.basename(self.ambiguous_url))
+                settings.BIGWIG_TEMP_DIR, '{}.ambig.bigWig'.format(str(self.pk)))  # noqa
             return {
                 'ambiguous': ambiguous_local_path,
                 'plus': None,
