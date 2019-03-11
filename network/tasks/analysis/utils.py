@@ -114,8 +114,8 @@ def download_dataset_bigwigs(datasets, check_certificate=True):
             '--allow-overwrite=true',
             '--conditional-get=true',
             '--check-certificate={}'.format(str(check_certificate).lower()),
-            '-x', '16',
-            '-s', '16',
+            '-x', '1',
+            '-s', '1',
             '-i', download_list_file.name,
         ])
         print('aria2c exitted with return code {}.'.format(
