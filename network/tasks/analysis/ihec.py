@@ -175,5 +175,6 @@ def add_ihec(json_path):
     tasks = []
     for experiment in experiments:
         tasks.append(process_experiment.si(
-            experiment.pk, update_recs_and_sims=False))
+            experiment.pk, update_recs_and_sims=False,
+            check_certificate=False))
     run_tasks(tasks, group_async=True)

@@ -29,7 +29,7 @@ from network.tasks.analysis.network import update_organism_network
 # commands. To get around this, many data processing functions are performed
 # in series within the update_and_clean function.
 @task
-def process_experiment(experiment_pk, download=True,
+def process_experiment(experiment_pk, download=True, check_certificate=True,
                        update_recs_and_sims=True):
 
     print('Processing experiment {}'.format(str(experiment_pk)))
@@ -38,7 +38,8 @@ def process_experiment(experiment_pk, download=True,
     dataset_pks = [ds.pk for ds in datasets]
     if download:
         chain(
-            download_bigwigs.si(dataset_pks),
+            download_bigwigs.si(dataset_pks,
+                                check_certificate=check_certificate),
             chord(
                 process_dataset_intersections(dataset_pks),
                 update_and_clean.si(dataset_pks, experiment_pk=experiment_pk,
@@ -147,12 +148,12 @@ def update_and_clean(dataset_pks, experiment_pk=None,
 
 
 @task
-def download_bigwigs(dataset_pks):
+def download_bigwigs(dataset_pks, **kwargs):
     print('Downloading bigWigs for datasets: {}'.format(
         ', '.join([str(x) for x in dataset_pks])))
 
     datasets = models.Dataset.objects.filter(pk__in=dataset_pks)
-    download_dataset_bigwigs(datasets)
+    download_dataset_bigwigs(datasets, **kwargs)
 
 
 def process_dataset_intersections(dataset_pks):
