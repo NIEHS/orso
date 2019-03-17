@@ -70,7 +70,7 @@ def generate_pca_transformed_df(pca, datasets=None):
     return df
 
 
-def download_dataset_bigwigs(datasets, check_certificate=True):
+def download_dataset_bigwigs(datasets, check_certificate=True, **kwargs):
 
     os.makedirs(settings.BIGWIG_TEMP_DIR, exist_ok=True)
 

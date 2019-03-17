@@ -4,7 +4,7 @@ from subprocess import call, DEVNULL
 
 from network import models
 from network.tasks.analysis.utils import download_dataset_bigwigs
-from network.tasks.processing import process_experiment
+from network.tasks.processing import process_experiment_batch
 from network.tasks.utils import run_tasks
 
 histone_marks = [
@@ -172,9 +172,5 @@ def add_ihec(json_path):
     print('{} experiments queued for processing'.format(
         str(len(experiments))))
 
-    tasks = []
-    for experiment in experiments:
-        tasks.append(process_experiment.si(
-            experiment.pk, update_recs_and_sims=False,
-            check_certificate=False))
-    run_tasks(tasks, group_async=True)
+    process_experiment_batch(experiments, check_certificate=False,
+                             update_recs_and_sims=False)

@@ -1,4 +1,5 @@
 import json
+from time import sleep
 
 import numpy as np
 from celery import group, chain, chord
@@ -189,6 +190,36 @@ def process_dataset_batch(datasets, chunk=100, **kwargs):
         job = group(tasks)
         results = job.apply_async()
         results.join()
+
+
+def process_experiment_batch(experiments, chunk=40, **kwargs):
+
+    for i in range(0, len(experiments), chunk):
+
+        index_1 = i
+        index_2 = min(i + chunk, len(experiments))
+        experiment_chunk = experiments[index_1:index_2]
+
+        dataset_chunk = models.Dataset.objects.filter(
+            experiment__in=experiment_chunk)
+        download_dataset_bigwigs(dataset_chunk, **kwargs)
+
+        tasks = []
+        for experiment in experiment_chunk:
+            tasks.append(process_experiment.si(
+                experiment.pk, download=False, **kwargs))
+
+        job = group(tasks)
+        results = job.apply_async()
+        results.join()
+
+        while not all([exp.processed is True for exp in
+                       models.Experiment.objects.filter(
+                           pk__in=[exp.pk for exp in experiment_chunk])]):
+            print([exp.processed is True for exp in
+                   models.Experiment.objects.filter(
+                       pk__in=[exp.pk for exp in experiment_chunk])])
+            sleep(10)
 
 
 def set_pca_transformed_values(dataset, pca):
