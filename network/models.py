@@ -372,7 +372,11 @@ class Experiment(models.Model):
     description = models.TextField(blank=True)
     created = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True, null=True)
-    consortial_id = models.CharField(max_length=128, null=True, default=None)
+
+    consortial_id = models.CharField(
+        verbose_name='Repository ID', max_length=128, null=True, blank=True)
+    consortial_url = models.URLField(
+        verbose_name='Repository URL', null=True, blank=True)
 
     use_default_color = models.BooleanField(default=True)
     color = models.CharField(max_length=7, blank=True, null=True, default=None)

@@ -79,6 +79,14 @@
                 {% if experiment.target %}
                 <p><b>Antibody:</b> {{experiment.target}}</p>
                 {% endif %}
+                {% if experiment.consortial_id %}
+                <p><b>Repository ID:</b> {{experiment.consortial_id}}</p>
+                {% endif %}
+                {% if experiment.consortial_url %}
+                <p><b>Repository URL:</b>
+                    <a href={{experiment.consortial_url}} target='_blank'>{{experiment.consortial_url}}</a>
+                </p>
+                {% endif %}
                 {% if experiment.description %}
                 <p><b>Description:</b> {{experiment.description|linebreaks}}</p>
                 {% endif %}
