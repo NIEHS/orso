@@ -259,6 +259,7 @@ class ExperimentForm(BootstrapModelForm):
         fields = (
             'name', 'organism', 'experiment_type', 'cell_type', 'target',
             'description', 'use_default_color', 'color', 'public',
+            'consortial_id', 'consortial_url',
         )
         widgets = {
             'color': TextInput(attrs={'type': 'color'}),
