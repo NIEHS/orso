@@ -173,10 +173,10 @@ def update_dendrogram(organism_pk, exp_type_pk, my_user_pk=None):
 
     if my_user_pk:
         my_user = models.MyUser.objects.get(pk=my_user_pk)
-        experiment_query &= (Q(owners=None) | Q(owners=my_user))
+        experiment_query &= (Q(project__name='ENCODE') | Q(owners=my_user))
     else:
         my_user = None
-        experiment_query &= Q(owners=None)
+        experiment_query &= Q(project__name='ENCODE')
 
     experiments = list(models.Experiment.objects.filter(
         experiment_query).distinct())
