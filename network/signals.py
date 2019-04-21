@@ -87,17 +87,16 @@ def user_pre_delete(sender, instance, **kwargs):
 @receiver(post_delete, sender=models.Experiment)
 def experiment_post_delete(sender, instance, **kwargs):
 
-    if instance.project:
-        # if instance.project.name in ['ENCODE']:
+    # if instance.project.name in ['ENCODE']:
 
-            update_organism_network.si(
-                instance.organism.pk,
-                instance.experiment_type.pk,
-            ).delay()
-            call_update_dendrogram.si(
-                instance.organism.pk,
-                instance.experiment_type.pk,
-            ).delay()
+        # update_organism_network.si(
+        #     instance.organism.pk,
+        #     instance.experiment_type.pk,
+        # ).delay()
+        # call_update_dendrogram.si(
+        #     instance.organism.pk,
+        #     instance.experiment_type.pk,
+        # ).delay()
 
     for my_user in models.MyUser.objects.filter(experiment=instance):
 
